@@ -1,0 +1,14 @@
+{
+  "name": "appmarket",
+  "private": true,
+  "packageManager": "pnpm@9.15.1",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm --filter @appmarket/web dev",
+    "check:secrets": "node scripts/check-no-secrets.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

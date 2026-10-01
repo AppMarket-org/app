@@ -1,0 +1,19 @@
+{
+	"name": "@appmarket/web",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "cf dev",
+		"build": "cf build",
+		"typecheck": "cf workers types && tsc"
+	},
+	"dependencies": {
+		"@appmarket/shared": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "beta",
+		"cf": "^1.0.0-beta.10",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.0"
+	}
+}
