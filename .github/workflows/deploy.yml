@@ -1,0 +1,66 @@
+# PRD R22: deploy appmarket.org. Manual only; each run waits for approval on its GitHub
+# environment (staging, production), whose secrets hold the Cloudflare API token. Runbook:
+# docs/deploy-runbook.md.
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target
+        type: choice
+        options: [staging, production]
+        default: staging
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      MODE: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npm install --global cf@1.0.0-beta.10
+
+      - name: Checks
+        run: pnpm typecheck && pnpm test && pnpm check:secrets && pnpm check:ui
+
+      - name: Preflight (environment config)
+        id: preflight
+        working-directory: apps/api
+        run: echo "database_id=$(pnpm -s exec tsx scripts/preflight.ts "$MODE")" >> "$GITHUB_OUTPUT"
+
+      - name: Apply D1 migrations
+        working-directory: apps/api
+        run: node scripts/migrate.mjs --remote "${{ steps.preflight.outputs.database_id }}"
+
+      - name: Deploy API Worker
+        working-directory: apps/api
+        run: cf deploy --mode "$MODE" --message "${{ github.sha }}"
+
+      - name: Build and deploy web Worker
+        working-directory: apps/web
+        run: |
+          pnpm exec ng build
+          if [ "$MODE" = staging ]; then pnpm exec wrangler deploy --env staging; else pnpm exec wrangler deploy; fi
+
+      - name: Smoke test
+        run: |
+          origin=$([ "$MODE" = staging ] && echo https://staging.appmarket.org || echo https://appmarket.org)
+          curl -fsS "$origin/api/health"
+          curl -fsS -o /dev/null "$origin/"
