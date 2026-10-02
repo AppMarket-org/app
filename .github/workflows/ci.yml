@@ -18,5 +18,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build
-      - run: pnpm --filter @appmarket/web exec ng test --watch=false
+      - run: pnpm test
       - run: pnpm check:secrets

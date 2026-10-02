@@ -16,6 +16,10 @@ Google and GitHub login via Better Auth in `apps/api`, sessions in D1, Turnstile
 
 The browser talks only to `localhost:4200`; `ng serve` proxies `/api` to the API, so cookies and OAuth callbacks stay on one origin.
 
+## Signing in locally without Google or GitHub
+
+`pnpm --filter @appmarket/api dev:login [email] [buyer|developer|admin]` creates (or reuses) a user in the local D1 state and prints a session `Cookie` header value, using Better Auth's test utilities and your local `BETTER_AUTH_SECRET`. Use it with curl (`-H "Cookie: $(...)"`) or set the cookie in the browser for `localhost:4200`. It only touches `apps/api/.cloudflare/state`.
+
 ## How it works
 
 | Piece | Where |

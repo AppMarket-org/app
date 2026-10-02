@@ -2,6 +2,17 @@
 	"name": "@appmarket/shared",
 	"private": true,
 	"type": "module",
-	"exports": { ".": "./src/index.ts" },
-	"scripts": { "typecheck": "tsc -p ." }
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc -p .",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"zod": "^4"
+	},
+	"devDependencies": {
+		"vitest": "^5"
+	}
 }

@@ -9,7 +9,8 @@
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm --parallel --filter @appmarket/api --filter @appmarket/web dev",
     "check:secrets": "node scripts/check-no-secrets.mjs",
-    "build": "pnpm --filter @appmarket/web build"
+    "build": "pnpm --filter @appmarket/web build",
+    "test": "pnpm --filter @appmarket/shared --filter @appmarket/api test && pnpm --filter @appmarket/web exec ng test --watch=false"
   },
   "devDependencies": {
     "typescript": "^7.0.2"
