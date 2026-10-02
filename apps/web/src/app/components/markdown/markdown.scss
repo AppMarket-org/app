@@ -3,9 +3,26 @@
   font: var(--mat-sys-body-large);
   overflow-wrap: anywhere;
 
+  h1 {
+    font: var(--mat-sys-headline-medium);
+    margin: 0 0 1rem;
+  }
+
   :is(h2, h3, h4) {
     font: var(--mat-sys-title-large);
     margin: 1.5rem 0 0.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font: var(--mat-sys-body-medium);
+  }
+
+  :is(th, td) {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 0.0625rem solid var(--mat-sys-outline-variant);
   }
 
   pre {

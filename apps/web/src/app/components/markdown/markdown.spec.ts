@@ -26,3 +26,13 @@ describe('Markdown', () => {
     expect(el.querySelector('a')?.getAttribute('href') ?? '').not.toMatch(/^javascript:/i);
   });
 });
+
+describe('Markdown without heading shift', () => {
+  it('keeps h1 for pages whose content is the main document', () => {
+    const fixture = TestBed.createComponent(Markdown);
+    fixture.componentRef.setInput('source', '# Terms');
+    fixture.componentRef.setInput('shiftHeadings', false);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toBe('Terms');
+  });
+});

@@ -1,4 +1,13 @@
-<article>
-  <h1>{{ page }}</h1>
-  <p>Legal text goes here (R21).</p>
-</article>
+@if (page; as p) {
+  <article>
+    <mat-card appearance="outlined" class="draft" role="note">
+      <mat-card-content>
+        <mat-icon>gavel</mat-icon>
+        <span>Draft, not yet in effect. Pending legal review; bracketed details are placeholders.</span>
+      </mat-card-content>
+    </mat-card>
+    <app-markdown [source]="p.markdown" [shiftHeadings]="false" />
+  </article>
+} @else {
+  <h1>Page not found</h1>
+}

@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, ViewEncapsulation, computed, input } from '@angular/core';
 import { Marked } from 'marked';
 
+const plain = new Marked({ gfm: true });
+
 /** README headings sit under the page's own h1, so every level moves down one (h1 to h2 and so on). */
-const markdown = new Marked({
+const shifted = new Marked({
   gfm: true,
   walkTokens: (token) => {
     if (token.type === 'heading') token.depth = Math.min(token.depth + 1, 6);
@@ -23,8 +25,10 @@ const markdown = new Marked({
 })
 export class Markdown {
   readonly source = input.required<string>();
+  /** Move headings down a level (for READMEs inside a page that has its own h1). */
+  readonly shiftHeadings = input(true);
   protected readonly html = computed(() =>
     // Images without alt text (often raw HTML in READMEs) are treated as decorative.
-    (markdown.parse(this.source(), { async: false }) as string).replace(/<img(?![^>]*\balt=)/gi, '<img alt=""'),
+    ((this.shiftHeadings() ? shifted : plain).parse(this.source(), { async: false }) as string).replace(/<img(?![^>]*\balt=)/gi, '<img alt=""'),
   );
 }
