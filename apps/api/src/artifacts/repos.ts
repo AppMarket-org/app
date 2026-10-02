@@ -5,9 +5,14 @@ export function repoNameFor(slug: string, listingId: string): string {
 	return `${slug.slice(0, 54).replace(/-+$/, "")}-${listingId.replace(/-/g, "").slice(0, 8)}`;
 }
 
-/** PRD R2: one Artifacts repo per listing. The initial write token is discarded; R3 mints scoped tokens. */
+/**
+ * PRD R2: one Artifacts repo per listing. create() also returns a write token; nothing uses it
+ * (R3 mints scoped tokens), so it is revoked at once instead of staying valid until it expires.
+ */
 export async function createListingRepo(name: string): Promise<{ name: string; remote: string }> {
 	const created = await env.ARTIFACTS.create(name);
+	using repo = await env.ARTIFACTS.get(created.name);
+	await repo.revokeToken(created.token);
 	return { name: created.name, remote: created.remote };
 }
 
@@ -30,4 +35,23 @@ export async function mintRepoToken(repoName: string, scope: "read" | "write", t
 	using repo = await env.ARTIFACTS.get(repoName);
 	const [token, info] = await Promise.all([repo.createToken(scope, ttl), repo.info()]);
 	return { id: token.id, token: token.plaintext, expiresAt: token.expiresAt, remote: info.remote };
+}
+
+/** PRD R19: live token metadata for a repo (no plaintext). */
+export async function listRepoTokens(repoName: string) {
+	using repo = await env.ARTIFACTS.get(repoName);
+	return (await repo.listTokens()).tokens;
+}
+
+export async function revokeRepoToken(repoName: string, tokenId: string): Promise<boolean> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	return repo.revokeToken(tokenId);
+}
+
+/** Revokes every active token on the repo; returns the revoked ids. */
+export async function revokeAllRepoTokens(repoName: string): Promise<string[]> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	const active = (await repo.listTokens()).tokens.filter((t) => t.state === "active");
+	await Promise.all(active.map((t) => repo.revokeToken(t.id)));
+	return active.map((t) => t.id);
 }

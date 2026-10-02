@@ -25,3 +25,18 @@ export interface RepoToken {
 	token: string;
 	expiresAt: string;
 }
+
+/** PRD R19: per-developer limit on listings that are not removed. Admins are exempt. */
+export const MAX_LISTINGS_PER_DEVELOPER = 25;
+
+/** A minted token as shown to its listing's owner or an admin (never the token itself). */
+export interface TokenRecord {
+	id: string;
+	scope: "read" | "write";
+	/** Live state from Artifacts; "unknown" if Artifacts no longer lists it. */
+	state: "active" | "expired" | "revoked" | "unknown";
+	mintedBy: { id: string; name: string };
+	createdAt: string;
+	expiresAt: string;
+	revokedAt: string | null;
+}
