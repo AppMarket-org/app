@@ -14,5 +14,12 @@
 	"observability": { "enabled": true },
 	"upload_source_maps": true,
 	// /api/*, /sitemap.xml and SSR data fetches go to the API Worker without a public hop.
-	"services": [{ "binding": "API", "service": "appmarket-api" }]
+	"services": [{ "binding": "API", "service": "appmarket-api" }],
+	// PRD R4: top level is production; `wrangler deploy --env staging` targets the staging API.
+	"env": {
+		"staging": {
+			"name": "appmarket-web-staging",
+			"services": [{ "binding": "API", "service": "appmarket-api-staging" }]
+		}
+	}
 }

@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { createRepo } from "./routes/repos.ts";
 import { sitemap } from "./routes/seo.ts";
@@ -6,7 +7,7 @@ import { createToken } from "./routes/tokens.ts";
 // appmarket.org API. The Angular web Worker forwards /api/* and /sitemap.xml here via a service binding.
 const api = new Hono();
 
-api.get("/health", (c) => c.json({ ok: true }));
+api.get("/health", (c) => c.json({ ok: true, env: env.APP_ENV }));
 
 // Phase 0 routes. Unauthenticated: localhost only, never deploy as-is (replaced by R3 + R11).
 api.post("/repos", (c) => createRepo(c.req.raw));
