@@ -1,6 +1,7 @@
 import type { CategorySlug, Listing, ListingEvent, ListingInput, ListingPage, ListingSearch, ListingState, ListingUpdate, TransitionActor, TransitionRequest } from "@appmarket/shared";
 import { slugify } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
+import { transitionUpdate } from "./transition-sql.ts";
 
 interface ListingRow {
 	id: string;
@@ -15,7 +16,9 @@ interface ListingRow {
 	owner_name: string;
 	repo_name: string | null;
 	submitted_tag: string | null;
+	submitted_commit: string | null;
 	published_tag: string | null;
+	published_commit: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -35,7 +38,9 @@ function toListing(row: ListingRow): Listing {
 		owner: { id: row.owner_id, name: row.owner_name },
 		repoName: row.repo_name,
 		submittedTag: row.submitted_tag,
+		submittedCommit: row.submitted_commit,
 		publishedTag: row.published_tag,
+		publishedCommit: row.published_commit,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -73,15 +78,18 @@ export class ListingRepository {
 		return results.map(toListing);
 	}
 
-	/** Creates a draft with a unique slug derived from the name. */
-	async create(ownerId: string, input: ListingInput): Promise<Listing> {
-		const id = crypto.randomUUID();
-		const slug = await this.uniqueSlug(slugify(input.name));
+	/** A new listing id and a slug not yet used, derived from the name. */
+	async reserve(name: string): Promise<{ id: string; slug: string }> {
+		return { id: crypto.randomUUID(), slug: await this.uniqueSlug(slugify(name)) };
+	}
+
+	/** Inserts a draft. Fails on a slug or repo name collision (UNIQUE constraints). */
+	async insert(ids: { id: string; slug: string }, ownerId: string, input: ListingInput, repoName: string): Promise<Listing> {
 		await this.db
-			.prepare("INSERT INTO listings (id, owner_id, slug, name, summary, description, category) VALUES (?, ?, ?, ?, ?, ?, ?)")
-			.bind(id, ownerId, slug, input.name, input.summary, input.description, input.category)
+			.prepare("INSERT INTO listings (id, owner_id, slug, name, summary, description, category, repo_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+			.bind(ids.id, ownerId, ids.slug, input.name, input.summary, input.description, input.category, repoName)
 			.run();
-		return (await this.findBySlug(slug))!;
+		return (await this.findBySlug(ids.slug))!;
 	}
 
 	/** Updates editable fields. The slug stays fixed so published URLs never break. */
@@ -106,23 +114,23 @@ export class ListingRepository {
 	 * listing is still in `from`, so a concurrent transition makes this return false instead of
 	 * overwriting it.
 	 */
-	async transition(listing: Listing, request: TransitionRequest, actor: { id: string; role: TransitionActor }): Promise<boolean> {
-		const sets: Record<ListingState, string> = {
-			submitted: "submitted_tag = ?1",
-			draft: "submitted_tag = NULL",
-			published: "published_tag = submitted_tag, submitted_tag = NULL, approved_by = ?2",
-			unpublished: "submitted_tag = NULL",
-			removed: "submitted_tag = NULL",
-		};
-		const tag = request.to === "submitted" ? request.tag : request.to === "published" ? listing.submittedTag : null;
+	async transition(
+		listing: Listing,
+		request: TransitionRequest,
+		actor: { id: string; role: TransitionActor },
+		/** For a submit: the commit the tag resolves to now. */
+		submittedCommit: string | null = null,
+	): Promise<boolean> {
+		const [tag, commit] =
+			request.to === "submitted" ? [request.tag, submittedCommit] : request.to === "published" ? [listing.submittedTag, listing.submittedCommit] : [null, null];
 		const note = "note" in request ? (request.note ?? null) : null;
 		const [update] = await this.db.batch([
+			(({ sql, params }) => this.db.prepare(sql).bind(...params))(transitionUpdate(listing, request, actor.id, submittedCommit)),
 			this.db
-				.prepare(`UPDATE listings SET state = ?3, ${sets[request.to]}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?4 AND state = ?5`)
-				.bind(request.to === "submitted" ? request.tag : null, actor.id, request.to, listing.id, listing.state),
-			this.db
-				.prepare("INSERT INTO listing_events (listing_id, from_state, to_state, actor_id, actor_role, tag, note) SELECT ?, ?, ?, ?, ?, ?, ? WHERE changes() > 0")
-				.bind(listing.id, listing.state, request.to, actor.id, actor.role, tag, note),
+				.prepare(
+					"INSERT INTO listing_events (listing_id, from_state, to_state, actor_id, actor_role, tag, commit_hash, note) SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE changes() > 0",
+				)
+				.bind(listing.id, listing.state, request.to, actor.id, actor.role, tag, commit, note),
 		]);
 		return update.meta.changes > 0;
 	}
@@ -133,12 +141,23 @@ export class ListingRepository {
 				`SELECT e.*, u.name AS actor_name FROM listing_events e JOIN "user" u ON u.id = e.actor_id WHERE e.listing_id = ? ORDER BY e.id DESC`,
 			)
 			.bind(listingId)
-			.all<{ from_state: ListingState; to_state: ListingState; actor_id: string; actor_name: string; actor_role: TransitionActor; tag: string | null; note: string | null; created_at: string }>();
+			.all<{
+				from_state: ListingState;
+				to_state: ListingState;
+				actor_id: string;
+				actor_name: string;
+				actor_role: TransitionActor;
+				tag: string | null;
+				commit_hash: string | null;
+				note: string | null;
+				created_at: string;
+			}>();
 		return results.map((r) => ({
 			from: r.from_state,
 			to: r.to_state,
 			actor: { id: r.actor_id, name: r.actor_name, role: r.actor_role },
 			tag: r.tag,
+			commit: r.commit_hash,
 			note: r.note,
 			createdAt: r.created_at,
 		}));

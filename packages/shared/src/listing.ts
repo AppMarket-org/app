@@ -91,10 +91,12 @@ export interface Listing {
 	state: ListingState;
 	owner: { id: string; name: string };
 	repoName: string | null;
-	/** Tag awaiting review while submitted. */
+	/** Tag awaiting review while submitted, and the commit it pointed to at submission. */
 	submittedTag: string | null;
-	/** Tag buyers get; set when an admin publishes. */
+	submittedCommit: string | null;
+	/** Tag buyers get, set when an admin publishes, pinned to the reviewed commit. */
 	publishedTag: string | null;
+	publishedCommit: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -126,6 +128,7 @@ export interface ListingEvent {
 	to: ListingState;
 	actor: { id: string; name: string; role: TransitionActor };
 	tag: string | null;
+	commit: string | null;
 	note: string | null;
 	createdAt: string;
 }
