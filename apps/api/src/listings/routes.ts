@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { createListingRepo, deleteListingRepo, repoNameFor, resolveTag } from "../artifacts/repos.ts";
 import { ListingRepository } from "./repository.ts";
 
 const listings = () => new ListingRepository(env.DB);
@@ -34,7 +35,18 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (user.role === "buyer") {
 			await env.DB.prepare(`UPDATE "user" SET role = 'developer' WHERE id = ? AND role = 'buyer'`).bind(user.id).run();
 		}
-		return c.json(await listings().create(user.id, input.data), 201);
+		// PRD R2: create the listing's Artifacts repo first; undo it if the listing cannot be saved.
+		const repo = listings();
+		const ids = await repo.reserve(input.data.name);
+		const repoName = repoNameFor(ids.slug, ids.id);
+		await createListingRepo(repoName);
+		try {
+			return c.json(await repo.insert(ids, user.id, input.data, repoName), 201);
+		} catch (error) {
+			await deleteListingRepo(repoName).catch(() => undefined);
+			if (String(error).includes("UNIQUE")) return c.json({ error: "conflict", message: "Name just taken; retry." }, 409);
+			throw error;
+		}
 	})
 	.patch("/:slug", requireRole(), async (c) => {
 		const repo = listings();
@@ -60,8 +72,14 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!actor) {
 			return c.json({ error: "transition_not_allowed", from: listing.state, to: request.data.to }, canEdit(listing, session) ? 409 : 403);
 		}
-		// TODO(R2, #9): on submit, verify the tag exists in the listing's Artifacts repo.
-		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }))) {
+		// PRD R2: a submitted tag must exist in the listing's repo; record the commit it points to.
+		let commit: string | null = null;
+		if (request.data.to === "submitted") {
+			if (!listing.repoName) return c.json({ error: "no_repo" }, 409);
+			commit = await resolveTag(listing.repoName, request.data.tag);
+			if (!commit) return c.json({ error: "tag_not_found", tag: request.data.tag }, 422);
+		}
+		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit))) {
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
 		return c.json(await repo.findBySlug(listing.slug));
