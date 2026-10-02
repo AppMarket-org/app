@@ -25,3 +25,31 @@ git -c http.extraHeader="Authorization: Bearer $ARTIFACTS_TOKEN" clone "$ARTIFAC
 7. Compare `git log -1` hashes, run `pnpm check:secrets` in each folder, stop `cf dev`.
 
 Check the dev server's printed port; the curl above assumes Vite's default.
+
+## Status
+
+Done 2026-10-01. Repo `default/appmarket-first-repo`, initial commit `a9d0f7b`.
+
+Remote: `https://aada0f21d612f647ef27d21e1c09b648.artifacts.cloudflare.net/git/default/appmarket-first-repo.git`
+
+`cf artifacts ...` CLI commands return 403 with the `cf` OAuth login even on Workers Paid; the Worker binding works. Use the routes below.
+
+## Push your own code
+
+Tokens expire (default 1 hour here). Mint a fresh one from the local Worker each time; it stays in your shell only.
+
+```sh
+pnpm dev   # in another terminal, from the repo root
+
+BODY=$(curl -s http://localhost:5173/repos/appmarket-first-repo/tokens -H 'Content-Type: application/json' -d '{"scope":"write","ttl":3600}')
+export ARTIFACTS_REMOTE=$(printf '%s' "$BODY" | jq -r .remote)
+export ARTIFACTS_TOKEN=$(printf '%s' "$BODY" | jq -r .token)
+unset BODY
+
+cd ~/path/to/your-project
+git remote add artifacts "$ARTIFACTS_REMOTE"      # once; the URL holds no credentials
+git -c http.extraHeader="Authorization: Bearer $ARTIFACTS_TOKEN" push artifacts main
+unset ARTIFACTS_TOKEN
+```
+
+Use `"scope":"read"` for clone-only access. Never put the token in the remote URL or `git config`. Stop `pnpm dev` when done.
