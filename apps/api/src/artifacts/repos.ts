@@ -55,3 +55,24 @@ export async function revokeAllRepoTokens(repoName: string): Promise<string[]> {
 	await Promise.all(active.map((t) => repo.revokeToken(t.id)));
 	return active.map((t) => t.id);
 }
+
+/** PRD R26: top-level entries of a commit's tree (for the runtime check). */
+export async function readRootEntries(repoName: string, commit: string): Promise<{ name: string; type: string }[]> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	const meta = await repo.readCommit(commit);
+	if (!meta) return [];
+	return ((await repo.readTree(meta.treeHash)) ?? []).map((e) => ({ name: e.name, type: e.type }));
+}
+
+const README_NAMES = ["README.md", "readme.md", "Readme.md", "README.markdown", "README"];
+const README_MAX_BYTES = 512 * 1024;
+
+/** PRD R24: README at a commit, as Markdown text, or null if the repo has none (or it is too large). */
+export async function readReadme(repoName: string, commit: string): Promise<string | null> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	for (const path of README_NAMES) {
+		const file = await repo.readFile({ ref: commit, path });
+		if (file) return file.size > README_MAX_BYTES ? null : file.text();
+	}
+	return null;
+}

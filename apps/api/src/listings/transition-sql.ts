@@ -1,6 +1,6 @@
 import type { Listing, ListingState, TransitionRequest } from "@appmarket/shared";
 
-const CLEAR_SUBMITTED = "submitted_tag = NULL, submitted_commit = NULL";
+const CLEAR_SUBMITTED = "submitted_tag = NULL, submitted_commit = NULL, submitted_notes = NULL";
 
 /**
  * UPDATE for a lifecycle transition, binding exactly the parameters each SET clause uses
@@ -13,7 +13,10 @@ export function transitionUpdate(
 	submittedCommit: string | null,
 ): { sql: string; params: unknown[] } {
 	const set: Record<ListingState, [string, unknown[]]> = {
-		submitted: ["submitted_tag = ?, submitted_commit = ?", [request.to === "submitted" ? request.tag : null, submittedCommit]],
+		submitted: [
+			"submitted_tag = ?, submitted_commit = ?, submitted_notes = ?",
+			request.to === "submitted" ? [request.tag, submittedCommit, request.releaseNotes] : [null, null, null],
+		],
 		draft: [CLEAR_SUBMITTED, []],
 		published: [`published_tag = submitted_tag, published_commit = submitted_commit, ${CLEAR_SUBMITTED}, approved_by = ?`, [actorId]],
 		unpublished: [CLEAR_SUBMITTED, []],

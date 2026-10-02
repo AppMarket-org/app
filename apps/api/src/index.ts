@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { auth } from "./auth/auth.ts";
 import { type AuthVariables, requireRole, sessionMiddleware } from "./auth/middleware.ts";
-import { adminListingRoutes, listingRoutes } from "./listings/routes.ts";
+import { adminListingRoutes, listingRoutes, mediaRoutes } from "./listings/routes.ts";
 import { clientIp, rateLimit } from "./rate-limit.ts";
 import { sitemap } from "./routes/seo.ts";
 
@@ -24,6 +24,7 @@ api.get("/me", requireRole(), (c) => {
 
 api.route("/listings", listingRoutes);
 api.route("/admin", adminListingRoutes);
+api.route("/media", mediaRoutes);
 
 // Phase 1: /releases (R13), /downloads (R14). /admin also goes behind Cloudflare Access at deploy (R18, R22).
 

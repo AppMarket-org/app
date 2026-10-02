@@ -11,6 +11,8 @@ export const ENVIRONMENTS = {
 		publicOrigin: "http://localhost:4200",
 		// R20: rate limiter namespace ids are account-wide; each environment gets its own block.
 		rateLimitBase: 1100,
+		// R2 bucket for screenshots (R24); local simulation in dev.
+		mediaBucket: "appmarket-media-dev",
 	},
 	staging: {
 		workerName: "appmarket-api-staging",
@@ -19,6 +21,7 @@ export const ENVIRONMENTS = {
 		database: { name: "appmarket-staging", id: undefined },
 		publicOrigin: "https://staging.appmarket.org",
 		rateLimitBase: 1200,
+		mediaBucket: "appmarket-media-staging",
 	},
 	production: {
 		workerName: "appmarket-api",
@@ -26,6 +29,7 @@ export const ENVIRONMENTS = {
 		database: { name: "appmarket-prod", id: undefined },
 		publicOrigin: "https://appmarket.org",
 		rateLimitBase: 1300,
+		mediaBucket: "appmarket-media-prod",
 	},
 } as const;
 

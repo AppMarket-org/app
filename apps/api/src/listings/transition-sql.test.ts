@@ -30,15 +30,15 @@ describe("transitionUpdate", () => {
 	});
 
 	it("binds exactly the parameters of every transition and pins the reviewed commit", () => {
-		expect(apply(db, "draft", { to: "submitted", tag: "v1" }, "c1")).toBe(1);
-		expect(row(db)).toMatchObject({ state: "submitted", submitted_tag: "v1", submitted_commit: "c1" });
+		expect(apply(db, "draft", { to: "submitted", tag: "v1", releaseNotes: "First release" }, "c1")).toBe(1);
+		expect(row(db)).toMatchObject({ state: "submitted", submitted_tag: "v1", submitted_commit: "c1", submitted_notes: "First release" });
 		expect(apply(db, "submitted", { to: "draft" })).toBe(1);
-		expect(row(db)).toMatchObject({ state: "draft", submitted_tag: null, submitted_commit: null });
-		expect(apply(db, "draft", { to: "submitted", tag: "v1" }, "c1")).toBe(1);
+		expect(row(db)).toMatchObject({ state: "draft", submitted_tag: null, submitted_commit: null, submitted_notes: null });
+		expect(apply(db, "draft", { to: "submitted", tag: "v1", releaseNotes: "" }, "c1")).toBe(1);
 		expect(apply(db, "submitted", { to: "published" })).toBe(1);
 		expect(row(db)).toMatchObject({ state: "published", published_tag: "v1", published_commit: "c1", approved_by: "a1", submitted_tag: null });
 		expect(apply(db, "published", { to: "unpublished" })).toBe(1);
-		expect(apply(db, "unpublished", { to: "submitted", tag: "v1" }, "c2")).toBe(1);
+		expect(apply(db, "unpublished", { to: "submitted", tag: "v1", releaseNotes: "" }, "c2")).toBe(1);
 		expect(row(db)).toMatchObject({ submitted_commit: "c2", published_commit: "c1" });
 		expect(apply(db, "submitted", { to: "removed" })).toBe(1);
 		expect(row(db)).toMatchObject({ state: "removed", published_commit: "c1" });
