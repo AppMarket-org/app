@@ -22,6 +22,7 @@
     "@angular/router": "^22.2.0",
     "@angular/ssr": "^22.2.0",
     "@appmarket/shared": "workspace:*",
+    "marked": "^18.0.14",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zod": "^4"

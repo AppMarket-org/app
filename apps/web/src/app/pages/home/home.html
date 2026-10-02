@@ -1,14 +1,27 @@
 <section class="hero">
   <h1>Apps you deploy to your own Cloudflare account</h1>
-  <p>Browse source-available apps, try a live preview, and deploy in one click.</p>
+  <p>Browse source-available apps, check how they run, and deploy them where you own the code, the bill and the data.</p>
   <a mat-flat-button routerLink="/search">Browse apps</a>
 </section>
 
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Featured listings</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <p>Populated from the catalog API (R1, R15).</p>
-  </mat-card-content>
-</mat-card>
+<section aria-labelledby="categories-heading">
+  <h2 id="categories-heading">Categories</h2>
+  <mat-chip-set aria-label="Categories">
+    @for (category of categories; track category.slug) {
+      <a mat-chip [routerLink]="['/category', category.slug]">{{ category.name }}</a>
+    }
+  </mat-chip-set>
+</section>
+
+<section aria-labelledby="latest-heading">
+  <h2 id="latest-heading">Latest apps</h2>
+  @if (latest().items.length > 0) {
+    <div class="grid">
+      @for (item of latest().items; track item.id) {
+        <app-listing-card [listing]="item" />
+      }
+    </div>
+  } @else {
+    <p class="empty">No apps are published yet.</p>
+  }
+</section>

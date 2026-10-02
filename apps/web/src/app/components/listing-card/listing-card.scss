@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+.card-link {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+
+  &:focus-visible mat-card,
+  &:hover mat-card {
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+mat-card {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+p {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 8px 0 12px;
+}

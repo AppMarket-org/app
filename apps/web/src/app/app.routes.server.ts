@@ -2,8 +2,9 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 
 // Hybrid rendering: SEO pages get full HTML from the server; app pages render in the browser.
 export const serverRoutes: ServerRoute[] = [
+  // Home lists the latest apps, so it renders per request.
+  { path: '', renderMode: RenderMode.Server },
   // Static content: prerendered at build time.
-  { path: '', renderMode: RenderMode.Prerender },
   {
     path: 'legal/:page',
     renderMode: RenderMode.Prerender,

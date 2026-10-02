@@ -1,0 +1,20 @@
+.markdown {
+  font: var(--mat-sys-body-large);
+  overflow-wrap: anywhere;
+
+  :is(h2, h3, h4) {
+    font: var(--mat-sys-title-large);
+    margin: 24px 0 8px;
+  }
+
+  pre {
+    overflow-x: auto;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--mat-sys-surface-container);
+  }
+
+  img {
+    max-width: 100%;
+  }
+}

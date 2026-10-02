@@ -1,33 +1,68 @@
-@if (listing(); as app) {
+@if (details(); as d) {
   <article>
-    <h1>{{ app.name }}</h1>
-    <p class="summary">{{ app.summary }}</p>
-
-    <mat-chip-set aria-label="Details">
-      <mat-chip>{{ runtimes[app.runtime].name }}</mat-chip>
-      <mat-chip>{{ categoryName(app.category) }}</mat-chip>
-      @if (app.license) {
-        <mat-chip>{{ app.license }}</mat-chip>
+    <header>
+      <h1>{{ d.listing.name }}</h1>
+      <p class="summary">{{ d.listing.summary }}</p>
+      <div class="meta">
+        <app-runtime-badge [runtime]="d.listing.runtime" />
+        <a [routerLink]="['/category', d.listing.category]">{{ categoryName(d.listing.category) }}</a>
+        <span>by {{ d.listing.owner.name }}</span>
+        @if (d.listing.publishedTag) {
+          <span>{{ d.listing.publishedTag }}</span>
+        }
+        @if (d.listing.license) {
+          <span>{{ d.listing.license }}</span>
+        }
+      </div>
+      <mat-chip-set aria-label="Platforms">
+        @for (p of d.listing.platforms; track p) {
+          <mat-chip>{{ platformName(p) }}</mat-chip>
+        }
+      </mat-chip-set>
+      @if (d.listing.state !== 'published') {
+        <p class="state" role="status">Not public: {{ d.listing.state }}</p>
       }
-      @if (app.publishedTag) {
-        <mat-chip>{{ app.publishedTag }}</mat-chip>
-      }
-    </mat-chip-set>
+    </header>
 
-    <p class="by">By {{ app.owner.name }}</p>
-
-    @if (app.state !== 'published') {
-      <p class="state" role="status">Not public: {{ app.state }}</p>
+    @if (d.screenshots.length > 0) {
+      <section class="screenshots" aria-label="Screenshots">
+        @for (shot of d.screenshots; track shot.id; let i = $index) {
+          <img [src]="shot.url" [alt]="d.listing.name + ' screenshot ' + (i + 1)" loading="lazy" decoding="async" />
+        }
+      </section>
     }
 
-    <mat-card appearance="outlined">
-      <mat-card-content>
-        <p class="description">{{ app.description || app.summary }}</p>
-      </mat-card-content>
-    </mat-card>
+    <div class="columns">
+      <section class="main" aria-label="About">
+        @if (d.readme) {
+          <app-markdown [source]="d.readme" />
+        } @else {
+          <p class="description">{{ d.listing.description || d.listing.summary }}</p>
+        }
+      </section>
+
+      <aside>
+        <app-get-code [slug]="d.listing.slug" />
+        <mat-divider />
+        <section aria-labelledby="versions-heading">
+          <h2 id="versions-heading">Versions</h2>
+          @for (v of d.versions; track v.tag + v.publishedAt) {
+            <div class="version">
+              <strong>{{ v.tag }}</strong>
+              <span class="date">{{ v.publishedAt | date: 'mediumDate' }}</span>
+              @if (v.releaseNotes) {
+                <p>{{ v.releaseNotes }}</p>
+              }
+            </div>
+          } @empty {
+            <p class="date">No published versions yet.</p>
+          }
+        </section>
+      </aside>
+    </div>
   </article>
 } @else {
-  <section class="missing">
+  <section>
     <h1>App not found</h1>
     <p>This app does not exist or is not published.</p>
     <a mat-button routerLink="/search">Browse apps</a>

@@ -1,7 +1,15 @@
-.query {
-  width: 100%;
+h1 {
+  font: var(--mat-sys-headline-medium);
 }
 
-.hint {
-  color: var(--mat-sys-on-surface-variant);
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.query {
+  flex: 1 1 280px;
 }

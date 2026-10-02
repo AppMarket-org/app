@@ -1,0 +1,26 @@
+<section class="get-code" aria-labelledby="get-code-heading">
+  <h2 id="get-code-heading">Get the code</h2>
+  @if (auth.user()) {
+    @if (token(); as t) {
+      <p>Run this within an hour. The token is shown once; do not save it in Git config or share it.</p>
+      <pre><code>{{ command() }}</code></pre>
+      <p class="hint">Expires {{ t.expiresAt }}.</p>
+    } @else {
+      <p>Clone the published source with a read-only token.</p>
+      <button mat-stroked-button type="button" [disabled]="pending()" (click)="mint()">
+        {{ pending() ? 'Creating token…' : 'Get clone command' }}
+      </button>
+      @if (pending()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Creating token" />
+      }
+      @if (error()) {
+        <p class="error" role="alert">Could not create a token. Try again in a minute.</p>
+      }
+    }
+  } @else if (auth.user() === null) {
+    <p>
+      <a [routerLink]="['/login']" [queryParams]="{ next: '/apps/' + slug() }">Sign in</a>
+      to clone the source.
+    </p>
+  }
+</section>
