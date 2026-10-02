@@ -28,6 +28,7 @@ import { checkRuntime } from "./runtime-check.ts";
 import { Screenshots } from "./screenshots.ts";
 import { TokenAudit } from "./token-audit.ts";
 import { tokenPolicy } from "./token-policy.ts";
+import { logEvent } from "../observability/log.ts";
 
 const listings = () => new ListingRepository(env.DB);
 const tokenAudit = () => new TokenAudit(env.DB);
@@ -77,7 +78,9 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const repoName = repoNameFor(ids.slug, ids.id);
 		await createListingRepo(repoName);
 		try {
-			return c.json(await repo.insert(ids, user.id, input.data, repoName), 201);
+			const created = await repo.insert(ids, user.id, input.data, repoName);
+			logEvent("repo.created", { listing: created.slug, repo: repoName, user: user.id });
+			return c.json(created, 201);
 		} catch (error) {
 			await deleteListingRepo(repoName).catch(() => undefined);
 			if (String(error).includes("UNIQUE")) return c.json({ error: "conflict", message: "Name just taken; retry." }, 409);
@@ -132,10 +135,11 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit, checks))) {
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
+		logEvent("listing.transition", { listing: listing.slug, from: listing.state, to: request.data.to, actor });
 		if (["published", "unpublished", "removed"].includes(request.data.to)) c.executionCtx.waitUntil(purgeListingPage(listing.slug));
 		// G4: generate the repo map for the newly published version (stored beside it, not committed).
 		if (request.data.to === "published" && listing.repoName && listing.submittedCommit) {
-			c.executionCtx.waitUntil(storeRepoMap(listing, listing.submittedCommit).catch((e) => console.error("repo map failed", listing.slug, e)));
+			c.executionCtx.waitUntil(storeRepoMap(listing, listing.submittedCommit).catch((e) => logEvent("repo_map.failed", { listing: listing.slug, error: e }, "error")));
 		}
 		// PRD R19: archiving a removed listing revokes every active token; no new ones are issued (token policy).
 		if (request.data.to === "removed" && listing.repoName) {
@@ -157,6 +161,7 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const { id: tokenId, ...minted } = await mintRepoToken(listing.repoName!, request.data.scope, ttl);
 		// R19: audit every mint with the token id, never the token itself.
 		await tokenAudit().recordMint({ listingId: listing.id, userId: user.id, tokenId, scope: request.data.scope, expiresAt: minted.expiresAt });
+		logEvent("token.minted", { listing: listing.slug, scope: request.data.scope, ttl, user: user.id, auditId: tokenId });
 		c.header("Cache-Control", "no-store");
 		return c.json({ scope: request.data.scope, ...minted } satisfies RepoToken, 201);
 	})

@@ -11,7 +11,8 @@
 		// Serve /legal/privacy without redirecting to /legal/privacy/, matching canonical URLs.
 		"html_handling": "drop-trailing-slash"
 	},
-	"observability": { "enabled": true },
+	// R23: logs and Issues; query strings stripped from logged URLs (OAuth codes, signed links).
+	"observability": { "enabled": true, "redact_query_string": true, "issues": { "enabled": true } },
 	"upload_source_maps": true,
 	// /api/*, /sitemap.xml and SSR data fetches go to the API Worker without a public hop.
 	"services": [{ "binding": "API", "service": "appmarket-api" }],

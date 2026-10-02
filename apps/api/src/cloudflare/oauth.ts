@@ -1,6 +1,7 @@
 import { CF_OAUTH_SCOPES, type CloudflareAccount, type CloudflareConnection } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { decryptToken, encryptToken, pkcePair, randomState } from "./crypto.ts";
+import { logEvent } from "../observability/log.ts";
 
 const AUTHORIZE_URL = "https://dash.cloudflare.com/oauth2/auth";
 const TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
@@ -112,7 +113,7 @@ async function tokenRequest(params: Record<string, string>): Promise<TokenRespon
 		body: new URLSearchParams(params),
 	});
 	if (!response.ok) {
-		console.warn("cloudflare oauth token request failed", response.status);
+		logEvent("cloudflare.token_request_failed", { status: response.status }, "warn");
 		return null;
 	}
 	return response.json() as Promise<TokenResponse>;

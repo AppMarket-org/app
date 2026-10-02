@@ -23,6 +23,15 @@ export default defineConfig(({ mode }) => {
 			compatibilityDate: "2026-10-01",
 			// Better Auth uses AsyncLocalStorage.
 			compatibilityFlags: ["nodejs_compat"],
+			// R23: logs, traces and Issues (error tracking) in Workers Observability. Query strings are
+			// stripped from logged URLs: OAuth callbacks and download links carry codes and signatures.
+			observability: {
+				enabled: true,
+				redactQueryString: true,
+				issues: { enabled: true },
+				logs: { enabled: true, invocationLogs: true },
+				traces: { enabled: true, headSamplingRate: 0.1 },
+			},
 			entrypoint,
 			exports: {
 				CiSandbox: exports.durableObject({ storage: "sqlite", container: buildContainer }),

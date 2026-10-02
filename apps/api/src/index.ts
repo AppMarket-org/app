@@ -10,6 +10,7 @@ import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
 import { downloadRoutes, listingReleaseRoutes, releaseLinkRoutes } from "./releases/routes.ts";
 import { clientIp, rateLimit } from "./rate-limit.ts";
 import { sitemap, sitemapPage } from "./routes/seo.ts";
+import { onError } from "./observability/errors.ts";
 
 // appmarket.org API. The Angular web Worker forwards /api/* and /sitemap.xml here via a service binding.
 const api = new Hono<{ Variables: AuthVariables }>();
@@ -43,7 +44,10 @@ api.route("/admin", adminReportRoutes);
 api.route("/media", mediaRoutes);
 
 
+api.onError(onError);
+
 const app = new Hono();
+app.onError(onError);
 app.route("/api", api);
 app.get("/sitemap.xml", sitemap);
 app.get("/sitemaps/:name", sitemapPage);
