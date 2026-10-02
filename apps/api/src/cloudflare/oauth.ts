@@ -5,7 +5,8 @@ import { decryptToken, encryptToken, pkcePair, randomState } from "./crypto.ts";
 const AUTHORIZE_URL = "https://dash.cloudflare.com/oauth2/auth";
 const TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
 const REVOKE_URL = "https://dash.cloudflare.com/oauth2/revoke";
-const USERINFO_URL = "https://dash.cloudflare.com/oauth2/userinfo";
+/** userinfo only returns `sub`; the email comes from the user API (user-details.read). */
+const USER_URL = "https://api.cloudflare.com/client/v4/user";
 const STATE_TTL_MINUTES = 10;
 
 const redirectUri = () => `${env.PUBLIC_ORIGIN}/api/cloudflare/callback`;
@@ -53,9 +54,9 @@ export async function completeAuthorization(userId: string, state: string, code:
 
 	const tokens = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: redirectUri(), code_verifier: row.code_verifier });
 	if (!tokens) return { ok: false, reason: "exchange_failed" };
-	const email = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${tokens.access_token}` } })
-		.then((r) => (r.ok ? (r.json() as Promise<{ email?: string }>) : {}))
-		.then((u) => (u as { email?: string }).email ?? null)
+	const email = await fetch(USER_URL, { headers: { Authorization: `Bearer ${tokens.access_token}` } })
+		.then((r) => (r.ok ? (r.json() as Promise<{ result?: { email?: string } }>) : {}))
+		.then((u) => (u as { result?: { email?: string } }).result?.email ?? null)
 		.catch(() => null);
 	await saveTokens(userId, tokens, email);
 	return { ok: true, returnTo: row.return_to };
