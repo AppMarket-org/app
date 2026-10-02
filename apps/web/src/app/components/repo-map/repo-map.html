@@ -1,0 +1,16 @@
+<mat-expansion-panel (opened)="load()">
+  <mat-expansion-panel-header>
+    <mat-panel-title>Repository map</mat-panel-title>
+  </mat-expansion-panel-header>
+  @switch (map()) {
+    @case (undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading repository map" />
+    }
+    @case (null) {
+      <p>No map for this version yet.</p>
+    }
+    @default {
+      <app-markdown [source]="map()!" />
+    }
+  }
+</mat-expansion-panel>

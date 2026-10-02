@@ -13,6 +13,7 @@ import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
 import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
 import { DomainGuide } from '../../components/domain-guide/domain-guide';
 import { Downloads } from '../../components/downloads/downloads';
+import { RepoMap } from '../../components/repo-map/repo-map';
 import { ReportDialog } from '../../components/report-dialog/report-dialog';
 import { GetCode } from '../../components/get-code/get-code';
 import { Markdown } from '../../components/markdown/markdown';
@@ -31,7 +32,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-listing',
-  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RuntimeBadge],
+  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
   templateUrl: './listing.html',
   styleUrl: './listing.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

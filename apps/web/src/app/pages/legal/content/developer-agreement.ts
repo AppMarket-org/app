@@ -14,7 +14,7 @@ To run the marketplace you grant [Legal entity name] a worldwide, non-exclusive,
 
 - store your repository and release files, and serve them to buyers (clone, download and deploy);
 - show your listing details, README and screenshots, including in search results;
-- for free listings that offer **Deploy to Cloudflare**, mirror the published version to a **public** GitHub repository so the button can deploy it.
+- build the published version and deploy it into a buyer's own Cloudflare account when the buyer asks us to.
 
 This license ends when you remove the listing, except for copies buyers already obtained and for records we must keep.
 

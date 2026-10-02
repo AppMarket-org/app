@@ -10,6 +10,7 @@ import {
 	deleteListingRepo,
 	listRepoTokens,
 	mintRepoToken,
+	listTree,
 	readFiles,
 	readReadme,
 	readRootEntries,
@@ -21,7 +22,7 @@ import {
 } from "../artifacts/repos.ts";
 import { purgeListingPage } from "../routes/seo.ts";
 import { canEdit, canView } from "./access.ts";
-import { CONTRACT_FILES, checkTemplate } from "@appmarket/template-contract";
+import { CONTRACT_FILES, buildRepoMap, checkTemplate, wranglerMain } from "@appmarket/template-contract";
 import { type ListingCheckSummary, ListingRepository } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
 import { Screenshots } from "./screenshots.ts";
@@ -132,6 +133,10 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
 		if (["published", "unpublished", "removed"].includes(request.data.to)) c.executionCtx.waitUntil(purgeListingPage(listing.slug));
+		// G4: generate the repo map for the newly published version (stored beside it, not committed).
+		if (request.data.to === "published" && listing.repoName && listing.submittedCommit) {
+			c.executionCtx.waitUntil(storeRepoMap(listing, listing.submittedCommit).catch((e) => console.error("repo map failed", listing.slug, e)));
+		}
 		// PRD R19: archiving a removed listing revokes every active token; no new ones are issued (token policy).
 		if (request.data.to === "removed" && listing.repoName) {
 			await tokenAudit().recordRevocations(listing.id, await revokeAllRepoTokens(listing.repoName), session.user.id);
@@ -180,6 +185,14 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const ids = await revokeAllRepoTokens(listing.repoName);
 		await tokenAudit().recordRevocations(listing.id, ids, session.user.id);
 		return c.json({ revoked: ids.length });
+	})
+	// G4: orientation map of the published version for agents (Markdown).
+	.get("/:slug/repo-map", async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		if (!listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const row = await env.DB.prepare("SELECT published_repo_map FROM listings WHERE id = ?").bind(listing.id).first<{ published_repo_map: string | null }>();
+		if (!row?.published_repo_map) return c.json({ error: "no_map" }, 404);
+		return c.body(row.published_repo_map, 200, { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": listing.state === "published" ? "public, max-age=300" : "private, no-store" });
 	})
 	// R16: Git remote for the owner's dashboard (no credentials in it).
 	.get("/:slug/repo", requireRole(), async (c) => {
@@ -272,3 +285,19 @@ export const mediaRoutes = new Hono<{ Variables: AuthVariables }>().get("/screen
 		"Content-Security-Policy": "default-src 'none'",
 	});
 });
+
+/** G4: builds the repo map for a published commit and stores it, unless a newer version was published meanwhile. */
+async function storeRepoMap(listing: Listing, commit: string): Promise<void> {
+	const [entries, files] = await Promise.all([listTree(listing.repoName!, commit), readFiles(listing.repoName!, commit, CONTRACT_FILES)]);
+	const map = buildRepoMap({
+		listingName: listing.name,
+		tag: listing.submittedTag ?? "",
+		commit,
+		entries,
+		packageJson: files.get("package.json"),
+		wranglerMain: wranglerMain(files),
+		manifest: listing.submittedChecks?.manifest ?? null,
+		hasAgentsMd: files.has("AGENTS.md"),
+	});
+	await env.DB.prepare("UPDATE listings SET published_repo_map = ? WHERE id = ? AND published_commit = ?").bind(map, listing.id, commit).run();
+}

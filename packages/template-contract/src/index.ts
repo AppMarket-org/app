@@ -4,6 +4,8 @@ import type { ContractIssue, ContractResult, DeployManifest, ManifestResourceTyp
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 
+export { buildRepoMap, type RepoMapInput } from "./repo-map";
+
 /** Files the contract reads, by path relative to the repo root. */
 export const CONTRACT_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml", "package.json", ".dev.vars.example", ".env.example", "AGENTS.md"] as const;
 
@@ -121,6 +123,12 @@ function checkBindings(config: Config, path: string, error: (r: string, f: strin
 	for (const [i, b] of list(isObject(config.durable_objects) ? config.durable_objects.bindings : undefined).entries()) {
 		if (typeof b.name !== "string" || typeof b.class_name !== "string") error("binding-complete", path, `durable_objects.bindings[${i}] needs \`name\` and \`class_name\`.`);
 	}
+}
+
+/** The Worker entry (`main`) from whichever Wrangler config the repo has. */
+export function wranglerMain(files: Map<string, string>): string | undefined {
+	const w = readWrangler(files);
+	return w && "config" in w && typeof w.config.main === "string" ? w.config.main : undefined;
 }
 
 /** PRD D3: resources, variables and secrets a deploy of this config involves. */
