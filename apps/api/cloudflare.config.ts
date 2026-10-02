@@ -4,7 +4,7 @@ import { CLOUDFLARE_ACCOUNT_ID, ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } 
 
 export default defineConfig(({ mode }) => {
 	const environment = resolveEnvironment(mode);
-	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket, releasesBucket, buildsBucket } = ENVIRONMENTS[environment];
+	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket, releasesBucket, buildsBucket, access } = ENVIRONMENTS[environment];
 	const rateLimit = ({ offset, limit, period }: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) =>
 		bindings.rateLimit({ namespace: String(rateLimitBase + offset), simple: { limit, period } });
 
@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => {
 			env: {
 				APP_ENV: bindings.text(environment),
 				PUBLIC_ORIGIN: bindings.text(publicOrigin),
+				// R22: Access JWT check on /api/admin (src/auth/access.ts).
+				ACCESS_TEAM_DOMAIN: bindings.text(access.teamDomain),
+				ACCESS_AUD: bindings.text(access.aud),
 				// Remote in dev so `cf dev` creates real repos on Cloudflare, not a local simulation.
 				ARTIFACTS: bindings.artifacts({ namespace: artifactsNamespace, dev: { remote: true } }),
 				ARTIFACTS_NAMESPACE: bindings.text(artifactsNamespace),

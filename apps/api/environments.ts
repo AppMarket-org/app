@@ -20,6 +20,8 @@ export const ENVIRONMENTS = {
 		releasesBucket: "appmarket-releases-dev",
 		// D6 build workspace snapshots between Workflow steps.
 		buildsBucket: "appmarket-builds-dev",
+		// R22: Cloudflare Access on /admin. Not used in development.
+		access: { teamDomain: "", aud: "" },
 	},
 	staging: {
 		workerName: "appmarket-api-staging",
@@ -33,6 +35,9 @@ export const ENVIRONMENTS = {
 		releasesBucket: "appmarket-releases-staging",
 		// D6 build workspace snapshots between Workflow steps.
 		buildsBucket: "appmarket-builds-staging",
+		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
+		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
+		access: { teamDomain: "", aud: "" },
 	},
 	production: {
 		workerName: "appmarket-api",
@@ -45,6 +50,9 @@ export const ENVIRONMENTS = {
 		releasesBucket: "appmarket-releases-prod",
 		// D6 build workspace snapshots between Workflow steps.
 		buildsBucket: "appmarket-builds-prod",
+		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
+		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
+		access: { teamDomain: "", aud: "" },
 	},
 } as const;
 

@@ -7,7 +7,7 @@
 		"build": "cf build",
 		"typecheck": "cf workers types && tsc",
 		"db:auth-schema": "auth generate --config scripts/auth-schema.ts --output migrations/0001_auth.sql -y",
-		"db:migrate": "node scripts/migrate-local.mjs",
+		"db:migrate": "node scripts/migrate.mjs",
 		"test": "vitest run",
 		"dev:login": "tsx scripts/dev-login.ts"
 	},
