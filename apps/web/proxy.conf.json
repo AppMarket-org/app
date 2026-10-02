@@ -1,4 +1,5 @@
 {
   "/api": { "target": "http://localhost:5173", "secure": false },
-  "/sitemap.xml": { "target": "http://localhost:5173", "secure": false }
+  "/sitemap.xml": { "target": "http://localhost:5173", "secure": false },
+  "/sitemaps": { "target": "http://localhost:5173", "secure": false }
 }

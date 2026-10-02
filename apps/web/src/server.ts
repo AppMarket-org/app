@@ -5,7 +5,11 @@ const angularApp = new AngularAppEngine({
 	allowedHosts: ['localhost', 'appmarket.org', 'www.appmarket.org'],
 });
 
-const API_PATHS = /^\/(api\/|sitemap\.xml$)/;
+const API_PATHS = /^\/(api\/|sitemap\.xml$|sitemaps\/)/;
+
+/** Public catalog pages cached at the edge for anonymous visitors (#45). */
+const CACHEABLE = /^\/($|apps\/[^/]+$|category\/[^/]+$|search$)/;
+const CACHE_SECONDS = 300;
 
 /**
  * Request handler used by the Angular CLI (dev-server and build) and as the Worker entry.
@@ -17,13 +21,37 @@ export const reqHandler = createRequestHandler(async (req) => {
 });
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const { pathname } = new URL(request.url);
 		if (API_PATHS.test(pathname)) {
 			return env.API.fetch(request);
 		}
 		// SSR data requests reach the API over the service binding (see app/api/server-api.ts).
 		const context = { apiFetch: (apiRequest: Request) => env.API.fetch(apiRequest) };
-		return (await angularApp.handle(request, context)) ?? new Response('Page not found.', { status: 404 });
+		const render = async () => (await angularApp.handle(request, context)) ?? new Response('Page not found.', { status: 404 });
+
+		// Anonymous GETs of catalog pages are cached; anything with a cookie (a signed-in visitor, who
+		// may see drafts) is rendered fresh and never stored.
+		const url = new URL(request.url);
+		const anonymous = request.method === 'GET' && !request.headers.has('cookie') && CACHEABLE.test(url.pathname);
+		if (!anonymous) {
+			const response = await render();
+			if (CACHEABLE.test(url.pathname)) return withHeaders(response, { 'Cache-Control': 'private, no-store', Vary: 'Cookie' });
+			return response;
+		}
+		// Workers' default cache; the DOM CacheStorage type Angular compiles against does not declare it.
+		const cache = (caches as unknown as { default: Cache }).default;
+		const key = new Request(url.toString(), { method: 'GET' });
+		const hit = await cache.match(key);
+		if (hit) return withHeaders(hit, { 'X-Cache': 'HIT' });
+		const response = withHeaders(await render(), { 'Cache-Control': `public, max-age=60, s-maxage=${CACHE_SECONDS}`, Vary: 'Cookie' });
+		if (response.status === 200) ctx.waitUntil(cache.put(key, response.clone()));
+		return withHeaders(response, { 'X-Cache': 'MISS' });
 	},
 };
+
+function withHeaders(response: Response, headers: Record<string, string>): Response {
+	const copy = new Response(response.body, response);
+	for (const [name, value] of Object.entries(headers)) copy.headers.set(name, value);
+	return copy;
+}
