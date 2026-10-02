@@ -5,7 +5,7 @@ export const ENVIRONMENTS = {
 	development: {
 		workerName: "appmarket-api-dev",
 		artifactsNamespace: "dev",
-		// Local-only ID: dev never touches a remote D1 database.
+		// Local-only ID: dev never touches a remote D1 database. Keep in sync with scripts/local-d1.json.
 		database: { name: "appmarket-dev", id: "37a21f9c-7f7d-4ea2-a13d-8a3dcc58c931" },
 		// Browser origin; `ng serve` proxies /api here, so auth cookies and OAuth callbacks use it.
 		publicOrigin: "http://localhost:4200",

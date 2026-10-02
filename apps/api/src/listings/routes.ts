@@ -1,4 +1,4 @@
-import { listingInputSchema, listingSearchSchema, listingUpdateSchema, type Listing } from "@appmarket/shared";
+import { canTransition, listingInputSchema, listingSearchSchema, listingUpdateSchema, transitionSchema, type Listing, type TransitionActor } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import type { z } from "zod";
@@ -47,9 +47,51 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!update.success) return c.json(invalid(update.error), 400);
 		await repo.update(listing.id, update.data);
 		return c.json(await repo.findBySlug(listing.slug));
+	})
+	// PRD R12: lifecycle. Owners submit a tag, withdraw, unpublish or remove; admins publish (approve).
+	.post("/:slug/transitions", requireRole(), async (c) => {
+		const repo = listings();
+		const listing = await repo.findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canView(listing, session)) return c.json({ error: "not_found" }, 404);
+		const request = transitionSchema.safeParse(await c.req.json().catch(() => null));
+		if (!request.success) return c.json(invalid(request.error), 400);
+		const actor = actorFor(listing, session, request.data.to);
+		if (!actor) {
+			return c.json({ error: "transition_not_allowed", from: listing.state, to: request.data.to }, canEdit(listing, session) ? 409 : 403);
+		}
+		// TODO(R2, #9): on submit, verify the tag exists in the listing's Artifacts repo.
+		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }))) {
+			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
+		}
+		return c.json(await repo.findBySlug(listing.slug));
+	})
+	.get("/:slug/events", requireRole(), async (c) => {
+		const repo = listings();
+		const listing = await repo.findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canEdit(listing, session)) return c.json({ error: "not_found" }, 404);
+		return c.json({ items: await repo.events(listing.id) });
+	});
+
+/** PRD R18: moderation queue. Mounted under /api/admin. */
+export const adminListingRoutes = new Hono<{ Variables: AuthVariables }>()
+	.use(requireRole("admin"))
+	.get("/listings", async (c) => {
+		const state = c.req.query("state") ?? "submitted";
+		if (!["draft", "submitted", "published", "unpublished", "removed"].includes(state)) return c.json({ error: "invalid_state" }, 400);
+		return c.json({ items: await listings().listByState(state as Listing["state"]) });
 	});
 
 type SessionLike = AuthVariables["session"];
+
+/** The role this user acts in for a transition, or null if they may not make it. Owners act as owners first. */
+function actorFor(listing: Listing, session: NonNullable<SessionLike>, to: Listing["state"]): TransitionActor | null {
+	const roles: TransitionActor[] = [];
+	if (session.user.id === listing.owner.id) roles.push("owner");
+	if (session.user.role === "admin") roles.push("admin");
+	return roles.find((role) => canTransition(listing.state, to, role)) ?? null;
+}
 
 function canEdit(listing: Listing, session: SessionLike): boolean {
 	return !!session && (session.user.id === listing.owner.id || session.user.role === "admin");

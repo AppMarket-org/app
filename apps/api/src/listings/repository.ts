@@ -1,4 +1,4 @@
-import type { CategorySlug, Listing, ListingInput, ListingPage, ListingSearch, ListingState, ListingUpdate } from "@appmarket/shared";
+import type { CategorySlug, Listing, ListingEvent, ListingInput, ListingPage, ListingSearch, ListingState, ListingUpdate, TransitionActor, TransitionRequest } from "@appmarket/shared";
 import { slugify } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 
@@ -14,6 +14,7 @@ interface ListingRow {
 	owner_id: string;
 	owner_name: string;
 	repo_name: string | null;
+	submitted_tag: string | null;
 	published_tag: string | null;
 	created_at: string;
 	updated_at: string;
@@ -33,6 +34,7 @@ function toListing(row: ListingRow): Listing {
 		state: row.state,
 		owner: { id: row.owner_id, name: row.owner_name },
 		repoName: row.repo_name,
+		submittedTag: row.submitted_tag,
 		publishedTag: row.published_tag,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
@@ -91,6 +93,55 @@ export class ListingRepository {
 			.prepare(`UPDATE listings SET ${set.map(([column]) => `${column} = ?`).join(", ")}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`)
 			.bind(...set.map(([, value]) => value), id)
 			.run();
+	}
+
+	/** Listings in one state, oldest first (moderation queue, R18). */
+	async listByState(state: ListingState): Promise<Listing[]> {
+		const { results } = await this.db.prepare(`${SELECT} WHERE l.state = ? ORDER BY l.updated_at ASC`).bind(state).all<ListingRow>();
+		return results.map(toListing);
+	}
+
+	/**
+	 * Applies a lifecycle transition and records it, atomically. The update only matches while the
+	 * listing is still in `from`, so a concurrent transition makes this return false instead of
+	 * overwriting it.
+	 */
+	async transition(listing: Listing, request: TransitionRequest, actor: { id: string; role: TransitionActor }): Promise<boolean> {
+		const sets: Record<ListingState, string> = {
+			submitted: "submitted_tag = ?1",
+			draft: "submitted_tag = NULL",
+			published: "published_tag = submitted_tag, submitted_tag = NULL, approved_by = ?2",
+			unpublished: "submitted_tag = NULL",
+			removed: "submitted_tag = NULL",
+		};
+		const tag = request.to === "submitted" ? request.tag : request.to === "published" ? listing.submittedTag : null;
+		const note = "note" in request ? (request.note ?? null) : null;
+		const [update] = await this.db.batch([
+			this.db
+				.prepare(`UPDATE listings SET state = ?3, ${sets[request.to]}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?4 AND state = ?5`)
+				.bind(request.to === "submitted" ? request.tag : null, actor.id, request.to, listing.id, listing.state),
+			this.db
+				.prepare("INSERT INTO listing_events (listing_id, from_state, to_state, actor_id, actor_role, tag, note) SELECT ?, ?, ?, ?, ?, ?, ? WHERE changes() > 0")
+				.bind(listing.id, listing.state, request.to, actor.id, actor.role, tag, note),
+		]);
+		return update.meta.changes > 0;
+	}
+
+	async events(listingId: string): Promise<ListingEvent[]> {
+		const { results } = await this.db
+			.prepare(
+				`SELECT e.*, u.name AS actor_name FROM listing_events e JOIN "user" u ON u.id = e.actor_id WHERE e.listing_id = ? ORDER BY e.id DESC`,
+			)
+			.bind(listingId)
+			.all<{ from_state: ListingState; to_state: ListingState; actor_id: string; actor_name: string; actor_role: TransitionActor; tag: string | null; note: string | null; created_at: string }>();
+		return results.map((r) => ({
+			from: r.from_state,
+			to: r.to_state,
+			actor: { id: r.actor_id, name: r.actor_name, role: r.actor_role },
+			tag: r.tag,
+			note: r.note,
+			createdAt: r.created_at,
+		}));
 	}
 
 	private async uniqueSlug(base: string): Promise<string> {
