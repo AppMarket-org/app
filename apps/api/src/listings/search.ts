@@ -6,7 +6,7 @@ export function escapeLike(value: string): string {
 }
 
 /** WHERE clause and bindings for public catalog search: published listings only. */
-export function buildSearchWhere(search: Pick<ListingSearch, "q" | "category">): { where: string; params: unknown[] } {
+export function buildSearchWhere(search: Pick<ListingSearch, "q" | "category" | "runtime">): { where: string; params: unknown[] } {
 	const clauses = ["l.state = 'published'"];
 	const params: unknown[] = [];
 	if (search.q) {
@@ -17,6 +17,10 @@ export function buildSearchWhere(search: Pick<ListingSearch, "q" | "category">):
 	if (search.category) {
 		clauses.push("l.category = ?");
 		params.push(search.category);
+	}
+	if (search.runtime) {
+		clauses.push("l.runtime = ?");
+		params.push(search.runtime);
 	}
 	return { where: clauses.join(" AND "), params };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, listingInputSchema, listingSearchSchema, slugify, transitionSchema } from "./listing";
+import { canTransition, listingInputSchema, listingSearchSchema, listingUpdateSchema, slugify, transitionSchema } from "./listing";
 import { tokenRequestSchema } from "./tokens";
 
 describe("slugify", () => {
@@ -14,11 +14,24 @@ describe("slugify", () => {
 describe("listingInputSchema", () => {
 	it("accepts a valid listing and defaults description", () => {
 		const parsed = listingInputSchema.parse({ name: "My App", summary: "Does useful things", category: "ai" });
-		expect(parsed.description).toBe("");
+		expect(parsed).toMatchObject({ description: "", runtime: "workers-js", platforms: ["workers"], license: null });
 	});
 
 	it("rejects unknown categories and short names", () => {
 		expect(listingInputSchema.safeParse({ name: "x", summary: "Does useful things", category: "nope" }).success).toBe(false);
+	});
+});
+
+describe("listingUpdateSchema", () => {
+	it("leaves omitted fields out instead of resetting them to defaults", () => {
+		expect(listingUpdateSchema.parse({ summary: "New summary text" })).toEqual({ summary: "New summary text" });
+	});
+
+	it("validates runtime, platforms and license", () => {
+		expect(listingUpdateSchema.parse({ platforms: ["pwa", "pwa", "android"] })).toEqual({ platforms: ["pwa", "android"] });
+		expect(listingUpdateSchema.safeParse({ runtime: "php" }).success).toBe(false);
+		expect(listingUpdateSchema.safeParse({ license: "MIT OR Apache-2.0" }).success).toBe(true);
+		expect(listingUpdateSchema.safeParse({ license: "<script>" }).success).toBe(false);
 	});
 });
 

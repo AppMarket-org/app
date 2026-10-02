@@ -1,5 +1,6 @@
 import {
 	MAX_LISTINGS_PER_DEVELOPER,
+	SCREENSHOT_LIMITS,
 	TOKEN_TTL,
 	canTransition,
 	listingInputSchema,
@@ -22,17 +23,22 @@ import {
 	deleteListingRepo,
 	listRepoTokens,
 	mintRepoToken,
+	readReadme,
+	readRootEntries,
 	repoNameFor,
 	resolveTag,
 	revokeAllRepoTokens,
 	revokeRepoToken,
 } from "../artifacts/repos.ts";
 import { ListingRepository } from "./repository.ts";
+import { checkRuntime } from "./runtime-check.ts";
+import { Screenshots } from "./screenshots.ts";
 import { TokenAudit } from "./token-audit.ts";
 import { tokenPolicy } from "./token-policy.ts";
 
 const listings = () => new ListingRepository(env.DB);
 const tokenAudit = () => new TokenAudit(env.DB);
+const screenshots = () => new Screenshots(env.DB, env.MEDIA);
 
 type Ctx = { Variables: AuthVariables };
 const perUser = (c: Context<Ctx>) => c.get("session")!.user.id;
@@ -113,6 +119,9 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 			if (!listing.repoName) return c.json({ error: "no_repo" }, 409);
 			commit = await resolveTag(listing.repoName, request.data.tag);
 			if (!commit) return c.json({ error: "tag_not_found", tag: request.data.tag }, 422);
+			// R26: the version must look like the declared runtime.
+			const issues = checkRuntime(listing.runtime, await readRootEntries(listing.repoName, commit));
+			if (issues.length > 0) return c.json({ error: "runtime_mismatch", runtime: listing.runtime, issues }, 422);
 		}
 		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit))) {
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
@@ -166,6 +175,46 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		await tokenAudit().recordRevocations(listing.id, ids, session.user.id);
 		return c.json({ revoked: ids.length });
 	})
+	// R24: changelog (published versions) and README of the published commit.
+	.get("/:slug/versions", async (c) => {
+		const repo = listings();
+		const listing = await repo.findBySlug(c.req.param("slug"));
+		if (!listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		return c.json({ items: await repo.versions(listing.id) });
+	})
+	.get("/:slug/readme", async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session");
+		if (!listing || !canView(listing, session)) return c.json({ error: "not_found" }, 404);
+		// Buyers see the published commit; the owner and admins can preview the submitted one.
+		const commit = c.req.query("version") === "submitted" && canEdit(listing, session) ? listing.submittedCommit : listing.publishedCommit;
+		const markdown = listing.repoName && commit ? await readReadme(listing.repoName, commit) : null;
+		if (markdown === null) return c.json({ error: "no_readme" }, 404);
+		c.header("Cache-Control", listing.state === "published" ? "public, max-age=300" : "private, no-store");
+		return c.json({ commit, markdown });
+	})
+	// R24: screenshots (owner manages; visible wherever the listing is).
+	.get("/:slug/screenshots", async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		if (!listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		return c.json({ items: await screenshots().list(listing.id) });
+	})
+	.post("/:slug/screenshots", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canView(listing, session)) return c.json({ error: "not_found" }, 404);
+		if (!canEdit(listing, session)) return c.json({ error: "forbidden" }, 403);
+		const declared = Number(c.req.header("content-length") ?? "0");
+		if (declared > SCREENSHOT_LIMITS.maxBytes) return c.json({ error: "too_large", maxBytes: SCREENSHOT_LIMITS.maxBytes }, 413);
+		const result = await screenshots().add(listing.id, await c.req.arrayBuffer());
+		return result.ok ? c.json(result.screenshot, 201) : c.json({ error: result.error }, result.status);
+	})
+	.delete("/:slug/screenshots/:id", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canEdit(listing, session)) return c.json({ error: "not_found" }, 404);
+		return (await screenshots().remove(listing.id, c.req.param("id"))) ? c.body(null, 204) : c.json({ error: "not_found" }, 404);
+	})
 	.get("/:slug/events", requireRole(), async (c) => {
 		const repo = listings();
 		const listing = await repo.findBySlug(c.req.param("slug"));
@@ -200,3 +249,19 @@ function canEdit(listing: Listing, session: SessionLike): boolean {
 function canView(listing: Listing, session: SessionLike): boolean {
 	return listing.state === "published" || canEdit(listing, session);
 }
+
+/** R24: serves screenshot bytes. Mounted at /api/media. Unpublished listings' images stay private. */
+export const mediaRoutes = new Hono<{ Variables: AuthVariables }>().get("/screenshots/:id", async (c) => {
+	const store = screenshots();
+	const row = await store.find(c.req.param("id"));
+	const listing = row && (await listings().findById(row.listing_id));
+	if (!row || !listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+	const object = await store.object(row);
+	if (!object) return c.json({ error: "not_found" }, 404);
+	return c.body(object.body, 200, {
+		"Content-Type": row.content_type,
+		"Cache-Control": listing.state === "published" ? "public, max-age=86400" : "private, no-store",
+		"X-Content-Type-Options": "nosniff",
+		"Content-Security-Policy": "default-src 'none'",
+	});
+});

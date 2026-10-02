@@ -1,4 +1,18 @@
-import type { CategorySlug, Listing, ListingEvent, ListingInput, ListingPage, ListingSearch, ListingState, ListingUpdate, TransitionActor, TransitionRequest } from "@appmarket/shared";
+import type {
+	CategorySlug,
+	Listing,
+	ListingEvent,
+	ListingInput,
+	ListingPage,
+	ListingSearch,
+	ListingState,
+	ListingUpdate,
+	ListingVersion,
+	Runtime,
+	TargetPlatform,
+	TransitionActor,
+	TransitionRequest,
+} from "@appmarket/shared";
 import { slugify } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 import { transitionUpdate } from "./transition-sql.ts";
@@ -10,6 +24,10 @@ interface ListingRow {
 	summary: string;
 	description: string;
 	category: CategorySlug;
+	runtime: Runtime;
+	platforms: string;
+	license: string | null;
+	submitted_notes: string | null;
 	price_cents: number;
 	state: ListingState;
 	owner_id: string;
@@ -33,6 +51,9 @@ function toListing(row: ListingRow): Listing {
 		summary: row.summary,
 		description: row.description,
 		category: row.category,
+		runtime: row.runtime,
+		platforms: JSON.parse(row.platforms) as TargetPlatform[],
+		license: row.license,
 		priceCents: row.price_cents,
 		state: row.state,
 		owner: { id: row.owner_id, name: row.owner_name },
@@ -70,6 +91,11 @@ export class ListingRepository {
 		return row ? toListing(row) : null;
 	}
 
+	async findById(id: string): Promise<Listing | null> {
+		const row = await this.db.prepare(`${SELECT} WHERE l.id = ?`).bind(id).first<ListingRow>();
+		return row ? toListing(row) : null;
+	}
+
 	async listByOwner(ownerId: string): Promise<Listing[]> {
 		const { results } = await this.db
 			.prepare(`${SELECT} WHERE l.owner_id = ? AND l.state != 'removed' ORDER BY l.updated_at DESC`)
@@ -86,15 +112,25 @@ export class ListingRepository {
 	/** Inserts a draft. Fails on a slug or repo name collision (UNIQUE constraints). */
 	async insert(ids: { id: string; slug: string }, ownerId: string, input: ListingInput, repoName: string): Promise<Listing> {
 		await this.db
-			.prepare("INSERT INTO listings (id, owner_id, slug, name, summary, description, category, repo_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-			.bind(ids.id, ownerId, ids.slug, input.name, input.summary, input.description, input.category, repoName)
+			.prepare(
+				"INSERT INTO listings (id, owner_id, slug, name, summary, description, category, runtime, platforms, license, repo_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			)
+			.bind(ids.id, ownerId, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, repoName)
 			.run();
 		return (await this.findBySlug(ids.slug))!;
 	}
 
 	/** Updates editable fields. The slug stays fixed so published URLs never break. */
 	async update(id: string, update: ListingUpdate): Promise<void> {
-		const columns = { name: update.name, summary: update.summary, description: update.description, category: update.category };
+		const columns = {
+			name: update.name,
+			summary: update.summary,
+			description: update.description,
+			category: update.category,
+			runtime: update.runtime,
+			platforms: update.platforms && JSON.stringify(update.platforms),
+			license: update.license,
+		};
 		const set = Object.entries(columns).filter(([, value]) => value !== undefined);
 		if (set.length === 0) return;
 		await this.db
@@ -130,6 +166,7 @@ export class ListingRepository {
 		const [tag, commit] =
 			request.to === "submitted" ? [request.tag, submittedCommit] : request.to === "published" ? [listing.submittedTag, listing.submittedCommit] : [null, null];
 		const note = "note" in request ? (request.note ?? null) : null;
+		const submittedNotes = request.to === "published" ? await this.submittedNotes(listing.id) : null;
 		const [update] = await this.db.batch([
 			(({ sql, params }) => this.db.prepare(sql).bind(...params))(transitionUpdate(listing, request, actor.id, submittedCommit)),
 			this.db
@@ -137,6 +174,16 @@ export class ListingRepository {
 					"INSERT INTO listing_events (listing_id, from_state, to_state, actor_id, actor_role, tag, commit_hash, note) SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE changes() > 0",
 				)
 				.bind(listing.id, listing.state, request.to, actor.id, actor.role, tag, commit, note),
+			// R24: publishing adds the reviewed version to the changelog.
+			...(request.to === "published"
+				? [
+						this.db
+							.prepare(
+								"INSERT INTO listing_versions (listing_id, tag, commit_hash, release_notes, published_by) SELECT ?, ?, ?, ?, ? WHERE changes() > 0",
+							)
+							.bind(listing.id, listing.submittedTag, listing.submittedCommit, submittedNotes ?? "", actor.id),
+					]
+				: []),
 		]);
 		return update.meta.changes > 0;
 	}
@@ -167,6 +214,19 @@ export class ListingRepository {
 			note: r.note,
 			createdAt: r.created_at,
 		}));
+	}
+
+	private async submittedNotes(listingId: string): Promise<string | null> {
+		return (await this.db.prepare("SELECT submitted_notes FROM listings WHERE id = ?").bind(listingId).first<{ submitted_notes: string | null }>())?.submitted_notes ?? null;
+	}
+
+	/** PRD R24: published versions, newest first (the changelog). */
+	async versions(listingId: string): Promise<ListingVersion[]> {
+		const { results } = await this.db
+			.prepare("SELECT tag, commit_hash, release_notes, published_at FROM listing_versions WHERE listing_id = ? ORDER BY id DESC LIMIT 100")
+			.bind(listingId)
+			.all<{ tag: string; commit_hash: string; release_notes: string; published_at: string }>();
+		return results.map((r) => ({ tag: r.tag, commit: r.commit_hash, releaseNotes: r.release_notes, publishedAt: r.published_at }));
 	}
 
 	private async uniqueSlug(base: string): Promise<string> {

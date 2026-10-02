@@ -4,7 +4,7 @@ import { ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } from "./environments.ts
 
 export default defineConfig(({ mode }) => {
 	const environment = resolveEnvironment(mode);
-	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase } = ENVIRONMENTS[environment];
+	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket } = ENVIRONMENTS[environment];
 	const rateLimit = ({ offset, limit, period }: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) =>
 		bindings.rateLimit({ namespace: String(rateLimitBase + offset), simple: { limit, period } });
 
@@ -34,7 +34,8 @@ export default defineConfig(({ mode }) => {
 				RL_TOKENS: rateLimit(RATE_LIMITS.TOKENS),
 				RL_LISTING_CREATE: rateLimit(RATE_LIMITS.LISTING_CREATE),
 				RL_SIGN_IN: rateLimit(RATE_LIMITS.SIGN_IN),
-				// Phase 1: RELEASES (R2, R5/R13).
+				// R24 screenshots. Release binaries (R13) get their own bucket.
+				MEDIA: bindings.r2({ name: mediaBucket }),
 			},
 		},
 	};
