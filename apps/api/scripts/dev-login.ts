@@ -37,7 +37,8 @@ const test = (await auth.$context).test;
 
 const existing = await (await auth.$context).internalAdapter.findUserByEmail(email);
 const user = existing?.user ?? (await test.saveUser(test.createUser({ email, name: email.split("@")[0], role })));
-if (existing && existing.user.role !== role) {
+// The internal adapter's return type omits additional fields such as role.
+if (existing && (existing.user as { role?: string }).role !== role) {
 	await (await auth.$context).internalAdapter.updateUser(user.id, { role });
 }
 const { headers } = await test.login({ userId: user.id });
