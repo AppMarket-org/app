@@ -1,10 +1,27 @@
 h1 {
   font: var(--mat-sys-headline-large);
-  margin: 0 0 12px;
+  margin: 0 0 8px;
 }
 
-.actions {
-  display: flex;
-  gap: 12px;
-  margin: 24px 0;
+.summary {
+  font: var(--mat-sys-body-large);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 16px;
+}
+
+.by {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.state {
+  color: var(--mat-sys-error);
+}
+
+.description {
+  white-space: pre-line;
+}
+
+mat-card {
+  margin-top: 24px;
 }

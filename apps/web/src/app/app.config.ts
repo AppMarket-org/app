@@ -1,12 +1,17 @@
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { serverApiInterceptor } from './api/server-api';
 import { routes } from './app.routes';
-import { provideClientHydration } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideHttpClient(withFetch()), 
+  providers: [
+    // The interceptor only acts during SSR (see api/server-api.ts).
+    provideHttpClient(withFetch(), withInterceptors([serverApiInterceptor])),
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes), provideClientHydration()
-  ]
+    provideRouter(routes, withComponentInputBinding()),
+    // Server responses to GET requests are transferred to the browser, so hydration does not refetch.
+    provideClientHydration(withEventReplay()),
+  ],
 };
