@@ -36,25 +36,28 @@ Remote: `https://aada0f21d612f647ef27d21e1c09b648.artifacts.cloudflare.net/git/d
 
 ## Push your own code
 
-Since R4, `cf dev` uses the `dev` Artifacts namespace (staging: `staging`, production: `prod`; see `apps/api/environments.ts`). The Phase 0 test repo above stays in `default`, which no environment uses. Create your own repo in `dev` once, then mint a fresh token each time you push. Tokens stay in your shell only.
+Since R3 (#10) the unauthenticated Phase 0 routes are gone. Every repo belongs to a listing, and tokens come from a signed-in route: write for the listing owner only, read for owner/admin (or anyone signed in once published). Lifetimes default to 1 hour (max 8 h write, 24 h read). Every mint is audited by token id; the token itself is returned once and never stored.
+
+Locally (`dev` namespace), sign in without OAuth using `dev:login` (see [auth setup](auth-setup.md)):
 
 ```sh
-pnpm --filter @appmarket/api dev   # in another terminal, from the repo root
-REPO=my-app                        # letters, digits, . _ - ; unique per namespace
+pnpm --filter @appmarket/api dev        # in another terminal
+COOKIE=$(pnpm -s --filter @appmarket/api dev:login you@example.test developer)
 
-# Once: create the repo (response includes a write token)
-BODY=$(curl -s http://localhost:5173/api/repos -H 'Content-Type: application/json' -d "{\"name\":\"$REPO\"}")
-# Later pushes: mint a fresh token instead
-BODY=$(curl -s http://localhost:5173/api/repos/$REPO/tokens -H 'Content-Type: application/json' -d '{"scope":"write","ttl":3600}')
+# Once: create a listing; its Artifacts repo is created with it
+SLUG=$(curl -s http://localhost:5173/api/listings -H "Cookie: $COOKIE" -H 'Content-Type: application/json' \
+  -d '{"name":"My App","summary":"What it does in a sentence","category":"developer-tools"}' | jq -r .slug)
 
+# Each push: mint a fresh write token
+BODY=$(curl -s http://localhost:5173/api/listings/$SLUG/tokens -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{"scope":"write"}')
 export ARTIFACTS_REMOTE=$(printf '%s' "$BODY" | jq -r .remote)
 export ARTIFACTS_TOKEN=$(printf '%s' "$BODY" | jq -r .token)
 unset BODY
 
 cd ~/path/to/your-project
 git remote add artifacts "$ARTIFACTS_REMOTE"      # once; the URL holds no credentials
-git -c http.extraHeader="Authorization: Bearer $ARTIFACTS_TOKEN" push artifacts main
+git -c http.extraHeader="Authorization: Bearer $ARTIFACTS_TOKEN" push artifacts main --tags
 unset ARTIFACTS_TOKEN
 ```
 
-Use `"scope":"read"` for clone-only access. Never put the token in the remote URL or `git config`. Stop the dev server when done.
+To publish: `POST /api/listings/$SLUG/transitions` with `{"to":"submitted","tag":"v1.0.0"}`; an admin approves with `{"to":"published"}`. Never put the token in the remote URL or `git config` (`pnpm check:secrets` catches any `art_v*_` token there). The Phase 0 test repo stays in the unused `default` namespace.

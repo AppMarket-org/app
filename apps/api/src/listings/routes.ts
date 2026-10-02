@@ -1,10 +1,23 @@
-import { canTransition, listingInputSchema, listingSearchSchema, listingUpdateSchema, transitionSchema, type Listing, type TransitionActor } from "@appmarket/shared";
+import {
+	TOKEN_TTL,
+	canTransition,
+	listingInputSchema,
+	listingSearchSchema,
+	listingUpdateSchema,
+	tokenRequestSchema,
+	transitionSchema,
+	type Listing,
+	type RepoToken,
+	type Role,
+	type TransitionActor,
+} from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { createListingRepo, deleteListingRepo, repoNameFor, resolveTag } from "../artifacts/repos.ts";
+import { createListingRepo, deleteListingRepo, mintRepoToken, repoNameFor, resolveTag } from "../artifacts/repos.ts";
 import { ListingRepository } from "./repository.ts";
+import { tokenPolicy } from "./token-policy.ts";
 
 const listings = () => new ListingRepository(env.DB);
 
@@ -83,6 +96,25 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
 		return c.json(await repo.findBySlug(listing.slug));
+	})
+	// PRD R3: short-lived, repo-scoped Git tokens. Write for the owner only; read once published.
+	.post("/:slug/tokens", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const user = c.get("session")!.user;
+		if (!listing) return c.json({ error: "not_found" }, 404);
+		const request = tokenRequestSchema.safeParse(await c.req.json().catch(() => ({})));
+		if (!request.success) return c.json(invalid(request.error), 400);
+		const decision = tokenPolicy(listing, { id: user.id, role: user.role as Role }, request.data.scope);
+		if (!decision.allowed) return c.json({ error: decision.error }, decision.status);
+
+		const ttl = request.data.ttl ?? TOKEN_TTL.default;
+		const { id: tokenId, ...minted } = await mintRepoToken(listing.repoName!, request.data.scope, ttl);
+		// R19: audit every mint with the token id, never the token itself.
+		await env.DB.prepare("INSERT INTO token_audit (listing_id, user_id, scope, expires_at, token_id) VALUES (?, ?, ?, ?, ?)")
+			.bind(listing.id, user.id, request.data.scope, minted.expiresAt, tokenId)
+			.run();
+		c.header("Cache-Control", "no-store");
+		return c.json({ scope: request.data.scope, ...minted } satisfies RepoToken, 201);
 	})
 	.get("/:slug/events", requireRole(), async (c) => {
 		const repo = listings();
