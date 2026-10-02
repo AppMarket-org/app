@@ -12,11 +12,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
-import { canTransition, type Listing, type ListingEvent, type ListingState, type RepoToken, type TransitionRequest } from '@appmarket/shared';
+import { SCREENSHOT_LIMITS, canTransition, type Listing, type ListingEvent, type ListingInput, type ListingState, type RepoToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { Developer } from '../../api/developer';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
+import { ListingForm } from '../../components/listing-form/listing-form';
+import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
+import { describeListingError } from '../listing-errors';
 import { STATE_LABELS } from '../state-labels';
 
 /** PRD R16/R12: one listing's repo, push token, version submission, lifecycle actions and history. */
@@ -34,6 +37,8 @@ import { STATE_LABELS } from '../state-labels';
     MatInputModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    ListingForm,
+    RuntimeBadge,
   ],
   templateUrl: './manage-listing.html',
   styleUrl: './manage-listing.scss',
@@ -56,6 +61,14 @@ export class ManageListing {
   protected readonly busy = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly submitIssues = signal<string[]>([]);
+  protected readonly screenshots = signal<Screenshot[]>([]);
+  protected readonly tokens = signal<TokenRecord[]>([]);
+  protected readonly editing = signal(false);
+  protected readonly detailsError = signal<string | null>(null);
+  protected readonly detailsFieldErrors = signal<Record<string, string>>({});
+  protected readonly shotLimits = SCREENSHOT_LIMITS;
+  protected readonly maxShotMb = SCREENSHOT_LIMITS.maxBytes / 1024 / 1024;
+  protected readonly activeTokens = computed(() => this.tokens().filter((t) => t.state === 'active').length);
 
   protected readonly canSubmit = computed(() => this.can('submitted'));
   protected readonly pushCommands = computed(() => {
@@ -88,7 +101,84 @@ export class ManageListing {
   }
 
   protected async createPushToken(): Promise<void> {
-    await this.run(async () => this.token.set(await firstValueFrom(this.api.writeToken(this.slug()))), 'Could not create a push token.');
+    await this.run(async () => {
+      this.token.set(await firstValueFrom(this.api.writeToken(this.slug())));
+      this.tokens.set(await firstValueFrom(this.api.tokens(this.slug())));
+    }, 'Could not create a push token.');
+  }
+
+  protected async saveDetails(input: ListingInput): Promise<void> {
+    this.busy.set(true);
+    this.detailsError.set(null);
+    try {
+      this.listing.set(await firstValueFrom(this.api.update(this.slug(), input)));
+      this.editing.set(false);
+      this.snackBar.open('Details saved', undefined, { duration: 3000 });
+    } catch (error) {
+      const { message, fieldErrors } = describeListingError(error);
+      this.detailsError.set(message);
+      this.detailsFieldErrors.set(fieldErrors);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async upload(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (file.size > SCREENSHOT_LIMITS.maxBytes) {
+      this.snackBar.open(`Screenshots can be at most ${this.maxShotMb} MB.`, 'OK', { duration: 5000 });
+      return;
+    }
+    this.busy.set(true);
+    try {
+      const shot = await firstValueFrom(this.api.uploadScreenshot(this.slug(), file));
+      this.screenshots.update((list) => [...list, shot]);
+    } catch (error) {
+      const code = error instanceof HttpErrorResponse ? (error.error as { error?: string } | null)?.error : undefined;
+      const messages: Record<string, string> = {
+        unsupported_image: 'Use a PNG, JPEG or WebP image.',
+        too_large: `Screenshots can be at most ${this.maxShotMb} MB.`,
+        too_many: `A listing can have at most ${SCREENSHOT_LIMITS.maxCount} screenshots.`,
+      };
+      this.snackBar.open(messages[code ?? ''] ?? 'Upload failed. Please try again.', 'OK', { duration: 5000 });
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async deleteScreenshot(id: string): Promise<void> {
+    await this.run(async () => {
+      await firstValueFrom(this.api.deleteScreenshot(this.slug(), id));
+      this.screenshots.update((list) => list.filter((s) => s.id !== id));
+    }, 'Could not delete the screenshot.');
+  }
+
+  protected async revoke(id: string): Promise<void> {
+    await this.run(async () => {
+      await firstValueFrom(this.api.revokeToken(this.slug(), id));
+      this.tokens.set(await firstValueFrom(this.api.tokens(this.slug())));
+      if (this.token()) this.token.set(null);
+    }, 'Could not revoke the token.');
+  }
+
+  protected async revokeAll(): Promise<void> {
+    const confirmed = await firstValueFrom(
+      this.dialog
+        .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, {
+          data: { title: 'Revoke all tokens?', message: 'Every push and clone token for this repository stops working right away. Use this if a token may have leaked.', confirm: 'Revoke all' },
+        })
+        .afterClosed(),
+    );
+    if (!confirmed) return;
+    await this.run(async () => {
+      const { revoked } = await firstValueFrom(this.api.revokeAllTokens(this.slug()));
+      this.tokens.set(await firstValueFrom(this.api.tokens(this.slug())));
+      this.token.set(null);
+      this.snackBar.open(`${revoked} ${revoked === 1 ? 'token' : 'tokens'} revoked`, undefined, { duration: 3000 });
+    }, 'Could not revoke the tokens.');
   }
 
   protected async submitVersion(formDirective: FormGroupDirective): Promise<void> {
@@ -133,9 +223,13 @@ export class ManageListing {
     try {
       const listing = await firstValueFrom(this.api.listing(this.slug()));
       this.listing.set(listing);
-      const [repo, events] = await firstValueFrom(forkJoin([this.api.repo(this.slug()), this.api.events(this.slug())]));
+      const [repo, events, screenshots, tokens] = await firstValueFrom(
+        forkJoin([this.api.repo(this.slug()), this.api.events(this.slug()), this.api.screenshots(this.slug()), this.api.tokens(this.slug())]),
+      );
       this.remote.set(repo.remote);
       this.events.set(events);
+      this.screenshots.set(screenshots);
+      this.tokens.set(tokens);
     } catch {
       this.loadError.set(true);
     }

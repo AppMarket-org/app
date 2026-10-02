@@ -41,9 +41,103 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
   gap: 16px;
   margin-top: 16px;
+
+  // Grid items default to their content's width; long remotes and commands must scroll inside instead.
+  > * {
+    min-width: 0;
+  }
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+
+  dt {
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.shots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  figure {
+    position: relative;
+    margin: 0;
+
+    img {
+      display: block;
+      height: 120px;
+      border-radius: 8px;
+      border: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    button {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: var(--mat-sys-surface);
+    }
+  }
+}
+
+.tokens {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font: var(--mat-sys-body-medium);
+
+  th,
+  td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  th {
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.token-state {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-small);
+  background: var(--mat-sys-surface-container-high);
+
+  &.active {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .history {

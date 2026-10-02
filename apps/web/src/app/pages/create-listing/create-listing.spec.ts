@@ -1,62 +1,35 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import type { ListingInput } from '@appmarket/shared';
 import { CreateListing } from './create-listing';
 
-/** The protected members the tests drive. */
-interface Internals {
-  form: { patchValue(value: object): void; controls: Record<string, { getError(key: string): unknown }> };
-  submit(): Promise<void>;
-  serverError(): string | null;
-}
-
-function setup() {
-  TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
-  const fixture = TestBed.createComponent(CreateListing);
-  fixture.detectChanges();
-  const cmp = fixture.componentInstance as unknown as Internals;
-  cmp.form.patchValue({ name: 'My App', summary: 'Does useful things', category: 'ai', license: 'MIT' });
-  return { fixture, cmp, http: TestBed.inject(HttpTestingController) };
-}
+const input: ListingInput = { name: 'My App', summary: 'Does useful things', description: '', category: 'ai', runtime: 'workers-js', platforms: ['workers'], license: 'MIT' };
 
 describe('CreateListing', () => {
-  it('posts the listing and opens it', async () => {
-    const { cmp, http } = setup();
+  beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }));
+
+  it('creates the draft and opens its dashboard page', async () => {
+    const cmp = TestBed.createComponent(CreateListing).componentInstance as unknown as { create(i: ListingInput): Promise<void> };
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const done = cmp.submit();
-    const req = http.expectOne('/api/listings');
-    expect(req.request.body).toMatchObject({ name: 'My App', category: 'ai', runtime: 'workers-js', platforms: ['workers'], license: 'MIT' });
+    const done = cmp.create(input);
+    const req = TestBed.inject(HttpTestingController).expectOne('/api/listings');
+    expect(req.request.body).toEqual(input);
     req.flush({ slug: 'my-app' });
     await done;
-    expect(navigate).toHaveBeenCalledWith(['/apps', 'my-app']);
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/listings', 'my-app']);
   });
 
-  it('puts server validation messages on the fields', async () => {
-    const { cmp, http } = setup();
-    const done = cmp.submit();
-    http.expectOne('/api/listings').flush({ error: 'invalid', issues: [{ path: 'summary', message: 'Too short' }] }, { status: 400, statusText: 'Bad Request' });
+  it('passes server field errors to the form', async () => {
+    const fixture = TestBed.createComponent(CreateListing);
+    const cmp = fixture.componentInstance as unknown as { create(i: ListingInput): Promise<void>; fieldErrors(): Record<string, string>; errorMessage(): string | null };
+    const done = cmp.create(input);
+    TestBed.inject(HttpTestingController)
+      .expectOne('/api/listings')
+      .flush({ error: 'invalid', issues: [{ path: 'summary', message: 'Too short' }] }, { status: 400, statusText: 'Bad Request' });
     await done;
-    expect(cmp.form.controls['summary']!.getError('server')).toBe('Too short');
-    expect(cmp.serverError()).toBe('Please fix the highlighted fields.');
-  });
-
-  it('explains the listing limit and rate limiting', async () => {
-    const { cmp, http } = setup();
-    let done = cmp.submit();
-    http.expectOne('/api/listings').flush({ error: 'quota_exceeded', limit: 25 }, { status: 409, statusText: 'Conflict' });
-    await done;
-    expect(cmp.serverError()).toContain('limit of 25 listings');
-    done = cmp.submit();
-    http.expectOne('/api/listings').flush({ error: 'rate_limited' }, { status: 429, statusText: 'Too Many Requests' });
-    await done;
-    expect(cmp.serverError()).toContain('Wait a minute');
-  });
-
-  it('does not post an invalid form', async () => {
-    const { cmp, http } = setup();
-    cmp.form.patchValue({ license: 'not a license!' });
-    await cmp.submit();
-    http.expectNone('/api/listings');
+    expect(cmp.fieldErrors()).toEqual({ summary: 'Too short' });
+    expect(cmp.errorMessage()).toBe('Please fix the highlighted fields.');
   });
 });
