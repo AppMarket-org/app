@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./listing";
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
+import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
 
 const runtimeKeys = Object.keys(RUNTIMES) as [Runtime, ...Runtime[]];
@@ -65,7 +66,8 @@ export const gitTagSchema = z
 export const transitionSchema = z.discriminatedUnion("to", [
 	z.object({ to: z.literal("submitted"), tag: gitTagSchema, releaseNotes: z.string().trim().max(10_000).default("") }),
 	z.object({ to: z.literal("published"), note: z.string().max(500).optional() }),
-	z.object({ to: z.literal("draft") }),
+	// Owners withdraw; admins request changes, which needs a note (enforced by the API).
+	z.object({ to: z.literal("draft"), note: z.string().trim().max(500).optional() }),
 	z.object({ to: z.literal("unpublished"), note: z.string().max(500).optional() }),
 	z.object({ to: z.literal("removed"), note: z.string().max(500).optional() }),
 ]);
@@ -102,3 +104,11 @@ export const releaseUploadSchema = z.object({
 		.regex(/^[0-9a-f]{64}$/, "SHA-256 as 64 hex characters"),
 });
 export type ReleaseUpload = z.infer<typeof releaseUploadSchema>;
+
+/** PRD R18: a visitor's report about a listing. */
+export const reportInputSchema = z.object({
+	reason: z.enum(Object.keys(REPORT_REASONS) as [ReportReason, ...ReportReason[]]),
+	details: z.string().trim().min(10).max(5000),
+	contact: z.string().trim().email().max(200).nullable().default(null),
+});
+export type ReportInput = z.infer<typeof reportInputSchema>;

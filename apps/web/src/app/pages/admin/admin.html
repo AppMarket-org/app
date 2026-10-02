@@ -1,7 +1,100 @@
 <h1>Moderation</h1>
 
-<mat-card appearance="outlined">
-  <mat-card-content>
-    <p>Approval queue and takedowns (R18). Protected by Cloudflare Access.</p>
-  </mat-card-content>
-</mat-card>
+@if (busy()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Working" />
+}
+
+<mat-tab-group>
+  <mat-tab [label]="'Review queue (' + (queue()?.length ?? 0) + ')'">
+    <div class="tab">
+      @for (l of queue(); track l.id) {
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ l.name }}</mat-card-title>
+            <mat-card-subtitle>by {{ l.owner.name }} · {{ l.submittedTag }} · commit {{ l.submittedCommit?.slice(0, 12) }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ l.summary }}</p>
+            <app-runtime-badge [runtime]="l.runtime" />
+            <mat-accordion>
+              <mat-expansion-panel (opened)="loadReadme(l.slug)">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>README at the submitted commit</mat-panel-title>
+                </mat-expansion-panel-header>
+                @if (readmes()[l.slug]; as md) {
+                  <app-markdown [source]="md" />
+                } @else if (l.slug in readmes()) {
+                  <p>No README in this version.</p>
+                } @else {
+                  <mat-progress-bar mode="indeterminate" aria-label="Loading README" />
+                }
+              </mat-expansion-panel>
+            </mat-accordion>
+          </mat-card-content>
+          <mat-card-actions align="end">
+            <a mat-button [routerLink]="['/apps', l.slug]">Open listing</a>
+            <button mat-button type="button" [disabled]="busy()" (click)="requestChanges(l)">Request changes</button>
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="approve(l)">Publish</button>
+          </mat-card-actions>
+        </mat-card>
+      } @empty {
+        <p class="empty">Nothing is waiting for review.</p>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab [label]="'Published (' + (published()?.length ?? 0) + ')'">
+    <div class="tab">
+      @for (l of published(); track l.id) {
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ l.name }}</mat-card-title>
+            <mat-card-subtitle>by {{ l.owner.name }} · live {{ l.publishedTag }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-actions align="end">
+            <a mat-button [routerLink]="['/apps', l.slug]">Open listing</a>
+            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="takeDown(l, 'unpublished')">Unpublish</button>
+            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="takeDown(l, 'removed')">Remove</button>
+          </mat-card-actions>
+        </mat-card>
+      } @empty {
+        <p class="empty">No published listings.</p>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab [label]="'Reports' + (reportStatus() === 'open' && reports()?.length ? ' (' + reports()!.length + ')' : '')">
+    <div class="tab">
+      <mat-button-toggle-group [value]="reportStatus()" (change)="showReports($event.value)" aria-label="Report status">
+        <mat-button-toggle value="open">Open</mat-button-toggle>
+        <mat-button-toggle value="resolved">Resolved</mat-button-toggle>
+      </mat-button-toggle-group>
+      @for (r of reports(); track r.id) {
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ reasons[r.reason] }}</mat-card-title>
+            <mat-card-subtitle>{{ r.listing.name }} ({{ r.listing.state }}) · {{ r.createdAt | date: 'medium' }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p class="details">{{ r.details }}</p>
+            @if (r.contact) {
+              <p class="muted">Contact: {{ r.contact }}</p>
+            }
+            @if (r.resolution) {
+              <mat-chip-set aria-label="Resolution"><mat-chip>{{ r.resolution }}</mat-chip></mat-chip-set>
+            }
+          </mat-card-content>
+          <mat-card-actions align="end">
+            <a mat-button [routerLink]="['/apps', r.listing.slug]">Open listing</a>
+            @if (!r.resolvedAt) {
+              <button mat-button type="button" [disabled]="busy()" (click)="dismiss(r)">Dismiss</button>
+              <button mat-button type="button" class="danger" [disabled]="busy() || r.listing.state !== 'published'" (click)="takeDownReported(r)">Take down</button>
+            }
+          </mat-card-actions>
+        </mat-card>
+      } @empty {
+        <p class="empty">No {{ reportStatus() }} reports.</p>
+      }
+    </div>
+  </mat-tab>
+</mat-tab-group>

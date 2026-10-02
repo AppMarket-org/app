@@ -10,7 +10,8 @@ export type TransitionActor = "owner" | "admin";
  */
 const TRANSITIONS: Record<ListingState, Partial<Record<ListingState, readonly TransitionActor[]>>> = {
 	draft: { submitted: ["owner"], removed: ["owner", "admin"] },
-	submitted: { draft: ["owner"], published: ["admin"], removed: ["owner", "admin"] },
+	// Admins send a submission back to draft to request changes (with a note).
+	submitted: { draft: ["owner", "admin"], published: ["admin"], removed: ["owner", "admin"] },
 	published: { unpublished: ["owner", "admin"], removed: ["owner", "admin"] },
 	unpublished: { submitted: ["owner"], removed: ["owner", "admin"] },
 	removed: {},

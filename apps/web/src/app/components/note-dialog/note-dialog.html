@@ -1,0 +1,13 @@
+<h2 mat-dialog-title>{{ data.title }}</h2>
+<mat-dialog-content>
+  <p>{{ data.message }}</p>
+  <mat-form-field appearance="outline" class="note">
+    <mat-label>{{ data.label }}</mat-label>
+    <textarea matInput [formControl]="note" rows="4" maxlength="500"></textarea>
+    <mat-error>{{ data.required ? 'A note is required.' : 'At most 500 characters.' }}</mat-error>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancel</button>
+  <button mat-flat-button type="button" [class.danger]="data.danger" (click)="confirm()">{{ data.confirm }}</button>
+</mat-dialog-actions>

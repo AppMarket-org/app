@@ -49,6 +49,11 @@ describe("canTransition", () => {
 		expect(canTransition("draft", "published", "admin")).toBe(false);
 	});
 
+	it("lets admins send a submission back to draft (request changes)", () => {
+		expect(canTransition("submitted", "draft", "admin")).toBe(true);
+		expect(canTransition("published", "draft", "admin")).toBe(false);
+	});
+
 	it("lets owners submit, withdraw and resubmit", () => {
 		expect(canTransition("draft", "submitted", "owner")).toBe(true);
 		expect(canTransition("submitted", "draft", "owner")).toBe(true);
