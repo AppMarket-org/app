@@ -3,9 +3,7 @@ import { Hono } from "hono";
 import { auth } from "./auth/auth.ts";
 import { type AuthVariables, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminListingRoutes, listingRoutes } from "./listings/routes.ts";
-import { createRepo } from "./routes/repos.ts";
 import { sitemap } from "./routes/seo.ts";
-import { createToken } from "./routes/tokens.ts";
 
 // appmarket.org API. The Angular web Worker forwards /api/* and /sitemap.xml here via a service binding.
 const api = new Hono<{ Variables: AuthVariables }>();
@@ -21,10 +19,6 @@ api.get("/me", requireRole(), (c) => {
 	const { user } = c.get("session")!;
 	return c.json({ id: user.id, name: user.name, email: user.email, image: user.image, role: user.role });
 });
-
-// Phase 0 routes. Unauthenticated: localhost only, never deploy as-is (replaced by R3).
-api.post("/repos", (c) => createRepo(c.req.raw));
-api.post("/repos/:name{[A-Za-z0-9][A-Za-z0-9._-]*}/tokens", (c) => createToken(c.req.raw, c.req.param("name")));
 
 api.route("/listings", listingRoutes);
 api.route("/admin", adminListingRoutes);

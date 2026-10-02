@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canTransition, listingInputSchema, listingSearchSchema, slugify, transitionSchema } from "./listing";
+import { tokenRequestSchema } from "./tokens";
 
 describe("slugify", () => {
 	it.each([
@@ -55,5 +56,14 @@ describe("transitionSchema", () => {
 			expect(transitionSchema.safeParse({ to: "submitted", tag }).success).toBe(false);
 		}
 		expect(transitionSchema.safeParse({ to: "submitted" }).success).toBe(false);
+	});
+});
+
+describe("tokenRequestSchema", () => {
+	it("caps lifetimes per scope", () => {
+		expect(tokenRequestSchema.safeParse({ scope: "read", ttl: 86_400 }).success).toBe(true);
+		expect(tokenRequestSchema.safeParse({ scope: "write", ttl: 86_400 }).success).toBe(false);
+		expect(tokenRequestSchema.safeParse({ scope: "write", ttl: 30 }).success).toBe(false);
+		expect(tokenRequestSchema.safeParse({ scope: "admin" }).success).toBe(false);
 	});
 });

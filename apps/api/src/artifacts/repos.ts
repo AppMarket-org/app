@@ -24,3 +24,10 @@ export async function resolveTag(repoName: string, tag: string): Promise<string 
 	const [commit] = await repo.log({ ref: tag, limit: 1 });
 	return commit?.hash ?? null;
 }
+
+/** PRD R3: mint a repo-scoped token. The plaintext is returned to the caller once and never stored. */
+export async function mintRepoToken(repoName: string, scope: "read" | "write", ttl: number) {
+	using repo = await env.ARTIFACTS.get(repoName);
+	const [token, info] = await Promise.all([repo.createToken(scope, ttl), repo.info()]);
+	return { id: token.id, token: token.plaintext, expiresAt: token.expiresAt, remote: info.remote };
+}
