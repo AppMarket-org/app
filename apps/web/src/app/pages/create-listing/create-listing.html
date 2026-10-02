@@ -1,0 +1,90 @@
+<h1>New listing</h1>
+<p class="intro">Your listing starts as a private draft with its own Git repository. Push your code, then submit a tagged version for review.</p>
+
+<mat-card appearance="outlined">
+  @if (saving()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Creating listing" />
+  }
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" maxlength="80" autocomplete="off" />
+        <mat-hint>3 to 80 characters. Also sets the URL.</mat-hint>
+        @if (form.controls.name.hasError('server')) {
+          <mat-error>{{ form.controls.name.getError('server') }}</mat-error>
+        } @else {
+          <mat-error>Enter 3 to 80 characters.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Summary</mat-label>
+        <input matInput formControlName="summary" maxlength="160" />
+        <mat-hint align="end">{{ form.controls.summary.value.length }} / 160</mat-hint>
+        @if (form.controls.summary.hasError('server')) {
+          <mat-error>{{ form.controls.summary.getError('server') }}</mat-error>
+        } @else {
+          <mat-error>Enter 10 to 160 characters.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" rows="6"></textarea>
+        <mat-hint>Shown when the repository has no README.</mat-hint>
+      </mat-form-field>
+
+      <div class="row">
+        <mat-form-field appearance="outline">
+          <mat-label>Category</mat-label>
+          <mat-select formControlName="category">
+            @for (c of categories; track c.slug) {
+              <mat-option [value]="c.slug">{{ c.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-error>Choose a category.</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Runtime</mat-label>
+          <mat-select formControlName="runtime">
+            @for (r of runtimes; track r.key) {
+              <mat-option [value]="r.key">{{ r.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>{{ runtimeNote() }}</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <fieldset>
+        <legend>Platforms</legend>
+        @for (p of platforms; track p.key) {
+          <mat-checkbox [checked]="form.controls.platforms.value.includes(p.key)" (change)="togglePlatform(p.key, $event.checked)">{{ p.label }}</mat-checkbox>
+        }
+        @if (form.controls.platforms.touched && form.controls.platforms.value.length === 0) {
+          <p class="error" role="alert">Choose at least one platform.</p>
+        }
+      </fieldset>
+
+      <mat-form-field appearance="outline">
+        <mat-label>License (optional)</mat-label>
+        <input matInput formControlName="license" placeholder="MIT" />
+        <mat-hint>An SPDX identifier, for example MIT or Apache-2.0.</mat-hint>
+        @if (form.controls.license.hasError('server')) {
+          <mat-error>{{ form.controls.license.getError('server') }}</mat-error>
+        } @else {
+          <mat-error>Use an SPDX identifier such as MIT.</mat-error>
+        }
+      </mat-form-field>
+
+      @if (serverError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
+      <div class="actions">
+        <button mat-flat-button type="submit" [disabled]="saving()">Create draft</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

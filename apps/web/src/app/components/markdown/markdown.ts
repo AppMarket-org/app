@@ -23,5 +23,8 @@ const markdown = new Marked({
 })
 export class Markdown {
   readonly source = input.required<string>();
-  protected readonly html = computed(() => markdown.parse(this.source(), { async: false }) as string);
+  protected readonly html = computed(() =>
+    // Images without alt text (often raw HTML in READMEs) are treated as decorative.
+    (markdown.parse(this.source(), { async: false }) as string).replace(/<img(?![^>]*\balt=)/gi, '<img alt=""'),
+  );
 }

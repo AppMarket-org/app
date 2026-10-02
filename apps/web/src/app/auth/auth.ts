@@ -30,7 +30,11 @@ export class Auth {
     if (!this.isBrowser) return null;
     if (this.current() !== undefined) return this.current()!;
     try {
-      this.current.set(await firstValueFrom(this.http.get<CurrentUser>('/api/me')));
+      // get-session answers 200 with null when signed out (no 401 noise in the console).
+      const session = await firstValueFrom(this.http.get<{ user: CurrentUser } | null>('/api/auth/get-session'));
+      this.current.set(
+        session ? { id: session.user.id, name: session.user.name, email: session.user.email, image: session.user.image ?? null, role: session.user.role } : null,
+      );
     } catch {
       this.current.set(null);
     }
