@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { auth } from "./auth/auth.ts";
 import { type AuthVariables, requireRole, sessionMiddleware } from "./auth/middleware.ts";
-import { listingRoutes } from "./listings/routes.ts";
+import { adminListingRoutes, listingRoutes } from "./listings/routes.ts";
 import { createRepo } from "./routes/repos.ts";
 import { sitemap } from "./routes/seo.ts";
 import { createToken } from "./routes/tokens.ts";
@@ -27,8 +27,9 @@ api.post("/repos", (c) => createRepo(c.req.raw));
 api.post("/repos/:name{[A-Za-z0-9][A-Za-z0-9._-]*}/tokens", (c) => createToken(c.req.raw, c.req.param("name")));
 
 api.route("/listings", listingRoutes);
+api.route("/admin", adminListingRoutes);
 
-// Phase 1: lifecycle (R12), /releases (R13), /downloads (R14), /admin (R18, behind Cloudflare Access).
+// Phase 1: /releases (R13), /downloads (R14). /admin also goes behind Cloudflare Access at deploy (R18, R22).
 
 const app = new Hono();
 app.route("/api", api);

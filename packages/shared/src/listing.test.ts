@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, listingInputSchema, listingSearchSchema, slugify } from "./listing";
+import { canTransition, listingInputSchema, listingSearchSchema, slugify, transitionSchema } from "./listing";
 
 describe("slugify", () => {
 	it.each([
@@ -29,8 +29,31 @@ describe("listingSearchSchema", () => {
 });
 
 describe("canTransition", () => {
-	it("allows publish only from submitted", () => {
-		expect(canTransition("submitted", "published")).toBe(true);
-		expect(canTransition("draft", "published")).toBe(false);
+	it("allows publish only from submitted, and only by an admin", () => {
+		expect(canTransition("submitted", "published", "admin")).toBe(true);
+		expect(canTransition("submitted", "published", "owner")).toBe(false);
+		expect(canTransition("draft", "published", "admin")).toBe(false);
+	});
+
+	it("lets owners submit, withdraw and resubmit", () => {
+		expect(canTransition("draft", "submitted", "owner")).toBe(true);
+		expect(canTransition("submitted", "draft", "owner")).toBe(true);
+		expect(canTransition("unpublished", "submitted", "owner")).toBe(true);
+	});
+
+	it("makes removed final", () => {
+		for (const to of ["draft", "submitted", "published", "unpublished"] as const) {
+			expect(canTransition("removed", to)).toBe(false);
+		}
+	});
+});
+
+describe("transitionSchema", () => {
+	it("requires a valid tag to submit", () => {
+		expect(transitionSchema.safeParse({ to: "submitted", tag: "v1.0.0" }).success).toBe(true);
+		for (const tag of ["", "-x", "a..b", "v1.lock", "v1/", "has space"]) {
+			expect(transitionSchema.safeParse({ to: "submitted", tag }).success).toBe(false);
+		}
+		expect(transitionSchema.safeParse({ to: "submitted" }).success).toBe(false);
 	});
 });
