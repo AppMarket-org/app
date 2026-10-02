@@ -86,7 +86,14 @@
               "buildTarget": "web:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "prebundle": {
+              "exclude": [
+                "@appmarket/shared"
+              ]
+            }
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"

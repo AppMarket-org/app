@@ -1,17 +1,35 @@
-<article>
-  <h1>{{ slug }}</h1>
-  <mat-chip-set aria-label="Platforms">
-    <mat-chip>Workers</mat-chip>
-  </mat-chip-set>
+@if (listing(); as app) {
+  <article>
+    <h1>{{ app.name }}</h1>
+    <p class="summary">{{ app.summary }}</p>
 
-  <div class="actions">
-    <a mat-flat-button>Deploy to Cloudflare</a>
-    <a mat-stroked-button>Live preview</a>
-  </div>
+    <mat-chip-set aria-label="Details">
+      <mat-chip>{{ runtimes[app.runtime].name }}</mat-chip>
+      <mat-chip>{{ categoryName(app.category) }}</mat-chip>
+      @if (app.license) {
+        <mat-chip>{{ app.license }}</mat-chip>
+      }
+      @if (app.publishedTag) {
+        <mat-chip>{{ app.publishedTag }}</mat-chip>
+      }
+    </mat-chip-set>
 
-  <mat-card appearance="outlined">
-    <mat-card-content>
-      <p>README, releases, deploy manifest and metadata load from the API (R15, R24, D1, D3).</p>
-    </mat-card-content>
-  </mat-card>
-</article>
+    <p class="by">By {{ app.owner.name }}</p>
+
+    @if (app.state !== 'published') {
+      <p class="state" role="status">Not public: {{ app.state }}</p>
+    }
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <p class="description">{{ app.description || app.summary }}</p>
+      </mat-card-content>
+    </mat-card>
+  </article>
+} @else {
+  <section class="missing">
+    <h1>App not found</h1>
+    <p>This app does not exist or is not published.</p>
+    <a mat-button routerLink="/search">Browse apps</a>
+  </section>
+}

@@ -22,6 +22,8 @@ export default {
 		if (API_PATHS.test(pathname)) {
 			return env.API.fetch(request);
 		}
-		return (await reqHandler(request)) ?? new Response('Page not found.', { status: 404 });
+		// SSR data requests reach the API over the service binding (see app/api/server-api.ts).
+		const context = { apiFetch: (apiRequest: Request) => env.API.fetch(apiRequest) };
+		return (await angularApp.handle(request, context)) ?? new Response('Page not found.', { status: 404 });
 	},
 };
