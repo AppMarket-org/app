@@ -159,6 +159,8 @@
         </mat-card-content>
       </mat-card>
 
+      <app-releases-card class="wide" [slug]="l.slug" [suggestedTag]="l.publishedTag ?? l.submittedTag" />
+
       <mat-card appearance="outlined" class="wide">
         <mat-card-header>
           <mat-card-title>Tokens</mat-card-title>

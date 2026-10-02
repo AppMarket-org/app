@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { auth } from "./auth/auth.ts";
 import { type AuthVariables, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminListingRoutes, listingRoutes, mediaRoutes } from "./listings/routes.ts";
+import { downloadRoutes, listingReleaseRoutes, releaseLinkRoutes } from "./releases/routes.ts";
 import { clientIp, rateLimit } from "./rate-limit.ts";
 import { sitemap } from "./routes/seo.ts";
 
@@ -23,10 +24,13 @@ api.get("/me", requireRole(), (c) => {
 });
 
 api.route("/listings", listingRoutes);
+api.route("/listings", listingReleaseRoutes);
+api.route("/releases", releaseLinkRoutes);
+api.route("/downloads", downloadRoutes);
 api.route("/admin", adminListingRoutes);
 api.route("/media", mediaRoutes);
 
-// Phase 1: /releases (R13), /downloads (R14). /admin also goes behind Cloudflare Access at deploy (R18, R22).
+// /admin also goes behind Cloudflare Access at deploy (R18, R22).
 
 const app = new Hono();
 app.route("/api", api);

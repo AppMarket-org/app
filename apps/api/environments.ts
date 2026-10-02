@@ -13,6 +13,8 @@ export const ENVIRONMENTS = {
 		rateLimitBase: 1100,
 		// R2 bucket for screenshots (R24); local simulation in dev.
 		mediaBucket: "appmarket-media-dev",
+		// R13 release binaries.
+		releasesBucket: "appmarket-releases-dev",
 	},
 	staging: {
 		workerName: "appmarket-api-staging",
@@ -22,6 +24,8 @@ export const ENVIRONMENTS = {
 		publicOrigin: "https://staging.appmarket.org",
 		rateLimitBase: 1200,
 		mediaBucket: "appmarket-media-staging",
+		// R13 release binaries.
+		releasesBucket: "appmarket-releases-staging",
 	},
 	production: {
 		workerName: "appmarket-api",
@@ -30,6 +34,8 @@ export const ENVIRONMENTS = {
 		publicOrigin: "https://appmarket.org",
 		rateLimitBase: 1300,
 		mediaBucket: "appmarket-media-prod",
+		// R13 release binaries.
+		releasesBucket: "appmarket-releases-prod",
 	},
 } as const;
 
@@ -51,4 +57,6 @@ export const RATE_LIMITS = {
 	LISTING_CREATE: { offset: 2, limit: 5, period: 60 },
 	/** Per client IP (no user yet); Turnstile is the main defence. */
 	SIGN_IN: { offset: 3, limit: 10, period: 60 },
+	/** Download links, per signed-in user or client IP (R14). */
+	DOWNLOAD_LINK: { offset: 4, limit: 30, period: 60 },
 } as const;

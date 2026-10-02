@@ -1,0 +1,51 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Releases</mat-card-title>
+    <mat-card-subtitle>Binaries buyers download (APK, installers, bundles), up to {{ maxSize }} each. Buyers see the files for the published version.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="upload()" novalidate class="upload">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Tag</mat-label>
+        <input matInput formControlName="tag" placeholder="v1.0.0" autocomplete="off" />
+        <mat-error>Enter a tag that exists in the repository.</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Platform</mat-label>
+        <mat-select formControlName="platform">
+          @for (p of platforms; track p.key) {
+            <mat-option [value]="p.key">{{ p.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <input #fileInput type="file" hidden (change)="pick($event)" />
+      <button mat-stroked-button type="button" [disabled]="progress() !== null" (click)="fileInput.click()">
+        <mat-icon>attach_file</mat-icon>{{ file()?.name ?? 'Choose file' }}
+      </button>
+      <button mat-flat-button type="submit" [disabled]="!file() || progress() !== null">Upload</button>
+    </form>
+
+    @if (progress() === -1) {
+      <mat-progress-bar mode="indeterminate" aria-label="Computing checksum" />
+      <p class="hint">Computing checksum…</p>
+    } @else if (progress() !== null) {
+      <mat-progress-bar mode="determinate" [value]="progress()" aria-label="Upload progress" />
+      <p class="hint">Uploading {{ progress() }}%</p>
+    }
+
+    <mat-list>
+      @for (r of releases(); track r.id) {
+        <mat-list-item lines="2">
+          <mat-icon matListItemIcon>inventory_2</mat-icon>
+          <span matListItemTitle>{{ r.filename }}</span>
+          <span matListItemLine>{{ r.tag }} · {{ platformName(r.platform) }} · {{ size(r.sizeBytes) }} · {{ r.downloads }} downloads</span>
+          <button matListItemMeta mat-icon-button type="button" [attr.aria-label]="'Delete ' + r.filename" (click)="remove(r)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-list-item>
+      } @empty {
+        <mat-list-item>No files uploaded yet.</mat-list-item>
+      }
+    </mat-list>
+  </mat-card-content>
+</mat-card>

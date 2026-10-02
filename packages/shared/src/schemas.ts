@@ -2,6 +2,7 @@
 // Kept out of the main entry so the browser bundle does not include zod.
 import { z } from "zod";
 import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./listing";
+import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { TOKEN_TTL } from "./tokens";
 
 const runtimeKeys = Object.keys(RUNTIMES) as [Runtime, ...Runtime[]];
@@ -80,3 +81,24 @@ export const tokenRequestSchema = z
 		message: `At most ${TOKEN_TTL.max.read}s for read and ${TOKEN_TTL.max.write}s for write`,
 	});
 export type TokenRequest = z.infer<typeof tokenRequestSchema>;
+
+const releasePlatformKeys = Object.keys(RELEASE_PLATFORMS) as [ReleasePlatform, ...ReleasePlatform[]];
+
+/** PRD R13: release upload metadata (query string); the body is the file itself. */
+export const releaseUploadSchema = z.object({
+	tag: gitTagSchema,
+	platform: z.enum(releasePlatformKeys),
+	filename: z
+		.string()
+		.trim()
+		.min(1)
+		.max(120)
+		.regex(/^[A-Za-z0-9][A-Za-z0-9._ -]*$/, "Use letters, digits, spaces, '.', '_' or '-'")
+		.refine((f) => !f.includes(".."), "Not a valid file name"),
+	sha256: z
+		.string()
+		.trim()
+		.toLowerCase()
+		.regex(/^[0-9a-f]{64}$/, "SHA-256 as 64 hex characters"),
+});
+export type ReleaseUpload = z.infer<typeof releaseUploadSchema>;

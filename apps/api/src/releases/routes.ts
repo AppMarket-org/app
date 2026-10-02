@@ -1,0 +1,116 @@
+import type { Release } from "@appmarket/shared";
+import { RELEASE_LIMITS } from "@appmarket/shared";
+import { releaseUploadSchema } from "@appmarket/shared/schemas";
+import { env } from "cloudflare:workers";
+import { type Context, Hono } from "hono";
+import { resolveTag } from "../artifacts/repos.ts";
+import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { canEdit, canView } from "../listings/access.ts";
+import { ListingRepository } from "../listings/repository.ts";
+import { clientIp, rateLimit } from "../rate-limit.ts";
+import { signDownload, verifyDownload } from "./signing.ts";
+import { Releases } from "./store.ts";
+
+type Ctx = { Variables: AuthVariables };
+const listings = () => new ListingRepository(env.DB);
+const releases = () => new Releases(env.DB, env.RELEASES);
+const LINK_TTL_SECONDS = 300;
+
+/** Buyers only see releases of the published version; the owner and admins see all. */
+function visible(release: Pick<Release, "tag">, listing: { publishedTag: string | null; state: string }, editor: boolean): boolean {
+	return editor || (listing.state === "published" && release.tag === listing.publishedTag);
+}
+
+/** PRD R13: release binaries per listing. Mounted under /api/listings. */
+export const listingReleaseRoutes = new Hono<Ctx>()
+	.get("/:slug/releases", async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session");
+		if (!listing || !canView(listing, session)) return c.json({ error: "not_found" }, 404);
+		const editor = canEdit(listing, session);
+		const items = (await releases().list(listing.id)).filter((r) => visible(r, listing, editor));
+		return c.json({ items });
+	})
+	.post("/:slug/releases", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canView(listing, session)) return c.json({ error: "not_found" }, 404);
+		if (listing.owner.id !== session.user.id) return c.json({ error: "forbidden" }, 403);
+		if (listing.state === "removed") return c.json({ error: "removed" }, 409);
+		const meta = releaseUploadSchema.safeParse(c.req.query());
+		if (!meta.success) return c.json({ error: "invalid", issues: meta.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
+		const size = Number(c.req.header("content-length"));
+		if (!Number.isSafeInteger(size) || size <= 0) return c.json({ error: "length_required" }, 411);
+		if (size > RELEASE_LIMITS.maxBytes) return c.json({ error: "too_large", maxBytes: RELEASE_LIMITS.maxBytes }, 413);
+		// A release belongs to a version that exists in the listing's repo.
+		if (!listing.repoName || !(await resolveTag(listing.repoName, meta.data.tag))) return c.json({ error: "tag_not_found", tag: meta.data.tag }, 422);
+		const body = c.req.raw.body;
+		if (!body) return c.json({ error: "empty" }, 400);
+		const result = await releases().add(listing.id, session.user.id, meta.data, body, size);
+		return result.ok ? c.json(result.release, 201) : c.json({ error: result.error }, result.status);
+	})
+	.delete("/:slug/releases/:id", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		if (!listing || !canEdit(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		return (await releases().remove(listing.id, c.req.param("id"))) ? c.body(null, 204) : c.json({ error: "not_found" }, 404);
+	});
+
+const perUserOrIp = (c: Context<Ctx>) => c.get("session")?.user.id ?? `ip:${clientIp(c)}`;
+
+/** PRD R14: signed, expiring download links (free listings in Phase 1). Mounted under /api/releases. */
+export const releaseLinkRoutes = new Hono<Ctx>().post(
+	"/:id/link",
+	rateLimit<Ctx>(() => env.RL_DOWNLOAD_LINK, perUserOrIp, env.RATE_LIMIT_CONFIG.DOWNLOAD_LINK.period),
+	async (c) => {
+		const release = await releases().find(c.req.param("id"));
+		const listing = release && (await listings().findById(release.listingId));
+		const session = c.get("session");
+		if (!release || !listing || !canView(listing, session) || !visible(release, listing, canEdit(listing, session))) {
+			return c.json({ error: "not_found" }, 404);
+		}
+		// R17: paid listings need an entitlement check here before a link is issued.
+		if (listing.priceCents > 0) return c.json({ error: "payment_required" }, 402);
+		const expiresAt = Math.floor(Date.now() / 1000) + LINK_TTL_SECONDS;
+		const sig = await signDownload(env.DOWNLOAD_SIGNING_KEY, release.id, expiresAt);
+		c.header("Cache-Control", "no-store");
+		return c.json({ url: `/api/downloads/${release.id}?exp=${expiresAt}&sig=${sig}`, expiresAt: new Date(expiresAt * 1000).toISOString() });
+	},
+);
+
+const ANDROID = /\.apk$/i;
+
+/** PRD R14: serves the file for a valid signed link; supports Range for resumable downloads. Mounted under /api/downloads. */
+export const downloadRoutes = new Hono<Ctx>().get("/:id", async (c) => {
+	const id = c.req.param("id");
+	const exp = Number(c.req.query("exp"));
+	if (!(await verifyDownload(env.DOWNLOAD_SIGNING_KEY, id, exp, c.req.query("sig") ?? ""))) {
+		return c.json({ error: "invalid_or_expired_link" }, 403);
+	}
+	const store = releases();
+	const release = await store.find(id);
+	if (!release) return c.json({ error: "not_found" }, 404);
+	const range = c.req.header("range") ? c.req.raw.headers : undefined;
+	const object = await store.object(release.r2_key, range);
+	if (!object) return c.json({ error: "not_found" }, 404);
+	// Count a download once per file, not per resumed chunk.
+	if (!range || /^bytes=0-/.test(c.req.header("range") ?? "")) c.executionCtx.waitUntil(store.countDownload(id));
+
+	const headers = new Headers({
+		"Content-Type": ANDROID.test(release.filename) ? "application/vnd.android.package-archive" : "application/octet-stream",
+		"Content-Disposition": `attachment; filename="${release.filename.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(release.filename)}`,
+		"Cache-Control": "private, no-store",
+		"X-Content-Type-Options": "nosniff",
+		"Accept-Ranges": "bytes",
+		ETag: object.httpEtag,
+		"X-Checksum-Sha256": release.sha256,
+	});
+	const r = "range" in object ? object.range : undefined;
+	if (range && r && "offset" in r && r.offset !== undefined) {
+		const length = r.length ?? object.size - r.offset;
+		headers.set("Content-Range", `bytes ${r.offset}-${r.offset + length - 1}/${object.size}`);
+		headers.set("Content-Length", String(length));
+		return new Response(object.body, { status: 206, headers });
+	}
+	headers.set("Content-Length", String(object.size));
+	return new Response(object.body, { status: 200, headers });
+});

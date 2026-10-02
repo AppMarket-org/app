@@ -21,6 +21,7 @@ import { Developer } from '../../api/developer';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
 import { ListingForm } from '../../components/listing-form/listing-form';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
+import { ReleasesCard } from './releases-card/releases-card';
 import { Seo } from '../../seo/seo';
 import { describeListingError } from '../listing-errors';
 import { STATE_LABELS } from '../state-labels';
@@ -44,6 +45,7 @@ import { STATE_LABELS } from '../state-labels';
     MatSnackBarModule,
     MatTableModule,
     ListingForm,
+    ReleasesCard,
     RuntimeBadge,
   ],
   templateUrl: './manage-listing.html',
