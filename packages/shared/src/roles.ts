@@ -1,2 +1,3 @@
 // Roles (PRD R11).
-export type Role = "developer" | "buyer" | "admin";
+export const ROLES = ["buyer", "developer", "admin"] as const;
+export type Role = (typeof ROLES)[number];

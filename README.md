@@ -25,6 +25,8 @@ pnpm dev      # API on :5173, Angular on :4200 (proxies /api)
 pnpm build    # Angular SSR build
 ```
 
+First run: copy `apps/api/.dev.vars.example` to `.dev.vars` and run `pnpm --filter @appmarket/api db:migrate`. See [auth setup](docs/auth-setup.md).
+
 Stack decisions: [ADR 0002](docs/adr/0002-stack-angular-hono-auth.md).
 
 Roadmap: GitHub milestones Phase 0 to Phase 3. See [docs](docs/README.md).

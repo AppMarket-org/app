@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './auth/auth-guard';
 
 // Public pages are server-rendered for SEO (see app.routes.server.ts); /dashboard, /admin and /login are client-only.
 export const routes: Routes = [
@@ -8,7 +9,7 @@ export const routes: Routes = [
   { path: 'search', loadComponent: () => import('./pages/search/search').then((m) => m.Search) },
   { path: 'legal/:page', loadComponent: () => import('./pages/legal/legal').then((m) => m.Legal) },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
-  { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
-  { path: 'admin', loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },
+  { path: 'dashboard', canActivate: [authGuard()], loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
+  { path: 'admin', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },
   { path: '**', loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFound) },
 ];

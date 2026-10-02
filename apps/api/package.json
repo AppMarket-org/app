@@ -5,16 +5,22 @@
 	"scripts": {
 		"dev": "cf dev",
 		"build": "cf build",
-		"typecheck": "cf workers types && tsc"
+		"typecheck": "cf workers types && tsc",
+		"db:auth-schema": "auth generate --config scripts/auth-schema.ts --output migrations/0001_auth.sql -y",
+		"db:migrate": "cf d1 migrations apply 37a21f9c-7f7d-4ea2-a13d-8a3dcc58c931 --local --persist-to .cloudflare/state"
 	},
 	"dependencies": {
 		"@appmarket/shared": "workspace:*",
+		"better-auth": "1.7.7",
 		"hono": "^4.13.12"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
+		"@types/better-sqlite3": "^9.6.0",
+		"better-sqlite3": "^13.0.3",
 		"cf": "^1.0.0-beta.10",
 		"typescript": "^7.0.2",
-		"vite": "^8.3.0"
+		"vite": "^8.3.0",
+		"auth": "1.7.7"
 	}
 }
