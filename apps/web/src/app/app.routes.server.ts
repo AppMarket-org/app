@@ -18,6 +18,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'login', renderMode: RenderMode.Client },
   { path: 'dashboard/new', renderMode: RenderMode.Client },
   { path: 'dashboard/listings/:slug', renderMode: RenderMode.Client },
+  { path: 'dashboard/cloudflare', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },
   { path: 'admin', renderMode: RenderMode.Client },
   { path: '**', renderMode: RenderMode.Server, status: 404 },
