@@ -6,6 +6,7 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { accessToken } from "../cloudflare/oauth.ts";
 import { buildCommand, deployCommand, type DeployPlan, SECRET_ENV_PREFIX, workerUrl } from "./commands.ts";
 import { finishDeployment, loadDeployment, readDeploymentSecrets, setDeploymentStatus } from "./store.ts";
+import { logEvent } from "../observability/log.ts";
 
 export { CiSandbox } from "./sandbox.ts";
 
@@ -45,9 +46,15 @@ export class DeployWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBind
 				config: { timeout: 10 * 60_000, retries: { limit: 1, delay: 10_000 } },
 			});
 			const url = workerUrl(typeof deployed.logs.stdout === "string" ? deployed.logs.stdout : "", plan.workerName);
-			await step.do("finish", () => finishDeployment(deploymentId, "succeeded", { url }));
+			await step.do("finish", async () => {
+				await finishDeployment(deploymentId, "succeeded", { url });
+				logEvent("deploy.succeeded", { deployment: deploymentId });
+			});
 		} catch (error) {
-			await step.do("fail", () => finishDeployment(deploymentId, "failed", { error: failureMessage(error) }));
+			await step.do("fail", async () => {
+				await finishDeployment(deploymentId, "failed", { error: failureMessage(error) });
+				logEvent("deploy.failed", { deployment: deploymentId, error: failureMessage(error) }, "error");
+			});
 			throw error;
 		}
 	}

@@ -9,6 +9,7 @@ import { cloudflareAccounts } from "../cloudflare/oauth.ts";
 import { ListingRepository } from "../listings/repository.ts";
 import { deploymentFor, deploymentsFor, insertDeployment } from "./store.ts";
 import type { DeployParams } from "./workflow.ts";
+import { logEvent } from "../observability/log.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -57,6 +58,7 @@ export const listingDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", re
 		deploymentId: id,
 	};
 	await env.DEPLOY_WORKFLOW.create({ id, params });
+	logEvent("deploy.started", { deployment: id, listing: listing.slug, version: listing.publishedTag, user: userId });
 	return c.json(await deploymentFor(userId, id), 202);
 });
 

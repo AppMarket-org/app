@@ -10,6 +10,7 @@ import { ListingRepository } from "../listings/repository.ts";
 import { clientIp, rateLimit } from "../rate-limit.ts";
 import { signDownload, verifyDownload } from "./signing.ts";
 import { Releases } from "./store.ts";
+import { logEvent } from "../observability/log.ts";
 
 type Ctx = { Variables: AuthVariables };
 const listings = () => new ListingRepository(env.DB);
@@ -72,6 +73,7 @@ export const releaseLinkRoutes = new Hono<Ctx>().post(
 		if (listing.priceCents > 0) return c.json({ error: "payment_required" }, 402);
 		const expiresAt = Math.floor(Date.now() / 1000) + LINK_TTL_SECONDS;
 		const sig = await signDownload(env.DOWNLOAD_SIGNING_KEY, release.id, expiresAt);
+		logEvent("download.link_issued", { listing: listing.slug, release: release.id });
 		c.header("Cache-Control", "no-store");
 		return c.json({ url: `/api/downloads/${release.id}?exp=${expiresAt}&sig=${sig}`, expiresAt: new Date(expiresAt * 1000).toISOString() });
 	},
@@ -93,7 +95,10 @@ export const downloadRoutes = new Hono<Ctx>().get("/:id", async (c) => {
 	const object = await store.object(release.r2_key, range);
 	if (!object) return c.json({ error: "not_found" }, 404);
 	// Count a download once per file, not per resumed chunk.
-	if (!range || /^bytes=0-/.test(c.req.header("range") ?? "")) c.executionCtx.waitUntil(store.countDownload(id));
+	if (!range || /^bytes=0-/.test(c.req.header("range") ?? "")) {
+		logEvent("download.started", { release: id, platform: release.platform, size: object.size });
+		c.executionCtx.waitUntil(store.countDownload(id));
+	}
 
 	const headers = new Headers({
 		"Content-Type": ANDROID.test(release.filename) ? "application/vnd.android.package-archive" : "application/octet-stream",
