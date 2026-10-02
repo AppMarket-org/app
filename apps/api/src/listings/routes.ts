@@ -1,4 +1,5 @@
 import {
+	MAX_LISTINGS_PER_DEVELOPER,
 	TOKEN_TTL,
 	canTransition,
 	listingInputSchema,
@@ -15,11 +16,22 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { createListingRepo, deleteListingRepo, mintRepoToken, repoNameFor, resolveTag } from "../artifacts/repos.ts";
+import {
+	createListingRepo,
+	deleteListingRepo,
+	listRepoTokens,
+	mintRepoToken,
+	repoNameFor,
+	resolveTag,
+	revokeAllRepoTokens,
+	revokeRepoToken,
+} from "../artifacts/repos.ts";
 import { ListingRepository } from "./repository.ts";
+import { TokenAudit } from "./token-audit.ts";
 import { tokenPolicy } from "./token-policy.ts";
 
 const listings = () => new ListingRepository(env.DB);
+const tokenAudit = () => new TokenAudit(env.DB);
 
 function invalid(error: z.ZodError) {
 	return { error: "invalid", issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) };
@@ -44,6 +56,10 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const input = listingInputSchema.safeParse(await c.req.json().catch(() => null));
 		if (!input.success) return c.json(invalid(input.error), 400);
 		const user = c.get("session")!.user;
+		// PRD R19: per-developer quota on listings that are not removed. Admins are exempt.
+		if (user.role !== "admin" && (await listings().countActiveByOwner(user.id)) >= MAX_LISTINGS_PER_DEVELOPER) {
+			return c.json({ error: "quota_exceeded", limit: MAX_LISTINGS_PER_DEVELOPER }, 409);
+		}
 		// Creating a first listing makes a buyer a developer (PRD R11 roles).
 		if (user.role === "buyer") {
 			await env.DB.prepare(`UPDATE "user" SET role = 'developer' WHERE id = ? AND role = 'buyer'`).bind(user.id).run();
@@ -95,6 +111,10 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit))) {
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
+		// PRD R19: archiving a removed listing revokes every active token; no new ones are issued (token policy).
+		if (request.data.to === "removed" && listing.repoName) {
+			await tokenAudit().recordRevocations(listing.id, await revokeAllRepoTokens(listing.repoName), session.user.id);
+		}
 		return c.json(await repo.findBySlug(listing.slug));
 	})
 	// PRD R3: short-lived, repo-scoped Git tokens. Write for the owner only; read once published.
@@ -110,11 +130,35 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const ttl = request.data.ttl ?? TOKEN_TTL.default;
 		const { id: tokenId, ...minted } = await mintRepoToken(listing.repoName!, request.data.scope, ttl);
 		// R19: audit every mint with the token id, never the token itself.
-		await env.DB.prepare("INSERT INTO token_audit (listing_id, user_id, scope, expires_at, token_id) VALUES (?, ?, ?, ?, ?)")
-			.bind(listing.id, user.id, request.data.scope, minted.expiresAt, tokenId)
-			.run();
+		await tokenAudit().recordMint({ listingId: listing.id, userId: user.id, tokenId, scope: request.data.scope, expiresAt: minted.expiresAt });
 		c.header("Cache-Control", "no-store");
 		return c.json({ scope: request.data.scope, ...minted } satisfies RepoToken, 201);
+	})
+	// PRD R19: owners and admins see every token minted for the listing and can revoke them.
+	.get("/:slug/tokens", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		if (!listing || !canEdit(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const live = listing.repoName ? await listRepoTokens(listing.repoName) : [];
+		return c.json({ items: await tokenAudit().list(listing.id, live) });
+	})
+	.delete("/:slug/tokens/:tokenId", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canEdit(listing, session) || !listing.repoName) return c.json({ error: "not_found" }, 404);
+		const tokenId = c.req.param("tokenId");
+		// Only tokens appmarket.org minted for this listing can be revoked through it.
+		if (!(await tokenAudit().isAudited(listing.id, tokenId))) return c.json({ error: "not_found" }, 404);
+		const revoked = await revokeRepoToken(listing.repoName, tokenId);
+		await tokenAudit().recordRevocations(listing.id, [tokenId], session.user.id);
+		return c.json({ revoked });
+	})
+	.post("/:slug/tokens/revoke-all", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!listing || !canEdit(listing, session) || !listing.repoName) return c.json({ error: "not_found" }, 404);
+		const ids = await revokeAllRepoTokens(listing.repoName);
+		await tokenAudit().recordRevocations(listing.id, ids, session.user.id);
+		return c.json({ revoked: ids.length });
 	})
 	.get("/:slug/events", requireRole(), async (c) => {
 		const repo = listings();

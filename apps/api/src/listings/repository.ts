@@ -103,6 +103,12 @@ export class ListingRepository {
 			.run();
 	}
 
+	/** Listings an owner has that are not removed (R19 quota). */
+	async countActiveByOwner(ownerId: string): Promise<number> {
+		const row = await this.db.prepare("SELECT COUNT(*) AS n FROM listings WHERE owner_id = ? AND state != 'removed'").bind(ownerId).first<{ n: number }>();
+		return row?.n ?? 0;
+	}
+
 	/** Listings in one state, oldest first (moderation queue, R18). */
 	async listByState(state: ListingState): Promise<Listing[]> {
 		const { results } = await this.db.prepare(`${SELECT} WHERE l.state = ? ORDER BY l.updated_at ASC`).bind(state).all<ListingRow>();
