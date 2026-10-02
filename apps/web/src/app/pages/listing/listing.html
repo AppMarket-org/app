@@ -51,6 +51,9 @@
             <h2 id="deploy-heading">What deploying creates</h2>
             <app-deploy-manifest [manifest]="manifest" />
           </section>
+          @if (d.listing.platforms.includes('workers')) {
+            <app-domain-guide />
+          }
           <mat-divider />
         }
         <app-get-code [slug]="d.listing.slug" />

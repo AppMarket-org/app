@@ -1,0 +1,47 @@
+<mat-expansion-panel>
+  <mat-expansion-panel-header>
+    <mat-panel-title>Use your own domain</mat-panel-title>
+  </mat-expansion-panel-header>
+
+  <p>After you deploy, the app runs on a <code>workers.dev</code> address in your Cloudflare account. To serve it from your own domain:</p>
+
+  <div class="step">
+    <mat-icon>looks_one</mat-icon>
+    <div>
+      <strong>Put the domain on Cloudflare.</strong>
+      If it is not there yet, add it in your Cloudflare dashboard and change the nameservers at your registrar to the ones Cloudflare shows.
+    </div>
+  </div>
+  <div class="step">
+    <mat-icon>looks_two</mat-icon>
+    <div>
+      <strong>Attach it to the Worker.</strong>
+      Workers &amp; Pages → your Worker → Settings → Domains &amp; Routes → Add → Custom domain. Cloudflare creates the DNS record and certificate.
+    </div>
+  </div>
+  <div class="step">
+    <mat-icon>looks_3</mat-icon>
+    <div>
+      <strong>Wait for the certificate.</strong>
+      It usually becomes active within minutes.
+    </div>
+  </div>
+
+  <h3>Limits</h3>
+  <div class="step">
+    <mat-icon>info</mat-icon>
+    <div>The domain must be a zone in the same Cloudflare account as the Worker.</div>
+  </div>
+  <div class="step">
+    <mat-icon>info</mat-icon>
+    <div>The hostname cannot already have a CNAME record.</div>
+  </div>
+  <div class="step">
+    <mat-icon>info</mat-icon>
+    <div>Wildcard hostnames are not supported.</div>
+  </div>
+
+  <a mat-stroked-button href="https://developers.cloudflare.com/workers/configuration/routing/custom-domains/" target="_blank" rel="noopener">
+    Cloudflare guide<mat-icon iconPositionEnd>open_in_new</mat-icon>
+  </a>
+</mat-expansion-panel>
