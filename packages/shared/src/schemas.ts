@@ -5,6 +5,7 @@ import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
+import { WORKER_NAME_PATTERN } from "./deployments";
 
 const runtimeKeys = Object.keys(RUNTIMES) as [Runtime, ...Runtime[]];
 export const runtimeSchema = z.enum(runtimeKeys);
@@ -112,3 +113,11 @@ export const reportInputSchema = z.object({
 	contact: z.string().trim().email().max(200).nullable().default(null),
 });
 export type ReportInput = z.infer<typeof reportInputSchema>;
+
+/** PRD D6: start a deploy. Secret values go to the buyer's Worker and are not kept after the deploy. */
+export const deploymentRequestSchema = z.object({
+	accountId: z.string().regex(/^[a-f0-9]{32}$/, "Not a Cloudflare account ID"),
+	workerName: z.string().regex(WORKER_NAME_PATTERN, "Use lowercase letters, numbers and dashes (up to 63)"),
+	secrets: z.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), z.string().min(1).max(5120)).default({}),
+});
+export type DeploymentRequest = z.infer<typeof deploymentRequestSchema>;

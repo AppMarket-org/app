@@ -1,4 +1,4 @@
-import { CF_OAUTH_SCOPES, type CloudflareConnection } from "@appmarket/shared";
+import { CF_OAUTH_SCOPES, type CloudflareAccount, type CloudflareConnection } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { decryptToken, encryptToken, pkcePair, randomState } from "./crypto.ts";
 
@@ -74,6 +74,16 @@ export async function accessToken(userId: string): Promise<string | null> {
 	if (!refreshed) return null;
 	await saveTokens(userId, refreshed, undefined);
 	return refreshed.access_token;
+}
+
+/** Accounts the buyer's connection can deploy to, or why it cannot be used. */
+export async function cloudflareAccounts(userId: string): Promise<CloudflareAccount[] | "not_connected" | "reconnect"> {
+	const token = await accessToken(userId);
+	if (!token) return "not_connected";
+	const response = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=50", { headers: { Authorization: `Bearer ${token}` } });
+	if (response.status === 401 || response.status === 403) return "reconnect";
+	const body = (await response.json()) as { result?: { id: string; name: string }[] };
+	return (body.result ?? []).map((a) => ({ id: a.id, name: a.name }));
 }
 
 export async function connection(userId: string): Promise<CloudflareConnection> {

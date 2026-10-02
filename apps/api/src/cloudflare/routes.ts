@@ -1,7 +1,6 @@
-import type { CloudflareAccount } from "@appmarket/shared";
 import { Hono } from "hono";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { accessToken, authorizationUrl, completeAuthorization, connection, disconnect } from "./oauth.ts";
+import { authorizationUrl, cloudflareAccounts, completeAuthorization, connection, disconnect } from "./oauth.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -27,10 +26,7 @@ export const cloudflareRoutes = new Hono<Ctx>()
 		return c.json({ connected: false });
 	})
 	.get("/accounts", async (c) => {
-		const token = await accessToken(c.get("session")!.user.id);
-		if (!token) return c.json({ error: "not_connected" }, 409);
-		const response = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=50", { headers: { Authorization: `Bearer ${token}` } });
-		if (response.status === 401 || response.status === 403) return c.json({ error: "reconnect" }, 409);
-		const body = (await response.json()) as { result?: { id: string; name: string }[] };
-		return c.json({ items: (body.result ?? []).map((a): CloudflareAccount => ({ id: a.id, name: a.name })) });
+		const accounts = await cloudflareAccounts(c.get("session")!.user.id);
+		if (!Array.isArray(accounts)) return c.json({ error: accounts }, 409);
+		return c.json({ items: accounts });
 	});

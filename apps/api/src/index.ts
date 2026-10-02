@@ -4,6 +4,7 @@ import { auth } from "./auth/auth.ts";
 import { type AuthVariables, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminListingRoutes, listingRoutes, mediaRoutes } from "./listings/routes.ts";
 import { cloudflareRoutes } from "./cloudflare/routes.ts";
+import { deploymentRoutes, listingDeployRoutes } from "./deploy/routes.ts";
 import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
 import { downloadRoutes, listingReleaseRoutes, releaseLinkRoutes } from "./releases/routes.ts";
 import { clientIp, rateLimit } from "./rate-limit.ts";
@@ -28,6 +29,8 @@ api.get("/me", requireRole(), (c) => {
 api.route("/listings", listingRoutes);
 api.route("/listings", listingReleaseRoutes);
 api.route("/listings", reportRoutes);
+api.route("/listings", listingDeployRoutes);
+api.route("/deployments", deploymentRoutes);
 api.route("/releases", releaseLinkRoutes);
 api.route("/downloads", downloadRoutes);
 api.route("/cloudflare", cloudflareRoutes);
@@ -43,3 +46,6 @@ app.get("/sitemap.xml", sitemap);
 app.get("/sitemaps/:name", sitemapPage);
 
 export default app;
+
+// D6: the deploy Workflow and its build Sandbox (Durable Object with a container).
+export { CiSandbox, DeployWorkflow } from "./deploy/workflow.ts";

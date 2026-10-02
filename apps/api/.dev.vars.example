@@ -20,3 +20,8 @@ CF_OAUTH_CLIENT_ID=
 CF_OAUTH_CLIENT_SECRET=
 # Encrypts buyers' Cloudflare tokens at rest. Generate: openssl rand -base64 32
 CF_TOKEN_ENCRYPTION_KEY=
+
+# D6 deploys: an R2 API token scoped to the builds bucket, used by deployed build containers to save
+# workspace snapshots. Not needed locally (local containers use the R2 binding).
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=

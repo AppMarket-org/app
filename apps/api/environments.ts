@@ -1,3 +1,6 @@
+/** appmarket.org's own Cloudflare account: Artifacts repos and deploy builds (D6) live here. */
+export const CLOUDFLARE_ACCOUNT_ID = "aada0f21d612f647ef27d21e1c09b648";
+
 // PRD R4: one Artifacts namespace (and Worker name) per environment, selected by `cf --mode`.
 // `cf dev` uses "development", builds default to "production"; API commands leave the mode undefined.
 
@@ -15,6 +18,8 @@ export const ENVIRONMENTS = {
 		mediaBucket: "appmarket-media-dev",
 		// R13 release binaries.
 		releasesBucket: "appmarket-releases-dev",
+		// D6 build workspace snapshots between Workflow steps.
+		buildsBucket: "appmarket-builds-dev",
 	},
 	staging: {
 		workerName: "appmarket-api-staging",
@@ -26,6 +31,8 @@ export const ENVIRONMENTS = {
 		mediaBucket: "appmarket-media-staging",
 		// R13 release binaries.
 		releasesBucket: "appmarket-releases-staging",
+		// D6 build workspace snapshots between Workflow steps.
+		buildsBucket: "appmarket-builds-staging",
 	},
 	production: {
 		workerName: "appmarket-api",
@@ -36,6 +43,8 @@ export const ENVIRONMENTS = {
 		mediaBucket: "appmarket-media-prod",
 		// R13 release binaries.
 		releasesBucket: "appmarket-releases-prod",
+		// D6 build workspace snapshots between Workflow steps.
+		buildsBucket: "appmarket-builds-prod",
 	},
 } as const;
 
@@ -61,4 +70,6 @@ export const RATE_LIMITS = {
 	DOWNLOAD_LINK: { offset: 4, limit: 30, period: 60 },
 	/** Listing reports, per signed-in user or client IP (R18). */
 	REPORT: { offset: 5, limit: 5, period: 60 },
+	/** One-click deploys, per signed-in user (D6); each runs a build container. */
+	DEPLOY: { offset: 6, limit: 3, period: 60 },
 } as const;

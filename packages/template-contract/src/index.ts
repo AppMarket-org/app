@@ -1,10 +1,10 @@
 // PRD D2 (template contract), G4 (context pack) and D3 (deploy manifest). Pure functions over the
 // files of one submitted commit, so the API can run them at submit and publish time.
 import type { ContractIssue, ContractResult, DeployManifest, ManifestResourceType, Runtime } from "@appmarket/shared";
-import { parse as parseJsonc, type ParseError } from "jsonc-parser";
-import { parse as parseToml } from "smol-toml";
+import { readWrangler } from "./wrangler";
 
 export { buildRepoMap, type RepoMapInput } from "./repo-map";
+export { buildDeployConfig, type DeployConfig, type DeployConfigResult } from "./deploy-config";
 
 /** Files the contract reads, by path relative to the repo root. */
 export const CONTRACT_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml", "package.json", ".dev.vars.example", ".env.example", "AGENTS.md"] as const;
@@ -77,23 +77,6 @@ export function checkTemplate({ runtime, rootEntries, files }: TemplateInput): C
 	}
 
 	return { errors, warnings, manifest: buildManifest(config, secretsFile ? files.get(secretsFile)! : "") };
-}
-
-function readWrangler(files: Map<string, string>): { path: string; config: Config } | { path: string; error: string } | null {
-	for (const path of ["wrangler.jsonc", "wrangler.json", "wrangler.toml"]) {
-		const text = files.get(path);
-		if (text === undefined) continue;
-		try {
-			if (path.endsWith(".toml")) return { path, config: parseToml(text) as Config };
-			const problems: ParseError[] = [];
-			const config = parseJsonc(text, problems, { allowTrailingComma: true });
-			if (problems.length > 0 || !isObject(config)) return { path, error: "invalid JSON" };
-			return { path, config };
-		} catch (e) {
-			return { path, error: e instanceof Error ? e.message.split("\n")[0]! : "invalid TOML" };
-		}
-	}
-	return null;
 }
 
 const REQUIRED_FIELDS: [key: string, type: ManifestResourceType, fields: string[], nameField: string | null, idField: string | null][] = [
