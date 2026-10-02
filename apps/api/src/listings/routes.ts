@@ -13,9 +13,10 @@ import {
 	type TransitionActor,
 } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { rateLimit } from "../rate-limit.ts";
 import {
 	createListingRepo,
 	deleteListingRepo,
@@ -32,6 +33,11 @@ import { tokenPolicy } from "./token-policy.ts";
 
 const listings = () => new ListingRepository(env.DB);
 const tokenAudit = () => new TokenAudit(env.DB);
+
+type Ctx = { Variables: AuthVariables };
+const perUser = (c: Context<Ctx>) => c.get("session")!.user.id;
+const limitListingCreate = rateLimit<Ctx>(() => env.RL_LISTING_CREATE, perUser, env.RATE_LIMIT_CONFIG.LISTING_CREATE.period);
+const limitTokens = rateLimit<Ctx>(() => env.RL_TOKENS, perUser, env.RATE_LIMIT_CONFIG.TOKENS.period);
 
 function invalid(error: z.ZodError) {
 	return { error: "invalid", issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) };
@@ -52,7 +58,7 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		return c.json(listing);
 	})
-	.post("/", requireRole(), async (c) => {
+	.post("/", requireRole(), limitListingCreate, async (c) => {
 		const input = listingInputSchema.safeParse(await c.req.json().catch(() => null));
 		if (!input.success) return c.json(invalid(input.error), 400);
 		const user = c.get("session")!.user;
@@ -118,7 +124,7 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		return c.json(await repo.findBySlug(listing.slug));
 	})
 	// PRD R3: short-lived, repo-scoped Git tokens. Write for the owner only; read once published.
-	.post("/:slug/tokens", requireRole(), async (c) => {
+	.post("/:slug/tokens", requireRole(), limitTokens, async (c) => {
 		const listing = await listings().findBySlug(c.req.param("slug"));
 		const user = c.get("session")!.user;
 		if (!listing) return c.json({ error: "not_found" }, 404);
