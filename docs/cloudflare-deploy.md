@@ -13,10 +13,18 @@ Cloudflare dashboard → **Manage Account** → **OAuth clients** → **Create c
 | Grant types | `authorization_code`, `refresh_token` |
 | Token authentication method | `client_secret_basic` |
 | Redirect URLs | dev: `http://localhost:4200/api/cloudflare/callback` · staging: `https://staging.appmarket.org/api/cloudflare/callback` · prod: `https://appmarket.org/api/cloudflare/callback` |
-| Required scopes | `offline_access`, `user-details.read`, `account-settings.read`, `memberships.read`, `workers-scripts.edit`, `d1.write`, `workers-kv-storage.write`, `workers-r2.write` |
+| Required scopes | `offline_access`, `user-details.read`, `account-settings.read`, `memberships.read`, `workers-scripts.write`, `d1.write`, `workers-kv-storage.write`, `workers-r2.write` |
 | Optional scopes | `queues.write`, `vectorize.write`, `query-cache.write`, `containers.write`, `workers-observability.read` |
 
-The list lives in `packages/shared/src/cloudflare.ts` (`CF_OAUTH_SCOPES`); scope IDs come from `cf oauth-scopes list`. The scopes requested must match the client exactly, or Cloudflare returns `invalid_scope`. In the dashboard picker, Workers → Edit is `workers-scripts.edit`, Hyperdrive is `query-cache.*`, and `offline_access` is added automatically with the Refresh Token grant.
+The list lives in `packages/shared/src/cloudflare.ts` (`CF_OAUTH_SCOPES`); scope IDs come from `cf oauth-scopes list`. The scopes requested must match the client exactly, or Cloudflare returns `invalid_scope`. Uploading Workers needs `workers-scripts.write`, which the dashboard's scope picker does not offer (its Workers → Edit is `workers-scripts.edit`, which gets 403 on uploads). Create the client in the dashboard, then set the scopes through the API with a short-lived API token that has Account → OAuth Clients: Edit:
+
+```sh
+read -rs T; curl -s -X PATCH -H "Authorization: Bearer $T" -H 'Content-Type: application/json' \
+  https://api.cloudflare.com/client/v4/accounts/<account_id>/oauth_clients/<client_id> \
+  -d '{"scopes":[...required and optional...],"optional_scopes":[...optional...]}'; unset T
+```
+
+Hyperdrive is `query-cache.*`; `offline_access` is added automatically with the Refresh Token grant.
 
 New clients are **private**: only members of your Cloudflare account can authorize them, which is enough for development and staging. To let any Cloudflare user connect (production), set a logo, client URL `https://appmarket.org`, verify the domain with the `cloudflare_oauth_client_publisher=` TXT record, then change visibility to public. **Public is permanent.**
 

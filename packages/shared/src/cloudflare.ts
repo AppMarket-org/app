@@ -5,7 +5,7 @@ export const CF_OAUTH_SCOPES = {
 		"user-details.read",
 		"account-settings.read",
 		"memberships.read",
-		"workers-scripts.edit",
+		"workers-scripts.write",
 		"d1.write",
 		"workers-kv-storage.write",
 		"workers-r2.write",

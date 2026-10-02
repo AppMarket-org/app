@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 const tokenReply = (access: string, refresh = "refresh-1", expiresIn = 3600) =>
-	new Response(JSON.stringify({ access_token: access, refresh_token: refresh, expires_in: expiresIn, scope: "offline_access workers-scripts.edit" }), { status: 200 });
+	new Response(JSON.stringify({ access_token: access, refresh_token: refresh, expires_in: expiresIn, scope: "offline_access workers-scripts.write" }), { status: 200 });
 
 async function connect(user = "u1") {
 	const url = new URL(await oauth.authorizationUrl(user, "/dashboard/cloudflare"));
@@ -34,7 +34,7 @@ describe("Cloudflare OAuth", () => {
 		expect(url.origin + url.pathname).toBe("https://dash.cloudflare.com/oauth2/auth");
 		expect(url.searchParams.get("redirect_uri")).toBe("https://appmarket.test/api/cloudflare/callback");
 		expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-		expect(url.searchParams.get("scope")).toContain("workers-scripts.edit");
+		expect(url.searchParams.get("scope")).toContain("workers-scripts.write");
 		expect(url.searchParams.get("scope")).toContain("offline_access");
 	});
 

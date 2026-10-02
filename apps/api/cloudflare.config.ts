@@ -1,25 +1,39 @@
-import { bindings, defineConfig } from "cf/config";
+import { bindings, defineConfig, defineContainer, exports } from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
-import { ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } from "./environments.ts";
+import { CLOUDFLARE_ACCOUNT_ID, ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } from "./environments.ts";
 
 export default defineConfig(({ mode }) => {
 	const environment = resolveEnvironment(mode);
-	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket, releasesBucket } = ENVIRONMENTS[environment];
+	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket, releasesBucket, buildsBucket } = ENVIRONMENTS[environment];
 	const rateLimit = ({ offset, limit, period }: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) =>
 		bindings.rateLimit({ namespace: String(rateLimitBase + offset), simple: { limit, period } });
 
+	// D6: one-click deploys build listings in a Sandbox container driven by a @cloudflare/ci Workflow.
+	const buildContainer = defineContainer({
+		name: `${workerName}-build`,
+		image: { dockerfile: "./sandbox/Dockerfile" },
+		instanceType: "standard-1",
+		maxInstances: 5,
+	});
+
 	return {
+		containers: [buildContainer],
 		worker: {
 			name: workerName,
 			compatibilityDate: "2026-10-01",
 			// Better Auth uses AsyncLocalStorage.
 			compatibilityFlags: ["nodejs_compat"],
 			entrypoint,
+			exports: {
+				CiSandbox: exports.durableObject({ storage: "sqlite", container: buildContainer }),
+				DeployWorkflow: exports.workflow({ name: `${workerName}-deploy`, concurrency: { limit: 5 } }),
+			},
 			env: {
 				APP_ENV: bindings.text(environment),
 				PUBLIC_ORIGIN: bindings.text(publicOrigin),
 				// Remote in dev so `cf dev` creates real repos on Cloudflare, not a local simulation.
 				ARTIFACTS: bindings.artifacts({ namespace: artifactsNamespace, dev: { remote: true } }),
+				ARTIFACTS_NAMESPACE: bindings.text(artifactsNamespace),
 				// Local simulation in dev; apply migrations with `pnpm --filter @appmarket/api db:migrate`.
 				DB: bindings.d1(database),
 				// R11 auth. Local values in apps/api/.dev.vars (see .dev.vars.example); deployed via `cf secrets`.
@@ -46,6 +60,16 @@ export default defineConfig(({ mode }) => {
 				CF_OAUTH_CLIENT_ID: bindings.secret(),
 				CF_OAUTH_CLIENT_SECRET: bindings.secret(),
 				CF_TOKEN_ENCRYPTION_KEY: bindings.secret(),
+				// D6 deploys. RL_DEPLOY limits container builds per user.
+				RL_DEPLOY: rateLimit(RATE_LIMITS.DEPLOY),
+				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
+				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
+				CLOUDFLARE_ACCOUNT_ID: bindings.text(CLOUDFLARE_ACCOUNT_ID),
+				BACKUP_BUCKET: bindings.r2({ name: buildsBucket }),
+				BACKUP_BUCKET_NAME: bindings.text(buildsBucket),
+				// Sandbox backups to R2 from deployed containers (an R2 API token scoped to the builds bucket).
+				R2_ACCESS_KEY_ID: bindings.secret(),
+				R2_SECRET_ACCESS_KEY: bindings.secret(),
 			},
 		},
 	};

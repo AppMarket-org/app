@@ -13,10 +13,11 @@
 	},
 	"dependencies": {
 		"@appmarket/shared": "workspace:*",
+		"@appmarket/template-contract": "workspace:*",
+		"@cloudflare/ci": "0.2.0",
 		"better-auth": "1.7.7",
 		"hono": "^4.13.12",
-		"zod": "^4",
-		"@appmarket/template-contract": "workspace:*"
+		"zod": "^4"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
