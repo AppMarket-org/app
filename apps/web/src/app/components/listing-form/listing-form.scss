@@ -1,28 +1,28 @@
 form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 8px;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 1rem;
 }
 
 fieldset {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 0 0 16px;
-  padding: 8px 12px 12px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 8px;
+  gap: 0.25rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-small);
 
   legend {
     font: var(--mat-sys-label-large);
-    padding: 0 4px;
+    padding: 0 0.25rem;
   }
 }
 
@@ -37,7 +37,7 @@ fieldset {
   justify-content: flex-end;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 37.5rem) {
   .row {
     grid-template-columns: 1fr;
   }

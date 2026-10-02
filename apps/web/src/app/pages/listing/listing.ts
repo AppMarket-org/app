@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatListModule } from '@angular/material/list';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
 import { GetCode } from '../../components/get-code/get-code';
@@ -22,7 +23,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-listing',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatDividerModule, RouterLink, GetCode, Markdown, RuntimeBadge],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, GetCode, Markdown, RuntimeBadge],
   templateUrl: './listing.html',
   styleUrl: './listing.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

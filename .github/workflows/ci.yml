@@ -20,3 +20,4 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm check:secrets
+      - run: pnpm check:ui

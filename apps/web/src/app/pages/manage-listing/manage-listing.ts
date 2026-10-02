@@ -5,12 +5,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { FormBuilder, type FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { SCREENSHOT_LIMITS, canTransition, type Listing, type ListingEvent, type ListingInput, type ListingState, type RepoToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom, forkJoin } from 'rxjs';
@@ -31,12 +34,15 @@ import { STATE_LABELS } from '../state-labels';
     RouterLink,
     MatButtonModule,
     MatCardModule,
+    MatChipsModule,
     MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatListModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    MatTableModule,
     ListingForm,
     RuntimeBadge,
   ],
@@ -67,6 +73,7 @@ export class ManageListing {
   protected readonly detailsError = signal<string | null>(null);
   protected readonly detailsFieldErrors = signal<Record<string, string>>({});
   protected readonly shotLimits = SCREENSHOT_LIMITS;
+  protected readonly tokenColumns = ['scope', 'state', 'issuedTo', 'expires', 'actions'];
   protected readonly maxShotMb = SCREENSHOT_LIMITS.maxBytes / 1024 / 1024;
   protected readonly activeTokens = computed(() => this.tokens().filter((t) => t.state === 'active').length);
 

@@ -1,35 +1,35 @@
 .hero {
-  padding: 32px 0 16px;
+  padding: 2rem 0 1rem;
 
   h1 {
     font: var(--mat-sys-display-small);
-    margin: 0 0 16px;
+    margin: 0 0 1rem;
   }
 
   p {
     font: var(--mat-sys-body-large);
     color: var(--mat-sys-on-surface-variant);
-    max-width: 640px;
-    margin: 0 0 24px;
+    max-width: 40rem;
+    margin: 0 0 1.5rem;
   }
 }
 
 h2 {
   font: var(--mat-sys-title-large);
-  margin: 32px 0 12px;
+  margin: 2rem 0 0.75rem;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(16.25rem, 1fr));
+  gap: 1rem;
 }
 
 .empty {
   color: var(--mat-sys-on-surface-variant);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 37.5rem) {
   .hero h1 {
     font: var(--mat-sys-headline-medium);
   }

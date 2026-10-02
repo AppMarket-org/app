@@ -18,9 +18,7 @@
       }
     }
   } @else if (auth.user() === null) {
-    <p>
-      <a [routerLink]="['/login']" [queryParams]="{ next: '/apps/' + slug() }">Sign in</a>
-      to clone the source.
-    </p>
+    <p>Sign in to clone the source.</p>
+    <a mat-stroked-button [routerLink]="['/login']" [queryParams]="{ next: '/apps/' + slug() }">Sign in</a>
   }
 </section>

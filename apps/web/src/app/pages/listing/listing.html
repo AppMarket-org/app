@@ -3,22 +3,22 @@
     <header>
       <h1>{{ d.listing.name }}</h1>
       <p class="summary">{{ d.listing.summary }}</p>
+      <p class="by">by {{ d.listing.owner.name }}</p>
       <div class="meta">
         <app-runtime-badge [runtime]="d.listing.runtime" />
-        <a [routerLink]="['/category', d.listing.category]">{{ categoryName(d.listing.category) }}</a>
-        <span>by {{ d.listing.owner.name }}</span>
-        @if (d.listing.publishedTag) {
-          <span>{{ d.listing.publishedTag }}</span>
-        }
-        @if (d.listing.license) {
-          <span>{{ d.listing.license }}</span>
-        }
+        <mat-chip-set aria-label="Details">
+          <a mat-chip [routerLink]="['/category', d.listing.category]">{{ categoryName(d.listing.category) }}</a>
+          @if (d.listing.publishedTag) {
+            <mat-chip>{{ d.listing.publishedTag }}</mat-chip>
+          }
+          @if (d.listing.license) {
+            <mat-chip>{{ d.listing.license }}</mat-chip>
+          }
+          @for (p of d.listing.platforms; track p) {
+            <mat-chip>{{ platformName(p) }}</mat-chip>
+          }
+        </mat-chip-set>
       </div>
-      <mat-chip-set aria-label="Platforms">
-        @for (p of d.listing.platforms; track p) {
-          <mat-chip>{{ platformName(p) }}</mat-chip>
-        }
-      </mat-chip-set>
       @if (d.listing.state !== 'published') {
         <p class="state" role="status">Not public: {{ d.listing.state }}</p>
       }
@@ -46,17 +46,19 @@
         <mat-divider />
         <section aria-labelledby="versions-heading">
           <h2 id="versions-heading">Versions</h2>
-          @for (v of d.versions; track v.tag + v.publishedAt) {
-            <div class="version">
-              <strong>{{ v.tag }}</strong>
-              <span class="date">{{ v.publishedAt | date: 'mediumDate' }}</span>
-              @if (v.releaseNotes) {
-                <p>{{ v.releaseNotes }}</p>
-              }
-            </div>
-          } @empty {
-            <p class="date">No published versions yet.</p>
-          }
+          <mat-list>
+            @for (v of d.versions; track v.tag + v.publishedAt) {
+              <mat-list-item [lines]="v.releaseNotes ? 3 : 2">
+                <span matListItemTitle>{{ v.tag }}</span>
+                <span matListItemLine>{{ v.publishedAt | date: 'mediumDate' }}</span>
+                @if (v.releaseNotes) {
+                  <span matListItemLine>{{ v.releaseNotes }}</span>
+                }
+              </mat-list-item>
+            } @empty {
+              <mat-list-item>No published versions yet.</mat-list-item>
+            }
+          </mat-list>
         </section>
       </aside>
     </div>

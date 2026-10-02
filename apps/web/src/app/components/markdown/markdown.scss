@@ -1,16 +1,17 @@
+// Unencapsulated (styles must reach the injected README HTML); scoped by the .markdown class.
 .markdown {
   font: var(--mat-sys-body-large);
   overflow-wrap: anywhere;
 
   :is(h2, h3, h4) {
     font: var(--mat-sys-title-large);
-    margin: 24px 0 8px;
+    margin: 1.5rem 0 0.5rem;
   }
 
   pre {
     overflow-x: auto;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 0.75rem;
+    border-radius: var(--mat-sys-corner-small);
     background: var(--mat-sys-surface-container);
   }
 
