@@ -1,0 +1,36 @@
+import type { CloudflareAccount } from "@appmarket/shared";
+import { Hono } from "hono";
+import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { accessToken, authorizationUrl, completeAuthorization, connection, disconnect } from "./oauth.ts";
+
+type Ctx = { Variables: AuthVariables };
+
+/** Only same-site paths are allowed as the place to return to after connecting. */
+const safeReturn = (value: string | undefined) => (value && value.startsWith("/") && !value.startsWith("//") ? value : "/dashboard/cloudflare");
+
+/** PRD D5: connect, inspect and disconnect the buyer's Cloudflare account. Mounted under /api/cloudflare. */
+export const cloudflareRoutes = new Hono<Ctx>()
+	.use(requireRole())
+	.get("/connection", async (c) => c.json(await connection(c.get("session")!.user.id)))
+	.get("/connect", async (c) => c.redirect(await authorizationUrl(c.get("session")!.user.id, safeReturn(c.req.query("return"))), 302))
+	.get("/callback", async (c) => {
+		const { code, state, error } = c.req.query();
+		if (error || !code || !state) return c.redirect(`/dashboard/cloudflare?error=${encodeURIComponent(error ?? "missing_code")}`, 302);
+		const result = await completeAuthorization(c.get("session")!.user.id, state, code);
+		if (!result.ok) return c.redirect(`/dashboard/cloudflare?error=${result.reason}`, 302);
+		const back = new URL(result.returnTo, "https://x");
+		back.searchParams.set("connected", "1");
+		return c.redirect(back.pathname + back.search, 302);
+	})
+	.post("/disconnect", async (c) => {
+		await disconnect(c.get("session")!.user.id);
+		return c.json({ connected: false });
+	})
+	.get("/accounts", async (c) => {
+		const token = await accessToken(c.get("session")!.user.id);
+		if (!token) return c.json({ error: "not_connected" }, 409);
+		const response = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=50", { headers: { Authorization: `Bearer ${token}` } });
+		if (response.status === 401 || response.status === 403) return c.json({ error: "reconnect" }, 409);
+		const body = (await response.json()) as { result?: { id: string; name: string }[] };
+		return c.json({ items: (body.result ?? []).map((a): CloudflareAccount => ({ id: a.id, name: a.name })) });
+	});

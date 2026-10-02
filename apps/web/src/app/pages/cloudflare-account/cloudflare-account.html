@@ -1,0 +1,64 @@
+<a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Dashboard</a>
+<h1>Cloudflare account</h1>
+
+@if (busy()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Working" />
+}
+
+@if (connection(); as c) {
+  @if (c.connected) {
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>cloud_done</mat-icon>
+        <mat-card-title>Connected</mat-card-title>
+        <mat-card-subtitle>{{ c.email ?? 'Cloudflare user' }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (needsReconnect()) {
+          <p class="error" role="alert">Cloudflare no longer accepts this connection. Reconnect to keep deploying.</p>
+        }
+        <h2>Accounts you can deploy into</h2>
+        @if (accounts(); as list) {
+          <mat-list>
+            @for (a of list; track a.id) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>apartment</mat-icon>
+                <span matListItemTitle>{{ a.name }}</span>
+              </mat-list-item>
+            } @empty {
+              <mat-list-item>No accounts available.</mat-list-item>
+            }
+          </mat-list>
+        } @else {
+          <mat-progress-bar mode="indeterminate" aria-label="Loading accounts" />
+        }
+        <h2>Permissions granted</h2>
+        <mat-chip-set aria-label="Permissions">
+          @for (s of c.scopes; track s) {
+            <mat-chip>{{ s }}</mat-chip>
+          }
+        </mat-chip-set>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <a mat-button [href]="connectUrl">Reconnect</a>
+        <button mat-button type="button" class="danger" [disabled]="busy()" (click)="disconnect()">Disconnect</button>
+      </mat-card-actions>
+    </mat-card>
+  } @else {
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>cloud_off</mat-icon>
+        <mat-card-title>Not connected</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Connect your Cloudflare account to deploy apps from appmarket.org into it with one click. Apps run in your account: you own the deployment, the bill and the data.</p>
+        <p class="muted">appmarket.org asks for access to deploy Workers and create the resources an app needs (D1, KV, R2). It never stores the secrets you give your apps, and you can disconnect at any time.</p>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <a mat-flat-button [href]="connectUrl"><mat-icon>link</mat-icon>Connect Cloudflare account</a>
+      </mat-card-actions>
+    </mat-card>
+  }
+} @else {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+}

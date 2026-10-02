@@ -1,6 +1,9 @@
 <header class="head">
   <h1>Your listings</h1>
-  <a mat-flat-button routerLink="/dashboard/new">New listing</a>
+  <div class="head-actions">
+    <a mat-stroked-button routerLink="/dashboard/cloudflare"><mat-icon>cloud</mat-icon>Cloudflare account</a>
+    <a mat-flat-button routerLink="/dashboard/new">New listing</a>
+  </div>
 </header>
 
 @switch (listings()) {

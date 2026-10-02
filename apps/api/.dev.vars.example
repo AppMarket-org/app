@@ -13,3 +13,10 @@ GITHUB_CLIENT_SECRET=
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 # Signs download links (R14). Generate: openssl rand -base64 32
 DOWNLOAD_SIGNING_KEY=
+# Cloudflare OAuth client for "Connect your Cloudflare account" (D5). Create it under
+# Manage Account > OAuth clients (see docs/cloudflare-deploy.md). Redirect URL for local dev:
+# http://localhost:4200/api/cloudflare/callback
+CF_OAUTH_CLIENT_ID=
+CF_OAUTH_CLIENT_SECRET=
+# Encrypts buyers' Cloudflare tokens at rest. Generate: openssl rand -base64 32
+CF_TOKEN_ENCRYPTION_KEY=

@@ -41,6 +41,11 @@ export default defineConfig(({ mode }) => {
 				// R13/R14 release binaries, served only through signed download links.
 				RELEASES: bindings.r2({ name: releasesBucket }),
 				DOWNLOAD_SIGNING_KEY: bindings.secret(),
+				// D5: Cloudflare OAuth client (register under Manage Account > OAuth clients) and the key
+				// that encrypts buyers' tokens at rest.
+				CF_OAUTH_CLIENT_ID: bindings.secret(),
+				CF_OAUTH_CLIENT_SECRET: bindings.secret(),
+				CF_TOKEN_ENCRYPTION_KEY: bindings.secret(),
 			},
 		},
 	};
