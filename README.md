@@ -6,7 +6,8 @@ A marketplace for apps whose source lives in Cloudflare Artifacts and deploys in
 
 | Path | What |
 | --- | --- |
-| `apps/web` | appmarket.org Worker: API, storefront, developer dashboard, admin (`cf` project) |
+| `apps/web` | Angular 22 + Angular Material UI: server-rendered SEO pages and the signed-in SPA (Wrangler Worker) |
+| `apps/api` | Hono API on Workers: Artifacts, D1, R2, auth (`cf` project) |
 | `packages/shared` | Shared types: listing lifecycle, roles, platforms |
 | `packages/template-contract` | Submit-time template lint and deploy manifest (D2, D3) |
 | `db/migrations` | D1 schema |
@@ -20,7 +21,10 @@ Node 22.18+, pnpm.
 ```sh
 pnpm install
 pnpm typecheck
-pnpm dev
+pnpm dev      # API on :5173, Angular on :4200 (proxies /api)
+pnpm build    # Angular SSR build
 ```
+
+Stack decisions: [ADR 0002](docs/adr/0002-stack-angular-hono-auth.md).
 
 Roadmap: GitHub milestones Phase 0 to Phase 3. See [docs](docs/README.md).

@@ -1,0 +1,6 @@
+// Global styles. Material 3 theme lives in material-theme.scss; component styles live next to each component.
+@use 'material-theme';
+
+a {
+  color: var(--mat-sys-primary);
+}

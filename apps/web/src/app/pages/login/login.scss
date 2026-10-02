@@ -1,0 +1,11 @@
+.login {
+  max-width: 400px;
+  margin: 48px auto;
+}
+
+mat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+}

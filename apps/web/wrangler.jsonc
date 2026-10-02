@@ -1,0 +1,18 @@
+// appmarket.org web Worker: Angular hybrid rendering (SSR for SEO pages, client rendering for the app).
+// Built with `ng build`; uses Wrangler because Angular builds outside the Vite plugin that `cf` uses.
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "appmarket-web",
+	"main": "./dist/server/server.mjs",
+	"compatibility_date": "2026-10-01",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist/browser",
+		// Serve /legal/privacy without redirecting to /legal/privacy/, matching canonical URLs.
+		"html_handling": "drop-trailing-slash"
+	},
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+	// /api/*, /sitemap.xml and SSR data fetches go to the API Worker without a public hop.
+	"services": [{ "binding": "API", "service": "appmarket-api" }]
+}

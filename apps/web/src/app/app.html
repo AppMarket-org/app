@@ -1,0 +1,18 @@
+<mat-toolbar>
+  <a class="brand" routerLink="/">appmarket.org</a>
+  <span class="spacer"></span>
+  <a mat-button routerLink="/search">Search</a>
+  <a mat-button routerLink="/dashboard">Dashboard</a>
+  <a mat-flat-button routerLink="/login">Sign in</a>
+</mat-toolbar>
+
+<main>
+  <router-outlet />
+</main>
+
+<footer>
+  <a routerLink="/legal/terms">Terms</a>
+  <a routerLink="/legal/privacy">Privacy</a>
+  <a routerLink="/legal/content-policy">Content policy</a>
+  <a routerLink="/legal/developer-agreement">Developer agreement</a>
+</footer>

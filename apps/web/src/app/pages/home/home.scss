@@ -1,0 +1,14 @@
+.hero {
+  padding: 48px 0;
+
+  h1 {
+    font: var(--mat-sys-display-small);
+    margin: 0 0 16px;
+  }
+
+  p {
+    font: var(--mat-sys-body-large);
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0 0 24px;
+  }
+}

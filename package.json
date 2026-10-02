@@ -2,11 +2,14 @@
   "name": "appmarket",
   "private": true,
   "packageManager": "pnpm@9.15.1",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
-    "dev": "pnpm --filter @appmarket/web dev",
-    "check:secrets": "node scripts/check-no-secrets.mjs"
+    "dev": "pnpm --parallel --filter @appmarket/api --filter @appmarket/web dev",
+    "check:secrets": "node scripts/check-no-secrets.mjs",
+    "build": "pnpm --filter @appmarket/web build"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

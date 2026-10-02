@@ -1,0 +1,33 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.brand {
+  color: inherit;
+  font: var(--mat-sys-title-large);
+  text-decoration: none;
+}
+
+.spacer {
+  flex: 1;
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 16px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}

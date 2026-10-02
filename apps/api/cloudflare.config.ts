@@ -3,7 +3,7 @@ import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 export default defineConfig({
 	worker: {
-		name: "appmarket-web",
+		name: "appmarket-api",
 		compatibilityDate: "2026-10-01",
 		entrypoint,
 		env: {
