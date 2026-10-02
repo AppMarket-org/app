@@ -1,0 +1,51 @@
+<a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Dashboard</a>
+
+@switch (deployment()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading deployment" />
+  }
+  @case (null) {
+    <h1>Deployment not found</h1>
+    <p>It does not exist or belongs to another account.</p>
+  }
+  @default {
+    @let d = deployment()!;
+    <h1>Deploying {{ d.listingName }}</h1>
+    <p class="sub">
+      {{ d.versionTag }} as <strong>{{ d.workerName }}</strong> · started {{ d.createdAt | date: 'medium' }}
+    </p>
+
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        @if (running()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Deploy in progress" />
+        }
+        <mat-list role="list" aria-label="Deploy steps">
+          @for (step of steps; track step.status) {
+            @let state = stepState(step.status);
+            <mat-list-item role="listitem" [class]="state">
+              <mat-icon matListItemIcon aria-hidden="true">{{ state === 'done' ? 'check_circle' : state === 'current' ? 'pending' : 'radio_button_unchecked' }}</mat-icon>
+              <span matListItemTitle>{{ step.label }}</span>
+            </mat-list-item>
+          }
+        </mat-list>
+
+        @if (d.status === 'succeeded') {
+          <p class="done" role="status">Your app is live in your Cloudflare account.</p>
+          @if (d.url) {
+            <a mat-flat-button [href]="d.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>Open {{ d.url }}</a>
+          } @else {
+            <p>Find it under Workers &amp; Pages in your Cloudflare dashboard; add a route or custom domain to reach it.</p>
+          }
+        }
+        @if (d.status === 'failed') {
+          <p class="error" role="alert">The deploy failed. Anything it already created stays in your account and is reused when you try again.</p>
+          @if (d.error) {
+            <pre><code>{{ d.error }}</code></pre>
+          }
+          <a mat-stroked-button [routerLink]="['/apps', d.listingSlug]" [queryParams]="{ deploy: 1 }">Try again</a>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+}

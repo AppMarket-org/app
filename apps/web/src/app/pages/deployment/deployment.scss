@@ -1,0 +1,36 @@
+h1 {
+  font: var(--mat-sys-headline-medium);
+  margin: 1rem 0 0.25rem;
+}
+
+.sub {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 1rem;
+}
+
+mat-card {
+  max-width: 40rem;
+}
+
+mat-list-item.done mat-icon {
+  color: var(--mat-sys-primary);
+}
+
+mat-list-item.todo {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface-container);
+  font: var(--mat-sys-body-small);
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+}

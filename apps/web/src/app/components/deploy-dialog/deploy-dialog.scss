@@ -1,0 +1,30 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.intro,
+.hint {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 0.5rem;
+}
+
+fieldset {
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  font: var(--mat-sys-title-small);
+  margin-bottom: 0.25rem;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
