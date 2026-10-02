@@ -20,11 +20,11 @@ beforeEach(() => {
 });
 
 const tokenReply = (access: string, refresh = "refresh-1", expiresIn = 3600) =>
-	new Response(JSON.stringify({ access_token: access, refresh_token: refresh, expires_in: expiresIn, scope: "offline_access workers-scripts.write" }), { status: 200 });
+	new Response(JSON.stringify({ access_token: access, refresh_token: refresh, expires_in: expiresIn, scope: "offline_access workers-scripts.edit" }), { status: 200 });
 
 async function connect(user = "u1") {
 	const url = new URL(await oauth.authorizationUrl(user, "/dashboard/cloudflare"));
-	fetchMock.mockResolvedValueOnce(tokenReply("access-1")).mockResolvedValueOnce(new Response(JSON.stringify({ email: "buyer@example.test" })));
+	fetchMock.mockResolvedValueOnce(tokenReply("access-1")).mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { email: "buyer@example.test" } })));
 	return { url, result: await oauth.completeAuthorization(user, url.searchParams.get("state")!, "code-1") };
 }
 
@@ -34,7 +34,7 @@ describe("Cloudflare OAuth", () => {
 		expect(url.origin + url.pathname).toBe("https://dash.cloudflare.com/oauth2/auth");
 		expect(url.searchParams.get("redirect_uri")).toBe("https://appmarket.test/api/cloudflare/callback");
 		expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-		expect(url.searchParams.get("scope")).toContain("workers-scripts.write");
+		expect(url.searchParams.get("scope")).toContain("workers-scripts.edit");
 		expect(url.searchParams.get("scope")).toContain("offline_access");
 	});
 
@@ -46,6 +46,7 @@ describe("Cloudflare OAuth", () => {
 		expect(String(init.body)).toContain("code_verifier=");
 		const row = sqlite.prepare("SELECT * FROM cloudflare_connections WHERE user_id = 'u1'").get() as Record<string, string>;
 		expect(row.access_token_enc).not.toContain("access-1");
+		expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.cloudflare.com/client/v4/user");
 		expect(row.cf_email).toBe("buyer@example.test");
 		expect(await oauth.accessToken("u1")).toBe("access-1");
 	});
