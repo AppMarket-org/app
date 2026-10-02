@@ -1,10 +1,12 @@
 import { bindings, defineConfig } from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
-import { ENVIRONMENTS, resolveEnvironment } from "./environments.ts";
+import { ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } from "./environments.ts";
 
 export default defineConfig(({ mode }) => {
 	const environment = resolveEnvironment(mode);
-	const { workerName, artifactsNamespace, database, publicOrigin } = ENVIRONMENTS[environment];
+	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase } = ENVIRONMENTS[environment];
+	const rateLimit = ({ offset, limit, period }: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) =>
+		bindings.rateLimit({ namespace: String(rateLimitBase + offset), simple: { limit, period } });
 
 	return {
 		worker: {
@@ -27,7 +29,12 @@ export default defineConfig(({ mode }) => {
 				GITHUB_CLIENT_ID: bindings.secret(),
 				GITHUB_CLIENT_SECRET: bindings.secret(),
 				TURNSTILE_SECRET_KEY: bindings.secret(),
-				// Phase 1: RELEASES (R2, R5/R13), RATE_LIMITER (R20).
+				// R20 rate limits. RATE_LIMIT_CONFIG gives Worker code the same settings (it may not import this file).
+				RATE_LIMIT_CONFIG: bindings.json(RATE_LIMITS),
+				RL_TOKENS: rateLimit(RATE_LIMITS.TOKENS),
+				RL_LISTING_CREATE: rateLimit(RATE_LIMITS.LISTING_CREATE),
+				RL_SIGN_IN: rateLimit(RATE_LIMITS.SIGN_IN),
+				// Phase 1: RELEASES (R2, R5/R13).
 			},
 		},
 	};
