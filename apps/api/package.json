@@ -7,20 +7,25 @@
 		"build": "cf build",
 		"typecheck": "cf workers types && tsc",
 		"db:auth-schema": "auth generate --config scripts/auth-schema.ts --output migrations/0001_auth.sql -y",
-		"db:migrate": "cf d1 migrations apply 37a21f9c-7f7d-4ea2-a13d-8a3dcc58c931 --local --persist-to .cloudflare/state"
+		"db:migrate": "cf d1 migrations apply 37a21f9c-7f7d-4ea2-a13d-8a3dcc58c931 --local --persist-to .cloudflare/state",
+		"test": "vitest run",
+		"dev:login": "tsx scripts/dev-login.ts"
 	},
 	"dependencies": {
 		"@appmarket/shared": "workspace:*",
 		"better-auth": "1.7.7",
-		"hono": "^4.13.12"
+		"hono": "^4.13.12",
+		"zod": "^4"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "beta",
 		"@types/better-sqlite3": "^9.6.0",
+		"auth": "1.7.7",
 		"better-sqlite3": "^13.0.3",
 		"cf": "^1.0.0-beta.10",
+		"tsx": "^4.23.15",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.0",
-		"auth": "1.7.7"
+		"vitest": "^5.0.3"
 	}
 }

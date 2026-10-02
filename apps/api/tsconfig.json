@@ -15,6 +15,7 @@
 		"skipLibCheck": true
 	},
 	"include": [
+		"vitest.config.ts",
 		"environments.ts",
 		"scripts",
 		"src",
