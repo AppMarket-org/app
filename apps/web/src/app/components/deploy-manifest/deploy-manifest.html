@@ -1,0 +1,34 @@
+@if (empty()) {
+  <p class="muted">Deploys a Worker with no extra resources, variables or secrets.</p>
+} @else {
+  @if (manifest().resources.length > 0) {
+    <h3>Resources created in your account</h3>
+    <mat-list>
+      @for (r of manifest().resources; track $index) {
+        <mat-list-item>
+          <mat-icon matListItemIcon>cloud</mat-icon>
+          <span matListItemTitle>{{ label(r.type) }}{{ r.name ? ': ' + r.name : '' }}</span>
+          @if (r.binding) {
+            <span matListItemLine>Binding {{ r.binding }}</span>
+          }
+        </mat-list-item>
+      }
+    </mat-list>
+  }
+  @if (manifest().secrets.length > 0) {
+    <h3>Secrets you will be asked for</h3>
+    <mat-chip-set aria-label="Secrets">
+      @for (s of manifest().secrets; track s) {
+        <mat-chip>{{ s }}</mat-chip>
+      }
+    </mat-chip-set>
+  }
+  @if (manifest().envVars.length > 0) {
+    <h3>Variables (editable after deploy)</h3>
+    <mat-chip-set aria-label="Variables">
+      @for (v of manifest().envVars; track v) {
+        <mat-chip>{{ v }}</mat-chip>
+      }
+    </mat-chip-set>
+  }
+}

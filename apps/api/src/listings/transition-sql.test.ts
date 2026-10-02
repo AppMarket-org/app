@@ -16,8 +16,8 @@ function freshDb() {
 	return db;
 }
 
-function apply(db: Database.Database, from: ListingState, request: TransitionRequest, commit: string | null = null) {
-	const { sql, params } = transitionUpdate({ id: "l1", state: from }, request, "a1", commit);
+function apply(db: Database.Database, from: ListingState, request: TransitionRequest, commit: string | null = null, checks: string | null = null) {
+	const { sql, params } = transitionUpdate({ id: "l1", state: from }, request, "a1", commit, checks);
 	return db.prepare(sql).run(...params).changes;
 }
 
@@ -34,9 +34,12 @@ describe("transitionUpdate", () => {
 		expect(row(db)).toMatchObject({ state: "submitted", submitted_tag: "v1", submitted_commit: "c1", submitted_notes: "First release" });
 		expect(apply(db, "submitted", { to: "draft" })).toBe(1);
 		expect(row(db)).toMatchObject({ state: "draft", submitted_tag: null, submitted_commit: null, submitted_notes: null });
-		expect(apply(db, "draft", { to: "submitted", tag: "v1", releaseNotes: "" }, "c1")).toBe(1);
+		const checks = JSON.stringify({ warnings: [], manifest: { resources: [{ type: "d1", binding: "DB", name: "db" }], envVars: [], secrets: ["KEY"] } });
+		expect(apply(db, "draft", { to: "submitted", tag: "v1", releaseNotes: "" }, "c1", checks)).toBe(1);
+		expect(row(db)).toMatchObject({ submitted_checks: checks });
 		expect(apply(db, "submitted", { to: "published" })).toBe(1);
-		expect(row(db)).toMatchObject({ state: "published", published_tag: "v1", published_commit: "c1", approved_by: "a1", submitted_tag: null });
+		expect(row(db)).toMatchObject({ state: "published", published_tag: "v1", published_commit: "c1", approved_by: "a1", submitted_tag: null, submitted_checks: null });
+		expect(JSON.parse(row(db).published_manifest as string)).toEqual(JSON.parse(checks).manifest);
 		expect(apply(db, "published", { to: "unpublished" })).toBe(1);
 		expect(apply(db, "unpublished", { to: "submitted", tag: "v1", releaseNotes: "" }, "c2")).toBe(1);
 		expect(row(db)).toMatchObject({ submitted_commit: "c2", published_commit: "c1" });

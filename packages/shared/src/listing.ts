@@ -1,3 +1,5 @@
+import type { ContractIssue, DeployManifest } from "./manifest";
+
 // Listing lifecycle (PRD R12). A published version pins to a Git tag in the app's Artifacts repo.
 export const LISTING_STATES = ["draft", "submitted", "published", "unpublished", "removed"] as const;
 export type ListingState = (typeof LISTING_STATES)[number];
@@ -74,6 +76,10 @@ export interface Listing {
 	/** Tag buyers get, set when an admin publishes, pinned to the reviewed commit. */
 	publishedTag: string | null;
 	publishedCommit: string | null;
+	/** D2/G4 warnings and D3 manifest for the version in review. */
+	submittedChecks: { warnings: ContractIssue[]; manifest: DeployManifest | null } | null;
+	/** D3: what deploying the published version creates. */
+	manifest: DeployManifest | null;
 	createdAt: string;
 	updatedAt: string;
 }
