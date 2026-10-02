@@ -4,13 +4,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { Deployment, Listing } from '@appmarket/shared';
+import { DEPLOY_UNAVAILABLE, RUNTIMES, type Deployment, type Listing, deployAvailability } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../auth/auth';
 import { DeployDialog, type DeployDialogData } from '../deploy-dialog/deploy-dialog';
 
 /**
- * PRD D6: "Deploy to Cloudflare" on a listing page. Signed-out visitors sign in first; returning
+ * PRD D6/D4: "Deploy to Cloudflare" on a listing page, for listings the pipeline can build; others
+ * get a short note on how to use the app instead. Signed-out visitors sign in first; returning
  * from sign-in or from connecting Cloudflare (`?deploy=1`) reopens the dialog.
  */
 @Component({
@@ -22,6 +23,8 @@ import { DeployDialog, type DeployDialogData } from '../deploy-dialog/deploy-dia
 })
 export class DeployAction {
   readonly listing = input.required<Listing>();
+  /** The listing has downloadable releases (R13), shown above on the page. */
+  readonly hasReleases = input(false);
 
   protected readonly auth = inject(Auth);
   private readonly dialog = inject(MatDialog);
@@ -29,10 +32,16 @@ export class DeployAction {
   private readonly route = inject(ActivatedRoute);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  /** D4: paid listings deploy after purchase (not built yet), so only free ones show the button. */
-  protected readonly deployable = computed(() => {
+  private readonly availability = computed(() => deployAvailability(this.listing()));
+  protected readonly deployable = computed(() => this.availability().ok);
+  /** Why there is no Deploy action, for published listings; null otherwise. */
+  protected readonly guidance = computed(() => {
+    const a = this.availability();
+    if (a.ok || a.reason === 'not_published') return null;
     const l = this.listing();
-    return l.state === 'published' && l.priceCents === 0 && !!l.manifest && l.platforms.includes('workers');
+    if (a.reason === 'platform') return this.hasReleases() ? 'Download it from the Downloads section above, or get the code below.' : 'Get the code below to build and run it.';
+    if (a.reason === 'runtime') return `One-click deploy is not available for ${RUNTIMES[l.runtime].name} apps yet. Get the code below and deploy it with Wrangler.`;
+    return DEPLOY_UNAVAILABLE[a.reason];
   });
   protected readonly returnPath = computed(() => `/apps/${this.listing().slug}?deploy=1`);
 

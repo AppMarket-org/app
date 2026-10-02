@@ -9,3 +9,9 @@
     }
   </section>
 }
+@if (guidance(); as text) {
+  <section class="deploy" aria-labelledby="deploy-action-heading">
+    <h2 id="deploy-action-heading">How to use this app</h2>
+    <p>{{ text }}</p>
+  </section>
+}
