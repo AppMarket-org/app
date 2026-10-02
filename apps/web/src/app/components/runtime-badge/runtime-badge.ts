@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RUNTIMES, type Runtime } from '@appmarket/shared';
 
 const TIER_LABELS = { supported: 'Supported', limited: 'Supported with limits', advanced: 'Advanced' } as const;
 
-/** PRD R26: runtime name with its support tier; the note explains it on hover or focus. */
+/** PRD R26: runtime and support tier as a Material chip; the note explains it on hover or focus. Place inside a mat-chip-set. */
 @Component({
   selector: 'app-runtime-badge',
-  imports: [MatTooltipModule],
+  imports: [MatChipsModule, MatTooltipModule],
   templateUrl: './runtime-badge.html',
   styleUrl: './runtime-badge.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

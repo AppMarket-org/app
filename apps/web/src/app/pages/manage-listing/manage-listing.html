@@ -1,12 +1,14 @@
 @if (listing(); as l) {
   <header class="head">
     <div>
-      <a class="back" routerLink="/dashboard">Your listings</a>
+      <a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Your listings</a>
       <h1>{{ l.name }}</h1>
-      <p>
-        <span class="state" [class]="l.state">{{ states[l.state].label }}</span>
-        {{ states[l.state].help }}
-      </p>
+      <div class="status">
+        <mat-chip-set aria-label="Status">
+          <mat-chip [class]="l.state">{{ states[l.state].label }}</mat-chip>
+        </mat-chip-set>
+        <span>{{ states[l.state].help }}</span>
+      </div>
     </div>
     @if (l.state !== 'removed') {
       <a mat-stroked-button [routerLink]="['/apps', l.slug]">View listing page</a>
@@ -63,11 +65,14 @@
               <div class="error" role="alert">
                 <p>{{ message }}</p>
                 @if (submitIssues().length > 0) {
-                  <ul>
+                  <mat-list dense>
                     @for (issue of submitIssues(); track issue) {
-                      <li>{{ issue }}</li>
+                      <mat-list-item>
+                        <mat-icon matListItemIcon>error_outline</mat-icon>
+                        <span matListItemTitle class="issue">{{ issue }}</span>
+                      </mat-list-item>
                     }
-                  </ul>
+                  </mat-list>
                 }
               </div>
             }
@@ -111,15 +116,20 @@
               (cancelled)="editing.set(false)"
             />
           } @else {
-            <dl class="details">
-              <dt>Summary</dt>
-              <dd>{{ l.summary }}</dd>
-              <dt>Runtime</dt>
-              <dd><app-runtime-badge [runtime]="l.runtime" /></dd>
-              <dt>License</dt>
-              <dd>{{ l.license ?? 'None' }}</dd>
-            </dl>
-            <button mat-stroked-button type="button" (click)="editing.set(true)">Edit details</button>
+            <mat-list>
+              <mat-list-item lines="2">
+                <span matListItemTitle>Summary</span>
+                <span matListItemLine>{{ l.summary }}</span>
+              </mat-list-item>
+              <mat-list-item lines="2">
+                <span matListItemTitle>License</span>
+                <span matListItemLine>{{ l.license ?? 'None' }}</span>
+              </mat-list-item>
+            </mat-list>
+            <div class="detail-actions">
+              <app-runtime-badge [runtime]="l.runtime" />
+              <button mat-stroked-button type="button" (click)="editing.set(true)">Edit details</button>
+            </div>
           }
         </mat-card-content>
       </mat-card>
@@ -132,12 +142,14 @@
         <mat-card-content>
           <div class="shots">
             @for (shot of screenshots(); track shot.id; let i = $index) {
-              <figure>
-                <img [src]="shot.url" [alt]="'Screenshot ' + (i + 1)" />
-                <button mat-icon-button type="button" [attr.aria-label]="'Delete screenshot ' + (i + 1)" [disabled]="busy()" (click)="deleteScreenshot(shot.id)">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </figure>
+              <mat-card appearance="outlined" class="shot">
+                <img mat-card-image [src]="shot.url" [alt]="'Screenshot ' + (i + 1)" />
+                <mat-card-actions>
+                  <button mat-button type="button" [attr.aria-label]="'Delete screenshot ' + (i + 1)" [disabled]="busy()" (click)="deleteScreenshot(shot.id)">
+                    <mat-icon>delete</mat-icon>Delete
+                  </button>
+                </mat-card-actions>
+              </mat-card>
             }
           </div>
           @if (screenshots().length < shotLimits.maxCount) {
@@ -155,26 +167,38 @@
         <mat-card-content>
           @if (tokens().length > 0) {
             <div class="table-scroll">
-            <table class="tokens">
-              <thead>
-                <tr><th scope="col">Scope</th><th scope="col">State</th><th scope="col">Issued to</th><th scope="col">Expires</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
-              </thead>
-              <tbody>
-                @for (t of tokens(); track t.id) {
-                  <tr>
-                    <td>{{ t.scope === 'write' ? 'Push' : 'Clone' }}</td>
-                    <td><span class="token-state" [class]="t.state">{{ t.state }}</span></td>
-                    <td>{{ t.mintedBy.name }}</td>
-                    <td>{{ t.expiresAt | date: 'short' }}</td>
-                    <td>
-                      @if (t.state === 'active') {
-                        <button mat-button type="button" class="danger" [disabled]="busy()" (click)="revoke(t.id)">Revoke</button>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+              <table mat-table [dataSource]="tokens()">
+                <ng-container matColumnDef="scope">
+                  <th mat-header-cell *matHeaderCellDef>Scope</th>
+                  <td mat-cell *matCellDef="let t">{{ t.scope === 'write' ? 'Push' : 'Clone' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="state">
+                  <th mat-header-cell *matHeaderCellDef>State</th>
+                  <td mat-cell *matCellDef="let t">
+                    <mat-chip-set [attr.aria-label]="'Token ' + t.state">
+                      <mat-chip [class]="t.state === 'active' ? 'published' : ''">{{ t.state }}</mat-chip>
+                    </mat-chip-set>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="issuedTo">
+                  <th mat-header-cell *matHeaderCellDef>Issued to</th>
+                  <td mat-cell *matCellDef="let t">{{ t.mintedBy.name }}</td>
+                </ng-container>
+                <ng-container matColumnDef="expires">
+                  <th mat-header-cell *matHeaderCellDef>Expires</th>
+                  <td mat-cell *matCellDef="let t">{{ t.expiresAt | date: 'short' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef><span class="cdk-visually-hidden">Actions</span></th>
+                  <td mat-cell *matCellDef="let t">
+                    @if (t.state === 'active') {
+                      <button mat-button type="button" class="danger" [disabled]="busy()" (click)="revoke(t.id)">Revoke</button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="tokenColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: tokenColumns"></tr>
+              </table>
             </div>
             @if (activeTokens() > 0) {
               <button mat-stroked-button type="button" class="danger" [disabled]="busy()" (click)="revokeAll()">Revoke all active tokens</button>
@@ -189,22 +213,19 @@
     <mat-card appearance="outlined" class="history">
       <mat-card-header><mat-card-title>History</mat-card-title></mat-card-header>
       <mat-card-content>
-        <ul>
+        <mat-list>
           @for (e of events(); track $index) {
-            <li>
-              <strong>{{ states[e.to].label }}</strong>
-              @if (e.tag) {
-                <span> · {{ e.tag }}</span>
-              }
-              <span class="muted"> by {{ e.actor.name }} ({{ e.actor.role }}), {{ e.createdAt | date: 'medium' }}</span>
+            <mat-list-item [lines]="e.note ? 3 : 2">
+              <span matListItemTitle>{{ states[e.to].label }}{{ e.tag ? ' · ' + e.tag : '' }}</span>
+              <span matListItemLine>by {{ e.actor.name }} ({{ e.actor.role }}), {{ e.createdAt | date: 'medium' }}</span>
               @if (e.note) {
-                <p class="muted">{{ e.note }}</p>
+                <span matListItemLine>{{ e.note }}</span>
               }
-            </li>
+            </mat-list-item>
           } @empty {
-            <li class="muted">No changes yet.</li>
+            <mat-list-item>No changes yet.</mat-list-item>
           }
-        </ul>
+        </mat-list>
       </mat-card-content>
     </mat-card>
   </div>

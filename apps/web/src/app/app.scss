@@ -5,9 +5,7 @@
 }
 
 .brand {
-  color: inherit;
   font: var(--mat-sys-title-large);
-  text-decoration: none;
 }
 
 .spacer {
@@ -17,19 +15,17 @@
 main {
   flex: 1;
   width: 100%;
-  max-width: 1120px;
+  max-width: 70rem;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 1.5rem 1rem;
   box-sizing: border-box;
 }
 
 footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 24px 16px;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+  gap: 0.25rem;
+  padding: 1rem;
 }
 
 .account {

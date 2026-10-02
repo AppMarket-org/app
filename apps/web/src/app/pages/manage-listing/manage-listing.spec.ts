@@ -58,7 +58,7 @@ describe('ManageListing', () => {
     http.expectOne('/api/listings/app/transitions').flush({ error: 'runtime_mismatch', issues: ['Add a Wrangler config.'] }, { status: 422, statusText: 'Unprocessable' });
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(el.querySelector('form .error li')?.textContent).toBe('Add a Wrangler config.');
+    expect(el.querySelector('form .error mat-list-item')?.textContent?.trim()).toContain('Add a Wrangler config.');
   });
 
   it('submits a tag, reloads, and leaves no error state behind', async () => {

@@ -1,3 +1,5 @@
-<span class="badge" [class]="info().tier" tabindex="0" [matTooltip]="info().note" [attr.aria-label]="info().name + ', ' + tierLabel() + '. ' + info().note">
-  {{ info().name }}<span class="tier"> · {{ tierLabel() }}</span>
-</span>
+<mat-chip-set [attr.aria-label]="'Runtime: ' + info().name">
+  <mat-chip [class]="info().tier" [matTooltip]="info().note" [attr.aria-description]="tierLabel() + '. ' + info().note">
+    {{ info().name }} · {{ tierLabel() }}
+  </mat-chip>
+</mat-chip-set>

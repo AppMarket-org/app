@@ -1,0 +1,17 @@
+// Listing state chip colours, shared by the dashboard pages (@use in their component styles).
+@mixin state-chip-colours {
+  mat-chip.published {
+    --mat-chip-elevated-container-color: var(--mat-sys-primary-container);
+    --mat-chip-label-text-color: var(--mat-sys-on-primary-container);
+  }
+
+  mat-chip.submitted {
+    --mat-chip-elevated-container-color: var(--mat-sys-tertiary-container);
+    --mat-chip-label-text-color: var(--mat-sys-on-tertiary-container);
+  }
+
+  mat-chip.removed {
+    --mat-chip-elevated-container-color: var(--mat-sys-error-container);
+    --mat-chip-label-text-color: var(--mat-sys-on-error-container);
+  }
+}

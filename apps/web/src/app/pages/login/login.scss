@@ -1,14 +1,14 @@
 .login {
-  max-width: 400px;
-  margin: 48px auto;
+  max-width: 25rem;
+  margin: 3rem auto;
   overflow: hidden;
 }
 
 mat-card-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 16px;
+  gap: 0.75rem;
+  padding-top: 1rem;
 }
 
 .error {

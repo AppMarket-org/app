@@ -12,33 +12,36 @@
   }
   @default {
     @for (item of listings()!; track item.id) {
-      <a class="row" [routerLink]="['/dashboard/listings', item.slug]">
-        <mat-card appearance="outlined">
-          <mat-card-content>
-            <div class="title">
-              <strong>{{ item.name }}</strong>
-              <span class="state" [class]="item.state">{{ states[item.state].label }}</span>
-            </div>
-            <p class="summary">{{ item.summary }}</p>
-            <div class="meta">
-              <app-runtime-badge [runtime]="item.runtime" />
-              @if (item.publishedTag) {
-                <span>Live: {{ item.publishedTag }}</span>
-              }
-              @if (item.submittedTag) {
-                <span>In review: {{ item.submittedTag }}</span>
-              }
-              <span>Updated {{ item.updatedAt | date: 'mediumDate' }}</span>
-            </div>
-          </mat-card-content>
-        </mat-card>
-      </a>
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>{{ item.name }}</mat-card-title>
+          <mat-card-subtitle>{{ item.summary }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="meta">
+          <mat-chip-set [attr.aria-label]="item.name + ' status'">
+            <mat-chip [class]="item.state">{{ states[item.state].label }}</mat-chip>
+            @if (item.publishedTag) {
+              <mat-chip>Live: {{ item.publishedTag }}</mat-chip>
+            }
+            @if (item.submittedTag) {
+              <mat-chip>In review: {{ item.submittedTag }}</mat-chip>
+            }
+          </mat-chip-set>
+          <app-runtime-badge [runtime]="item.runtime" />
+          <span class="updated">Updated {{ item.updatedAt | date: 'mediumDate' }}</span>
+        </mat-card-content>
+        <mat-card-actions>
+          <a mat-button [routerLink]="['/dashboard/listings', item.slug]" [attr.aria-label]="'Manage ' + item.name">Manage</a>
+        </mat-card-actions>
+      </mat-card>
     } @empty {
       <mat-card appearance="outlined">
         <mat-card-content>
           <p>You have no listings yet. Create one to get a Git repository for your app.</p>
-          <a mat-stroked-button routerLink="/dashboard/new">Create your first listing</a>
         </mat-card-content>
+        <mat-card-actions>
+          <a mat-stroked-button routerLink="/dashboard/new">Create your first listing</a>
+        </mat-card-actions>
       </mat-card>
     }
   }
