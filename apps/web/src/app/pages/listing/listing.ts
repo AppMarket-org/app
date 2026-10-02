@@ -1,48 +1,65 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CATEGORIES, RUNTIMES, type Listing as ListingData } from '@appmarket/shared';
+import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
+import { GetCode } from '../../components/get-code/get-code';
+import { Markdown } from '../../components/markdown/markdown';
+import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
+import type { ListingDetails } from './listing-resolver';
+
+const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
+  workers: 'Cloudflare Workers',
+  pwa: 'Installable web app',
+  android: 'Android',
+  ios: 'iOS',
+  download: 'Download',
+};
 
 @Component({
   selector: 'app-listing',
-  imports: [MatButtonModule, MatCardModule, MatChipsModule, RouterLink],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatDividerModule, RouterLink, GetCode, Markdown, RuntimeBadge],
   templateUrl: './listing.html',
   styleUrl: './listing.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Listing {
   /** From listingResolver; null when the listing does not exist or is not visible. */
-  readonly listing = input<ListingData | null>(null);
+  readonly details = input<ListingDetails | null>(null);
 
-  protected readonly runtimes = RUNTIMES;
+  protected readonly platformName = (p: keyof typeof PLATFORM_NAMES) => PLATFORM_NAMES[p];
   protected readonly categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
 
   constructor() {
-    const data = inject(ActivatedRoute).snapshot.data['listing'] as ListingData | null;
-    const slug = inject(ActivatedRoute).snapshot.paramMap.get('slug') ?? '';
+    const route = inject(ActivatedRoute).snapshot;
+    const data = route.data['details'] as ListingDetails | null;
     const seo = inject(Seo);
     if (!data) {
-      seo.set({ title: 'App not found', description: 'This app does not exist or is not published.', path: `/apps/${slug}`, noindex: true });
+      seo.set({ title: 'App not found', description: 'This app does not exist or is not published.', path: `/apps/${route.paramMap.get('slug') ?? ''}`, noindex: true });
       return;
     }
+    const app = data.listing;
     seo.set({
-      title: data.name,
-      description: data.summary,
-      path: `/apps/${data.slug}`,
-      noindex: data.state !== 'published',
+      title: app.name,
+      description: app.summary,
+      path: `/apps/${app.slug}`,
+      image: data.screenshots[0] ? `https://appmarket.org${data.screenshots[0].url}` : undefined,
+      noindex: app.state !== 'published',
       jsonLd: {
         '@type': 'SoftwareApplication',
-        name: data.name,
-        description: data.summary,
-        applicationCategory: this.categoryName(data.category),
+        name: app.name,
+        description: app.summary,
+        applicationCategory: this.categoryName(app.category),
         operatingSystem: 'Web',
-        softwareVersion: data.publishedTag ?? undefined,
-        license: data.license ?? undefined,
-        offers: { '@type': 'Offer', price: (data.priceCents / 100).toFixed(2), priceCurrency: 'USD' },
-        author: { '@type': 'Person', name: data.owner.name },
+        softwareVersion: app.publishedTag ?? undefined,
+        license: app.license ?? undefined,
+        screenshot: data.screenshots.map((s) => `https://appmarket.org${s.url}`),
+        offers: { '@type': 'Offer', price: (app.priceCents / 100).toFixed(2), priceCurrency: 'USD' },
+        author: { '@type': 'Person', name: app.owner.name },
       },
     });
   }

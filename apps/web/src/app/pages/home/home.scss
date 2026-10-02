@@ -1,5 +1,5 @@
 .hero {
-  padding: 48px 0;
+  padding: 32px 0 16px;
 
   h1 {
     font: var(--mat-sys-display-small);
@@ -9,6 +9,28 @@
   p {
     font: var(--mat-sys-body-large);
     color: var(--mat-sys-on-surface-variant);
+    max-width: 640px;
     margin: 0 0 24px;
+  }
+}
+
+h2 {
+  font: var(--mat-sys-title-large);
+  margin: 32px 0 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+@media (max-width: 600px) {
+  .hero h1 {
+    font: var(--mat-sys-headline-medium);
   }
 }

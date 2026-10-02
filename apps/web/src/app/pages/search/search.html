@@ -1,9 +1,34 @@
 <h1>Search apps</h1>
 
-<mat-form-field appearance="outline" class="query">
-  <mat-label>Search</mat-label>
-  <mat-icon matPrefix>search</mat-icon>
-  <input matInput type="search" />
-</mat-form-field>
+<!-- A plain GET form: works before JavaScript loads and gives every search a URL. -->
+<form class="filters" action="/search" method="get" role="search">
+  <mat-form-field appearance="outline" class="query">
+    <mat-label>Search</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput type="search" name="q" [value]="q() ?? ''" maxlength="100" />
+  </mat-form-field>
 
-<p class="hint">Results come from the catalog API (R1, R15).</p>
+  <mat-form-field appearance="outline">
+    <mat-label>Category</mat-label>
+    <select matNativeControl name="category">
+      <option value="">Any</option>
+      @for (c of categories; track c.slug) {
+        <option [value]="c.slug" [selected]="c.slug === category()">{{ c.name }}</option>
+      }
+    </select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Runtime</mat-label>
+    <select matNativeControl name="runtime">
+      <option value="">Any</option>
+      @for (r of runtimes; track r.key) {
+        <option [value]="r.key" [selected]="r.key === runtime()">{{ r.name }}</option>
+      }
+    </select>
+  </mat-form-field>
+
+  <button mat-flat-button type="submit">Search</button>
+</form>
+
+<app-listing-results [results]="results()" [query]="query()" />

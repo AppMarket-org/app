@@ -1,15 +1,33 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { RESPONSE_INIT, inject } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
-import type { Listing } from '@appmarket/shared';
-import { catchError, of, throwError } from 'rxjs';
+import type { Listing, ListingVersion, Screenshot } from '@appmarket/shared';
+import { catchError, forkJoin, map, of, switchMap, throwError } from 'rxjs';
+import { Catalog } from '../../api/catalog';
 
-/** Loads the listing before render (SSR waits for it); a missing listing becomes an HTTP 404. */
-export const listingResolver: ResolveFn<Listing | null> = (route) => {
+export interface ListingDetails {
+  listing: Listing;
+  screenshots: Screenshot[];
+  versions: ListingVersion[];
+  readme: string | null;
+}
+
+/** Loads the listing and its details before render (SSR waits); a missing listing becomes an HTTP 404. */
+export const listingResolver: ResolveFn<ListingDetails | null> = (route) => {
   const response = inject(RESPONSE_INIT, { optional: true });
+  const catalog = inject(Catalog);
+  const slug = encodeURIComponent(route.paramMap.get('slug') ?? '');
   return inject(HttpClient)
-    .get<Listing>(`/api/listings/${encodeURIComponent(route.paramMap.get('slug') ?? '')}`)
+    .get<Listing>(`/api/listings/${slug}`)
     .pipe(
+      switchMap((listing) =>
+        forkJoin({
+          screenshots: catalog.screenshots(slug).pipe(catchError(() => of([]))),
+          versions: catalog.versions(slug).pipe(catchError(() => of([]))),
+          // No README (404) is normal; show nothing.
+          readme: catalog.readme(slug).pipe(catchError(() => of(null))),
+        }).pipe(map((details) => ({ listing, ...details }))),
+      ),
       catchError((error: unknown) => {
         if (error instanceof HttpErrorResponse && error.status === 404) {
           if (response) response.status = 404;

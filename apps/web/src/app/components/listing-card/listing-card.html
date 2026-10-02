@@ -1,0 +1,12 @@
+<a class="card-link" [routerLink]="['/apps', listing().slug]">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>{{ listing().name }}</mat-card-title>
+      <mat-card-subtitle>{{ categoryName(listing().category) }} · by {{ listing().owner.name }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p>{{ listing().summary }}</p>
+      <app-runtime-badge [runtime]="listing().runtime" />
+    </mat-card-content>
+  </mat-card>
+</a>

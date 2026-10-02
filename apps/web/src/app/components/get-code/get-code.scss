@@ -1,0 +1,24 @@
+h2 {
+  font: var(--mat-sys-title-large);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  font-size: 13px;
+}
+
+.hint {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+mat-progress-bar {
+  margin-top: 12px;
+}

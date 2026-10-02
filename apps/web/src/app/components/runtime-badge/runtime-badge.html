@@ -1,0 +1,3 @@
+<span class="badge" [class]="info().tier" tabindex="0" [matTooltip]="info().note" [attr.aria-label]="info().name + ', ' + tierLabel() + '. ' + info().note">
+  {{ info().name }}<span class="tier"> · {{ tierLabel() }}</span>
+</span>
