@@ -1,0 +1,124 @@
+@if (listing(); as l) {
+  <header class="head">
+    <div>
+      <a class="back" routerLink="/dashboard">Your listings</a>
+      <h1>{{ l.name }}</h1>
+      <p>
+        <span class="state" [class]="l.state">{{ states[l.state].label }}</span>
+        {{ states[l.state].help }}
+      </p>
+    </div>
+    @if (l.state !== 'removed') {
+      <a mat-stroked-button [routerLink]="['/apps', l.slug]">View listing page</a>
+    }
+  </header>
+
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Working" />
+  }
+
+  <div class="grid">
+    @if (l.state !== 'removed') {
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Push your code</mat-card-title></mat-card-header>
+        <mat-card-content>
+          @if (remote(); as url) {
+            <p>Git remote (no credentials in it):</p>
+            <div class="copyable">
+              <code>{{ url }}</code>
+              <button mat-icon-button type="button" aria-label="Copy remote URL" (click)="copy(url, 'Remote URL')"><mat-icon>content_copy</mat-icon></button>
+            </div>
+          }
+          @if (token()) {
+            <p>Run these from your project. The token works for 1 hour and is shown only now; do not save it in Git config.</p>
+            @for (cmd of pushCommands(); track $index) {
+              <div class="copyable">
+                <code>{{ cmd }}</code>
+                <button mat-icon-button type="button" aria-label="Copy command" (click)="copy(cmd, 'Command')"><mat-icon>content_copy</mat-icon></button>
+              </div>
+            }
+          } @else {
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="createPushToken()">Create push token</button>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @if (canSubmit()) {
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Submit a version for review</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="submitForm" (ngSubmit)="submitVersion(formDirective)" #formDirective="ngForm" novalidate>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Git tag</mat-label>
+              <input matInput formControlName="tag" placeholder="v1.0.0" autocomplete="off" />
+              <mat-hint>Push the tag first. Its commit is what gets reviewed and published.</mat-hint>
+              <mat-error>Use letters, digits, ".", "_", "-" or "/".</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Release notes</mat-label>
+              <textarea matInput formControlName="releaseNotes" rows="4"></textarea>
+            </mat-form-field>
+            @if (submitError(); as message) {
+              <div class="error" role="alert">
+                <p>{{ message }}</p>
+                @if (submitIssues().length > 0) {
+                  <ul>
+                    @for (issue of submitIssues(); track issue) {
+                      <li>{{ issue }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
+            <button mat-flat-button type="submit" [disabled]="busy()">Submit for review</button>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @if (can('draft') || can('unpublished') || can('removed')) {
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Status</mat-card-title></mat-card-header>
+        <mat-card-content class="actions">
+          @if (can('draft')) {
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('draft')">Withdraw from review</button>
+          }
+          @if (can('unpublished')) {
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('unpublished')">Unpublish</button>
+          }
+          @if (can('removed')) {
+            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="change('removed')">Remove listing</button>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <mat-card appearance="outlined" class="history">
+      <mat-card-header><mat-card-title>History</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <ul>
+          @for (e of events(); track $index) {
+            <li>
+              <strong>{{ states[e.to].label }}</strong>
+              @if (e.tag) {
+                <span> · {{ e.tag }}</span>
+              }
+              <span class="muted"> by {{ e.actor.name }} ({{ e.actor.role }}), {{ e.createdAt | date: 'medium' }}</span>
+              @if (e.note) {
+                <p class="muted">{{ e.note }}</p>
+              }
+            </li>
+          } @empty {
+            <li class="muted">No changes yet.</li>
+          }
+        </ul>
+      </mat-card-content>
+    </mat-card>
+  </div>
+} @else if (loadError()) {
+  <p class="error" role="alert">This listing could not be loaded. It may not exist, or it is not yours.</p>
+  <a mat-button routerLink="/dashboard">Back to your listings</a>
+} @else {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading listing" />
+}

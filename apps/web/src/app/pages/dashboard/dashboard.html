@@ -1,9 +1,45 @@
-<h1>Developer dashboard</h1>
+<header class="head">
+  <h1>Your listings</h1>
+  <a mat-flat-button routerLink="/dashboard/new">New listing</a>
+</header>
 
-<a mat-flat-button routerLink="/dashboard/new">New listing</a>
-
-<mat-card appearance="outlined">
-  <mat-card-content>
-    <p>Repo remote URL, token minting, release upload and listing status (R16).</p>
-  </mat-card-content>
-</mat-card>
+@switch (listings()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading listings" />
+  }
+  @case (null) {
+    <p class="error" role="alert">Could not load your listings. Reload to try again.</p>
+  }
+  @default {
+    @for (item of listings()!; track item.id) {
+      <a class="row" [routerLink]="['/dashboard/listings', item.slug]">
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <div class="title">
+              <strong>{{ item.name }}</strong>
+              <span class="state" [class]="item.state">{{ states[item.state].label }}</span>
+            </div>
+            <p class="summary">{{ item.summary }}</p>
+            <div class="meta">
+              <app-runtime-badge [runtime]="item.runtime" />
+              @if (item.publishedTag) {
+                <span>Live: {{ item.publishedTag }}</span>
+              }
+              @if (item.submittedTag) {
+                <span>In review: {{ item.submittedTag }}</span>
+              }
+              <span>Updated {{ item.updatedAt | date: 'mediumDate' }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </a>
+    } @empty {
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <p>You have no listings yet. Create one to get a Git repository for your app.</p>
+          <a mat-stroked-button routerLink="/dashboard/new">Create your first listing</a>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+}

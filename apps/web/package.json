@@ -24,8 +24,7 @@
     "@appmarket/shared": "workspace:*",
     "marked": "^18.0.14",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "zod": "^4"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^22.2.0",
