@@ -76,3 +76,9 @@ export async function readReadme(repoName: string, commit: string): Promise<stri
 	}
 	return null;
 }
+
+/** PRD R16: the repo's Git remote (no credentials) for the owner's dashboard. */
+export async function repoRemote(repoName: string): Promise<string> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	return (await repo.info()).remote;
+}

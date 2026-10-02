@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 // Listing lifecycle (PRD R12). A published version pins to a Git tag in the app's Artifacts repo.
 export const LISTING_STATES = ["draft", "submitted", "published", "unpublished", "removed"] as const;
 export type ListingState = (typeof LISTING_STATES)[number];
@@ -23,21 +21,6 @@ export function canTransition(from: ListingState, to: ListingState, actor?: Tran
 	return !!actors && (actor === undefined || actors.includes(actor));
 }
 
-/** A Git tag name we accept for a submitted version: a safe subset of git's ref rules. */
-export const gitTagSchema = z
-	.string()
-	.trim()
-	.regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/, "Use letters, digits, '.', '_', '-' or '/'")
-	.refine((t) => !t.includes("..") && !t.endsWith(".lock") && !t.endsWith("/") && !t.endsWith("."), "Not a valid Git tag name");
-
-export const transitionSchema = z.discriminatedUnion("to", [
-	z.object({ to: z.literal("submitted"), tag: gitTagSchema, releaseNotes: z.string().trim().max(10_000).default("") }),
-	z.object({ to: z.literal("published"), note: z.string().max(500).optional() }),
-	z.object({ to: z.literal("draft") }),
-	z.object({ to: z.literal("unpublished"), note: z.string().max(500).optional() }),
-	z.object({ to: z.literal("removed"), note: z.string().max(500).optional() }),
-]);
-export type TransitionRequest = z.infer<typeof transitionSchema>;
 
 // Target platforms (PRD R24, D4, M1-M4).
 export const TARGET_PLATFORMS = ["workers", "pwa", "android", "ios", "download"] as const;
@@ -53,17 +36,6 @@ export const RUNTIMES = {
 } as const;
 export type Runtime = keyof typeof RUNTIMES;
 export type RuntimeTier = (typeof RUNTIMES)[Runtime]["tier"];
-const runtimeKeys = Object.keys(RUNTIMES) as [Runtime, ...Runtime[]];
-export const runtimeSchema = z.enum(runtimeKeys);
-
-/** SPDX license identifier, for example MIT or Apache-2.0, or a simple expression such as "MIT OR Apache-2.0". */
-export const licenseSchema = z
-	.string()
-	.trim()
-	.max(64)
-	.regex(/^[A-Za-z0-9.+-]+( (AND|OR|WITH) [A-Za-z0-9.+-]+)*$/, "Use an SPDX identifier such as MIT or Apache-2.0");
-
-// Catalog categories (PRD R1). Slugs appear in /category/:slug URLs.
 export const CATEGORIES = [
 	{ slug: "ai", name: "AI" },
 	{ slug: "developer-tools", name: "Developer tools" },
@@ -79,43 +51,6 @@ export const CATEGORIES = [
 	{ slug: "other", name: "Other" },
 ] as const;
 export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
-const categorySlugs = CATEGORIES.map((c) => c.slug) as [CategorySlug, ...CategorySlug[]];
-
-/** Fields a developer sets when creating or editing a listing (PRD R1). Price is free-only in Phase 1 (R17). */
-const listingFields = {
-	name: z.string().trim().min(3).max(80),
-	summary: z.string().trim().min(10).max(160),
-	description: z.string().trim().max(20_000),
-	category: z.enum(categorySlugs),
-	runtime: runtimeSchema,
-	platforms: z
-		.array(z.enum(TARGET_PLATFORMS))
-		.min(1)
-		.max(TARGET_PLATFORMS.length)
-		.transform((p) => [...new Set(p)]),
-	license: licenseSchema.nullable(),
-};
-
-export const listingInputSchema = z.object({
-	...listingFields,
-	description: listingFields.description.default(""),
-	runtime: listingFields.runtime.default("workers-js"),
-	platforms: listingFields.platforms.default(["workers"]),
-	license: listingFields.license.default(null),
-});
-export type ListingInput = z.infer<typeof listingInputSchema>;
-/** Built from the fields without defaults: Zod 4 applies defaults inside .partial(), which would reset omitted fields. */
-export const listingUpdateSchema = z.object(listingFields).partial();
-export type ListingUpdate = z.infer<typeof listingUpdateSchema>;
-
-export const listingSearchSchema = z.object({
-	q: z.string().trim().max(100).optional(),
-	category: z.enum(categorySlugs).optional(),
-	runtime: runtimeSchema.optional(),
-	page: z.coerce.number().int().min(1).default(1),
-	pageSize: z.coerce.number().int().min(1).max(50).default(20),
-});
-export type ListingSearch = z.infer<typeof listingSearchSchema>;
 
 /** Listing as returned by the API. */
 export interface Listing {

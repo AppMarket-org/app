@@ -1,18 +1,5 @@
-import {
-	MAX_LISTINGS_PER_DEVELOPER,
-	SCREENSHOT_LIMITS,
-	TOKEN_TTL,
-	canTransition,
-	listingInputSchema,
-	listingSearchSchema,
-	listingUpdateSchema,
-	tokenRequestSchema,
-	transitionSchema,
-	type Listing,
-	type RepoToken,
-	type Role,
-	type TransitionActor,
-} from "@appmarket/shared";
+import { MAX_LISTINGS_PER_DEVELOPER, SCREENSHOT_LIMITS, TOKEN_TTL, canTransition, type Listing, type RepoToken, type Role, type TransitionActor } from "@appmarket/shared";
+import { listingInputSchema, listingSearchSchema, listingUpdateSchema, tokenRequestSchema, transitionSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
@@ -25,6 +12,7 @@ import {
 	mintRepoToken,
 	readReadme,
 	readRootEntries,
+	repoRemote,
 	repoNameFor,
 	resolveTag,
 	revokeAllRepoTokens,
@@ -174,6 +162,13 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const ids = await revokeAllRepoTokens(listing.repoName);
 		await tokenAudit().recordRevocations(listing.id, ids, session.user.id);
 		return c.json({ revoked: ids.length });
+	})
+	// R16: Git remote for the owner's dashboard (no credentials in it).
+	.get("/:slug/repo", requireRole(), async (c) => {
+		const listing = await listings().findBySlug(c.req.param("slug"));
+		if (!listing || !canEdit(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		if (!listing.repoName) return c.json({ error: "no_repo" }, 409);
+		return c.json({ name: listing.repoName, remote: await repoRemote(listing.repoName) });
 	})
 	// R24: changelog (published versions) and README of the published commit.
 	.get("/:slug/versions", async (c) => {
