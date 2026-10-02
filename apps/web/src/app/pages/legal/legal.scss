@@ -2,7 +2,14 @@ article {
   max-width: 45rem;
 }
 
-h1 {
-  font: var(--mat-sys-headline-medium);
-  text-transform: capitalize;
+.draft {
+  margin-bottom: 1.5rem;
+  --mat-card-outlined-container-color: var(--mat-sys-tertiary-container);
+
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--mat-sys-on-tertiary-container);
+  }
 }
