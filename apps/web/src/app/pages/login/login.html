@@ -1,9 +1,24 @@
 <mat-card appearance="outlined" class="login">
+  @if (pending()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
   <mat-card-header>
     <mat-card-title>Sign in to appmarket.org</mat-card-title>
+    <mat-card-subtitle>Use your Google or GitHub account</mat-card-subtitle>
   </mat-card-header>
+
   <mat-card-content>
-    <a mat-stroked-button href="/api/auth/sign-in/google">Continue with Google</a>
-    <a mat-stroked-button href="/api/auth/sign-in/github">Continue with GitHub</a>
+    <app-turnstile (token)="captchaToken.set($event)" />
+
+    <button mat-stroked-button type="button" [disabled]="!captchaToken() || pending()" (click)="signIn('google')">
+      Continue with Google
+    </button>
+    <button mat-stroked-button type="button" [disabled]="!captchaToken() || pending()" (click)="signIn('github')">
+      Continue with GitHub
+    </button>
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
   </mat-card-content>
 </mat-card>

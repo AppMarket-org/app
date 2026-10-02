@@ -1,2 +1,2 @@
-export * from "./listing.ts";
-export * from "./roles.ts";
+export * from "./listing";
+export * from "./roles";

@@ -1,0 +1,56 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import type { Role } from '@appmarket/shared';
+import { firstValueFrom } from 'rxjs';
+
+export type Provider = 'google' | 'github';
+
+export interface CurrentUser {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+  role: Role;
+}
+
+/** Session state and Google/GitHub sign-in via the API's Better Auth routes (PRD R11). */
+@Injectable({ providedIn: 'root' })
+export class Auth {
+  private readonly http = inject(HttpClient);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly current = signal<CurrentUser | null | undefined>(undefined);
+
+  /** undefined while loading, null when signed out. */
+  readonly user = this.current.asReadonly();
+  readonly signedIn = computed(() => !!this.current());
+
+  /** Loads the session once; signed-in pages are client-rendered, so the server never needs it. */
+  async load(): Promise<CurrentUser | null> {
+    if (!this.isBrowser) return null;
+    if (this.current() !== undefined) return this.current()!;
+    try {
+      this.current.set(await firstValueFrom(this.http.get<CurrentUser>('/api/me')));
+    } catch {
+      this.current.set(null);
+    }
+    return this.current()!;
+  }
+
+  /** Starts the OAuth flow; the browser leaves the app for Google or GitHub. */
+  async signIn(provider: Provider, captchaToken: string, callbackURL = '/dashboard'): Promise<void> {
+    const { url } = await firstValueFrom(
+      this.http.post<{ url: string }>(
+        '/api/auth/sign-in/social',
+        { provider, callbackURL },
+        { headers: { 'x-captcha-response': captchaToken } },
+      ),
+    );
+    window.location.assign(url);
+  }
+
+  async signOut(): Promise<void> {
+    await firstValueFrom(this.http.post('/api/auth/sign-out', {}));
+    this.current.set(null);
+  }
+}

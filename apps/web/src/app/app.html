@@ -2,8 +2,19 @@
   <a class="brand" routerLink="/">appmarket.org</a>
   <span class="spacer"></span>
   <a mat-button routerLink="/search">Search</a>
-  <a mat-button routerLink="/dashboard">Dashboard</a>
-  <a mat-flat-button routerLink="/login">Sign in</a>
+
+  @if (auth.user(); as user) {
+    <a mat-button routerLink="/dashboard">Dashboard</a>
+    <button mat-icon-button type="button" [matMenuTriggerFor]="account" aria-label="Account menu">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #account="matMenu">
+      <div class="account" mat-menu-item disabled>{{ user.name }}</div>
+      <button mat-menu-item type="button" (click)="signOut()">Sign out</button>
+    </mat-menu>
+  } @else if (auth.user() === null) {
+    <a mat-flat-button routerLink="/login">Sign in</a>
+  }
 </mat-toolbar>
 
 <main>

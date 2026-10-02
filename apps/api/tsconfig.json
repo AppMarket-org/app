@@ -16,6 +16,7 @@
 	},
 	"include": [
 		"environments.ts",
+		"scripts",
 		"src",
 		"cloudflare.config.ts",
 		".cloudflare/types"
