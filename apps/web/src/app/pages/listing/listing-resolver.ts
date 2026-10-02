@@ -31,8 +31,9 @@ export const listingResolver: ResolveFn<ListingDetails | null> = (route) => {
         }).pipe(map((details) => ({ listing, ...details }))),
       ),
       catchError((error: unknown) => {
-        if (error instanceof HttpErrorResponse && error.status === 404) {
-          if (response) response.status = 404;
+        // 404: hidden or missing; 410: removed for good, so search engines drop it.
+        if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 410)) {
+          if (response) response.status = error.status;
           return of(null);
         }
         return throwError(() => error);

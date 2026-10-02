@@ -19,6 +19,7 @@ import {
 	revokeAllRepoTokens,
 	revokeRepoToken,
 } from "../artifacts/repos.ts";
+import { purgeListingPage } from "../routes/seo.ts";
 import { canEdit, canView } from "./access.ts";
 import { CONTRACT_FILES, checkTemplate } from "@appmarket/template-contract";
 import { type ListingCheckSummary, ListingRepository } from "./repository.ts";
@@ -52,6 +53,8 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 	})
 	.get("/:slug", async (c) => {
 		const listing = await listings().findBySlug(c.req.param("slug"));
+		// SEO: a removed listing is gone for good, so crawlers drop it (410), unlike a hidden one (404).
+		if (listing?.state === "removed" && !canEdit(listing, c.get("session"))) return c.json({ error: "gone" }, 410);
 		if (!listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		return c.json(listing);
 	})
@@ -90,6 +93,7 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const update = listingUpdateSchema.safeParse(await c.req.json().catch(() => null));
 		if (!update.success) return c.json(invalid(update.error), 400);
 		await repo.update(listing.id, update.data);
+		if (listing.state === "published") c.executionCtx.waitUntil(purgeListingPage(listing.slug));
 		return c.json(await repo.findBySlug(listing.slug));
 	})
 	// PRD R12: lifecycle. Owners submit a tag, withdraw, unpublish or remove; admins publish (approve).
@@ -127,6 +131,7 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit, checks))) {
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
+		if (["published", "unpublished", "removed"].includes(request.data.to)) c.executionCtx.waitUntil(purgeListingPage(listing.slug));
 		// PRD R19: archiving a removed listing revokes every active token; no new ones are issued (token policy).
 		if (request.data.to === "removed" && listing.repoName) {
 			await tokenAudit().recordRevocations(listing.id, await revokeAllRepoTokens(listing.repoName), session.user.id);
@@ -215,6 +220,7 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		const declared = Number(c.req.header("content-length") ?? "0");
 		if (declared > SCREENSHOT_LIMITS.maxBytes) return c.json({ error: "too_large", maxBytes: SCREENSHOT_LIMITS.maxBytes }, 413);
 		const result = await screenshots().add(listing.id, await c.req.arrayBuffer());
+		if (result.ok && listing.state === "published") c.executionCtx.waitUntil(purgeListingPage(listing.slug));
 		return result.ok ? c.json(result.screenshot, 201) : c.json({ error: result.error }, result.status);
 	})
 	.delete("/:slug/screenshots/:id", requireRole(), async (c) => {
