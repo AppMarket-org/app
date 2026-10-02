@@ -17,6 +17,8 @@ import { slugify } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 import { transitionUpdate } from "./transition-sql.ts";
 
+export type ListingCheckSummary = NonNullable<Listing["submittedChecks"]>;
+
 interface ListingRow {
 	id: string;
 	slug: string;
@@ -37,6 +39,8 @@ interface ListingRow {
 	submitted_commit: string | null;
 	published_tag: string | null;
 	published_commit: string | null;
+	submitted_checks: string | null;
+	published_manifest: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -62,6 +66,8 @@ function toListing(row: ListingRow): Listing {
 		submittedCommit: row.submitted_commit,
 		publishedTag: row.published_tag,
 		publishedCommit: row.published_commit,
+		submittedChecks: row.submitted_checks ? JSON.parse(row.submitted_checks) : null,
+		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -162,13 +168,15 @@ export class ListingRepository {
 		actor: { id: string; role: TransitionActor },
 		/** For a submit: the commit the tag resolves to now. */
 		submittedCommit: string | null = null,
+		/** For a submit: D2/G4 warnings and D3 manifest. */
+		submittedChecks: ListingCheckSummary | null = null,
 	): Promise<boolean> {
 		const [tag, commit] =
 			request.to === "submitted" ? [request.tag, submittedCommit] : request.to === "published" ? [listing.submittedTag, listing.submittedCommit] : [null, null];
 		const note = "note" in request ? (request.note ?? null) : null;
 		const submittedNotes = request.to === "published" ? await this.submittedNotes(listing.id) : null;
 		const [update] = await this.db.batch([
-			(({ sql, params }) => this.db.prepare(sql).bind(...params))(transitionUpdate(listing, request, actor.id, submittedCommit)),
+			(({ sql, params }) => this.db.prepare(sql).bind(...params))(transitionUpdate(listing, request, actor.id, submittedCommit, submittedChecks && JSON.stringify(submittedChecks))),
 			this.db
 				.prepare(
 					"INSERT INTO listing_events (listing_id, from_state, to_state, actor_id, actor_role, tag, commit_hash, note) SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE changes() > 0",

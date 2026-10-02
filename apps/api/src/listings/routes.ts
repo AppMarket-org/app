@@ -10,6 +10,7 @@ import {
 	deleteListingRepo,
 	listRepoTokens,
 	mintRepoToken,
+	readFiles,
 	readReadme,
 	readRootEntries,
 	repoRemote,
@@ -19,7 +20,8 @@ import {
 	revokeRepoToken,
 } from "../artifacts/repos.ts";
 import { canEdit, canView } from "./access.ts";
-import { ListingRepository } from "./repository.ts";
+import { CONTRACT_FILES, checkTemplate } from "@appmarket/template-contract";
+import { type ListingCheckSummary, ListingRepository } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
 import { Screenshots } from "./screenshots.ts";
 import { TokenAudit } from "./token-audit.ts";
@@ -108,15 +110,21 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		}
 		// PRD R2: a submitted tag must exist in the listing's repo; record the commit it points to.
 		let commit: string | null = null;
+		let checks: ListingCheckSummary | null = null;
 		if (request.data.to === "submitted") {
 			if (!listing.repoName) return c.json({ error: "no_repo" }, 409);
 			commit = await resolveTag(listing.repoName, request.data.tag);
 			if (!commit) return c.json({ error: "tag_not_found", tag: request.data.tag }, 422);
 			// R26: the version must look like the declared runtime.
-			const issues = checkRuntime(listing.runtime, await readRootEntries(listing.repoName, commit));
+			const root = await readRootEntries(listing.repoName, commit);
+			const issues = checkRuntime(listing.runtime, root);
 			if (issues.length > 0) return c.json({ error: "runtime_mismatch", runtime: listing.runtime, issues }, 422);
+			// D2/G4: template contract; errors block, warnings and the D3 manifest go to review.
+			const contract = checkTemplate({ runtime: listing.runtime, rootEntries: root.map((e) => e.name), files: await readFiles(listing.repoName, commit, CONTRACT_FILES) });
+			if (contract.errors.length > 0) return c.json({ error: "contract_failed", errors: contract.errors, warnings: contract.warnings }, 422);
+			checks = { warnings: contract.warnings, manifest: contract.manifest };
 		}
-		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit))) {
+		if (!(await repo.transition(listing, request.data, { id: session.user.id, role: actor }, commit, checks))) {
 			return c.json({ error: "conflict", message: "Listing changed; reload and retry." }, 409);
 		}
 		// PRD R19: archiving a removed listing revokes every active token; no new ones are issued (token policy).

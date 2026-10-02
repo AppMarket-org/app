@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
+import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
 import { Downloads } from '../../components/downloads/downloads';
 import { ReportDialog } from '../../components/report-dialog/report-dialog';
 import { GetCode } from '../../components/get-code/get-code';
@@ -29,7 +30,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-listing',
-  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, Downloads, GetCode, Markdown, RuntimeBadge],
+  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, DeployManifest, Downloads, GetCode, Markdown, RuntimeBadge],
   templateUrl: './listing.html',
   styleUrl: './listing.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

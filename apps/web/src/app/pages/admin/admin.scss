@@ -26,3 +26,11 @@ mat-accordion {
 .danger {
   color: var(--mat-sys-error);
 }
+
+.warnings mat-icon {
+  color: var(--mat-sys-tertiary);
+}
+
+.wrap {
+  white-space: normal;
+}

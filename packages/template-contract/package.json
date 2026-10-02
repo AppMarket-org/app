@@ -2,6 +2,19 @@
 	"name": "@appmarket/template-contract",
 	"private": true,
 	"type": "module",
-	"exports": { ".": "./src/index.ts" },
-	"scripts": { "typecheck": "tsc -p ." }
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc -p .",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"jsonc-parser": "^3.3.1",
+		"smol-toml": "^1.9.0",
+		"@appmarket/shared": "workspace:*"
+	},
+	"devDependencies": {
+		"vitest": "^5"
+	}
 }

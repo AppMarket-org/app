@@ -16,6 +16,17 @@
           <mat-card-content>
             <p>{{ l.summary }}</p>
             <app-runtime-badge [runtime]="l.runtime" />
+            @if (l.submittedChecks?.warnings?.length) {
+              <mat-list class="warnings">
+                @for (w of l.submittedChecks!.warnings; track $index) {
+                  <mat-list-item lines="2">
+                    <mat-icon matListItemIcon>warning</mat-icon>
+                    <span matListItemTitle>{{ w.file }}</span>
+                    <span matListItemLine class="wrap">{{ w.message }}</span>
+                  </mat-list-item>
+                }
+              </mat-list>
+            }
             <mat-accordion>
               <mat-expansion-panel (opened)="loadReadme(l.slug)">
                 <mat-expansion-panel-header>
@@ -29,6 +40,14 @@
                   <mat-progress-bar mode="indeterminate" aria-label="Loading README" />
                 }
               </mat-expansion-panel>
+              @if (l.submittedChecks?.manifest; as manifest) {
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>What deploying creates</mat-panel-title>
+                  </mat-expansion-panel-header>
+                  <app-deploy-manifest [manifest]="manifest" />
+                </mat-expansion-panel>
+              }
             </mat-accordion>
           </mat-card-content>
           <mat-card-actions align="end">

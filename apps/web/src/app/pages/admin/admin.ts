@@ -7,6 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -14,6 +15,7 @@ import { RouterLink } from '@angular/router';
 import { REPORT_REASONS, type Listing, type ListingReport, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Admin as AdminApi } from '../../api/admin';
+import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
 import { Markdown } from '../../components/markdown/markdown';
 import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/note-dialog';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
@@ -32,9 +34,11 @@ import { Seo } from '../../seo/seo';
     MatDialogModule,
     MatExpansionModule,
     MatIconModule,
+    MatListModule,
     MatProgressBarModule,
     MatSnackBarModule,
     MatTabsModule,
+    DeployManifest,
     Markdown,
     RuntimeBadge,
   ],

@@ -82,3 +82,16 @@ export async function repoRemote(repoName: string): Promise<string> {
 	using repo = await env.ARTIFACTS.get(repoName);
 	return (await repo.info()).remote;
 }
+
+/** PRD D2/G4: the files the template contract reads, at one commit (missing files are skipped). */
+export async function readFiles(repoName: string, commit: string, paths: readonly string[]): Promise<Map<string, string>> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	const files = new Map<string, string>();
+	await Promise.all(
+		paths.map(async (path) => {
+			const blob = await repo.readFile({ ref: commit, path });
+			if (blob && blob.size <= 256 * 1024) files.set(path, await blob.text());
+		}),
+	);
+	return files;
+}

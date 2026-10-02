@@ -256,7 +256,7 @@ export class ManageListing {
   }
 
   private explainSubmitError(error: unknown, tag: string): void {
-    const body = error instanceof HttpErrorResponse ? (error.error as { error?: string; issues?: unknown[] } | null) : null;
+    const body = error instanceof HttpErrorResponse ? (error.error as { error?: string; issues?: unknown[]; errors?: unknown[] } | null) : null;
     switch (body?.error) {
       case 'tag_not_found':
         this.submitError.set(`Tag ${tag} is not in the repository. Push it first: git push appmarket ${tag}`);
@@ -264,6 +264,10 @@ export class ManageListing {
       case 'runtime_mismatch':
         this.submitError.set(`Version ${tag} does not look like this listing's runtime:`);
         this.submitIssues.set(body.issues as string[]);
+        return;
+      case 'contract_failed':
+        this.submitError.set(`Version ${tag} does not meet the template rules:`);
+        this.submitIssues.set((body.errors as { file: string; message: string }[]).map((e) => `${e.file}: ${e.message}`));
         return;
       case 'invalid':
         this.submitError.set('Check the tag name and release notes.');

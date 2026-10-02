@@ -46,6 +46,13 @@
       </section>
 
       <aside>
+        @if (d.listing.manifest; as manifest) {
+          <section aria-labelledby="deploy-heading">
+            <h2 id="deploy-heading">What deploying creates</h2>
+            <app-deploy-manifest [manifest]="manifest" />
+          </section>
+          <mat-divider />
+        }
         <app-get-code [slug]="d.listing.slug" />
         <button mat-button type="button" class="report" (click)="report(d.listing.slug, d.listing.name)"><mat-icon>flag</mat-icon>Report this app</button>
         <mat-divider />
