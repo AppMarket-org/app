@@ -1,0 +1,61 @@
+:host {
+  display: block;
+  max-width: 720px;
+}
+
+h1 {
+  font: var(--mat-sys-headline-medium);
+}
+
+.intro {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+mat-card {
+  overflow: hidden;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+  padding: 8px 12px 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+
+  legend {
+    font: var(--mat-sys-label-large);
+    padding: 0 4px;
+  }
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0;
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

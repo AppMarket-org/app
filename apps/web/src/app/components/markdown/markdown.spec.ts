@@ -21,6 +21,7 @@ describe('Markdown', () => {
     const el = render('<script>alert(1)</script>\n\n<img src="x" onerror="alert(1)">\n\n<a href="javascript:alert(1)">x</a>');
     expect(el.querySelector('script')).toBeNull();
     expect(el.querySelector('img')?.getAttribute('onerror')).toBeNull();
+    expect(el.querySelector('img')?.getAttribute('alt')).toBe('');
     // Angular rewrites unsafe URLs to "unsafe:..." so the browser will not run them.
     expect(el.querySelector('a')?.getAttribute('href') ?? '').not.toMatch(/^javascript:/i);
   });
