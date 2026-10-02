@@ -1,0 +1,58 @@
+<h2 mat-dialog-title>Deploy {{ data.name }}</h2>
+<mat-dialog-content>
+  @switch (accounts()) {
+    @case (undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading your Cloudflare accounts" />
+    }
+    @case (null) {
+      <p>Connect your Cloudflare account first. The app runs in your account: you own the deployment, the bill and the data.</p>
+    }
+    @default {
+      <form [formGroup]="form" (ngSubmit)="deploy()" id="deploy-form" novalidate>
+        <p class="intro">Deploys version {{ data.version }} as a Worker in your account, with the resources it needs.</p>
+        <mat-form-field appearance="outline">
+          <mat-label>Cloudflare account</mat-label>
+          <mat-select formControlName="accountId">
+            @for (a of accounts(); track a.id) {
+              <mat-option [value]="a.id">{{ a.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-error>Choose an account.</mat-error>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Worker name</mat-label>
+          <input matInput formControlName="workerName" autocomplete="off" spellcheck="false" maxlength="63" />
+          <mat-hint>Deploying again with the same name updates that Worker.</mat-hint>
+          <mat-error>Use lowercase letters, numbers and dashes.</mat-error>
+        </mat-form-field>
+        @if (data.secrets.length > 0) {
+          <fieldset formGroupName="secrets">
+            <legend>Secrets</legend>
+            <p class="hint">Set on your Worker and not kept by appmarket.org after the deploy.</p>
+            @for (name of data.secrets; track name) {
+              <mat-form-field appearance="outline">
+                <mat-label>{{ name }}</mat-label>
+                <input matInput [formControlName]="name" type="password" autocomplete="off" />
+                <mat-error>Enter a value for {{ name }}.</mat-error>
+              </mat-form-field>
+            }
+          </fieldset>
+        }
+        @if (sending()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Starting deploy" />
+        }
+      </form>
+    }
+  }
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancel</button>
+  @if (accounts() === null) {
+    <a mat-flat-button [href]="connectUrl">Connect Cloudflare account</a>
+  } @else {
+    <button mat-flat-button type="submit" form="deploy-form" [disabled]="!accounts() || sending()">Deploy</button>
+  }
+</mat-dialog-actions>

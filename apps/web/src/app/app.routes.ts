@@ -13,6 +13,7 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   { path: 'dashboard/new', canActivate: [authGuard()], loadComponent: () => import('./pages/create-listing/create-listing').then((m) => m.CreateListing) },
   { path: 'dashboard/listings/:slug', canActivate: [authGuard()], loadComponent: () => import('./pages/manage-listing/manage-listing').then((m) => m.ManageListing) },
+  { path: 'dashboard/deployments/:id', canActivate: [authGuard()], loadComponent: () => import('./pages/deployment/deployment').then((m) => m.DeploymentPage) },
   { path: 'dashboard/cloudflare', canActivate: [authGuard()], loadComponent: () => import('./pages/cloudflare-account/cloudflare-account').then((m) => m.CloudflareAccountPage) },
   { path: 'dashboard', canActivate: [authGuard()], loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
   { path: 'admin', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },

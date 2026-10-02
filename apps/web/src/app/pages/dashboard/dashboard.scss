@@ -41,3 +41,11 @@ mat-card {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+.deploys {
+  margin-top: 2rem;
+
+  h2 {
+    font: var(--mat-sys-title-large);
+  }
+}

@@ -49,3 +49,20 @@
     }
   }
 }
+
+@if (deployments()?.length) {
+  <section class="deploys" aria-labelledby="deploys-heading">
+    <h2 id="deploys-heading">Your deploys</h2>
+    <mat-card appearance="outlined">
+      <mat-nav-list aria-labelledby="deploys-heading">
+        @for (d of deployments(); track d.id) {
+          <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
+            <mat-icon matListItemIcon aria-hidden="true">{{ d.status === 'succeeded' ? 'check_circle' : d.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
+            <span matListItemTitle>{{ d.listingName }} → {{ d.workerName }}</span>
+            <span matListItemLine>{{ deployStatus[d.status] }} · {{ d.versionTag }} · {{ d.createdAt | date: 'medium' }}</span>
+          </a>
+        }
+      </mat-nav-list>
+    </mat-card>
+  </section>
+}

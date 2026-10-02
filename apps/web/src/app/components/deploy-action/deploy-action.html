@@ -1,0 +1,11 @@
+@if (deployable()) {
+  <section class="deploy" aria-labelledby="deploy-action-heading">
+    <h2 id="deploy-action-heading">Run it on Cloudflare</h2>
+    <p>Deploy this app into your own Cloudflare account in one step.</p>
+    @if (auth.user()) {
+      <button mat-flat-button type="button" (click)="open()"><mat-icon>rocket_launch</mat-icon>Deploy to Cloudflare</button>
+    } @else if (auth.user() === null) {
+      <a mat-flat-button [routerLink]="['/login']" [queryParams]="{ next: returnPath() }"><mat-icon>rocket_launch</mat-icon>Sign in to deploy</a>
+    }
+  </section>
+}
