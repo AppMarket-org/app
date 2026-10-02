@@ -1,3 +1,4 @@
+import { DEPLOY_UNAVAILABLE, deployAvailability } from "@appmarket/shared";
 import { deploymentRequestSchema } from "@appmarket/shared/schemas";
 import { buildDeployConfig, CONTRACT_FILES } from "@appmarket/template-contract";
 import { env } from "cloudflare:workers";
@@ -20,8 +21,9 @@ export const listingDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", re
 
 	const listing = await new ListingRepository(env.DB).findBySlug(c.req.param("slug"));
 	if (!listing || listing.state !== "published" || !listing.repoName || !listing.publishedTag || !listing.publishedCommit) return c.json({ error: "not_found" }, 404);
-	// D4: paid listings deploy after purchase, which is not built yet.
-	if (listing.priceCents > 0) return c.json({ error: "purchase_required" }, 402);
+	// D4: the same rule the listing page uses to show the Deploy action.
+	const availability = deployAvailability(listing);
+	if (!availability.ok) return availability.reason === "paid" ? c.json({ error: "purchase_required" }, 402) : c.json({ error: "not_deployable", reason: DEPLOY_UNAVAILABLE[availability.reason] }, 422);
 
 	const expected = listing.manifest?.secrets ?? [];
 	const missing = expected.filter((name) => !secrets[name]);

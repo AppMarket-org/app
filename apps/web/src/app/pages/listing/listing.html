@@ -46,7 +46,7 @@
       </section>
 
       <aside>
-        <app-deploy-action [listing]="d.listing" />
+        <app-deploy-action [listing]="d.listing" [hasReleases]="d.releases.length > 0" />
         @if (d.listing.manifest; as manifest) {
           <section aria-labelledby="deploy-heading">
             <h2 id="deploy-heading">What deploying creates</h2>
