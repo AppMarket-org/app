@@ -59,4 +59,6 @@ export const RATE_LIMITS = {
 	SIGN_IN: { offset: 3, limit: 10, period: 60 },
 	/** Download links, per signed-in user or client IP (R14). */
 	DOWNLOAD_LINK: { offset: 4, limit: 30, period: 60 },
+	/** Listing reports, per signed-in user or client IP (R18). */
+	REPORT: { offset: 5, limit: 5, period: 60 },
 } as const;

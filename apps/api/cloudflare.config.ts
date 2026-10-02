@@ -35,6 +35,7 @@ export default defineConfig(({ mode }) => {
 				RL_LISTING_CREATE: rateLimit(RATE_LIMITS.LISTING_CREATE),
 				RL_SIGN_IN: rateLimit(RATE_LIMITS.SIGN_IN),
 				RL_DOWNLOAD_LINK: rateLimit(RATE_LIMITS.DOWNLOAD_LINK),
+				RL_REPORT: rateLimit(RATE_LIMITS.REPORT),
 				// R24 screenshots. 
 				MEDIA: bindings.r2({ name: mediaBucket }),
 				// R13/R14 release binaries, served only through signed download links.

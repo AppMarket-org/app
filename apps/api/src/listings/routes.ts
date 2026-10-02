@@ -102,6 +102,10 @@ export const listingRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!actor) {
 			return c.json({ error: "transition_not_allowed", from: listing.state, to: request.data.to }, canEdit(listing, session) ? 409 : 403);
 		}
+		// R18: an admin sending a submission back must say what to change.
+		if (request.data.to === "draft" && actor === "admin" && !request.data.note) {
+			return c.json({ error: "note_required", message: "Tell the owner what to change." }, 400);
+		}
 		// PRD R2: a submitted tag must exist in the listing's repo; record the commit it points to.
 		let commit: string | null = null;
 		if (request.data.to === "submitted") {

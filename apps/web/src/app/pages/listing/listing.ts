@@ -1,5 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -8,10 +11,12 @@ import { MatListModule } from '@angular/material/list';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
 import { Downloads } from '../../components/downloads/downloads';
+import { ReportDialog } from '../../components/report-dialog/report-dialog';
 import { GetCode } from '../../components/get-code/get-code';
 import { Markdown } from '../../components/markdown/markdown';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
+import { firstValueFrom } from 'rxjs';
 import type { ListingDetails } from './listing-resolver';
 
 const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
@@ -24,7 +29,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-listing',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, Downloads, GetCode, Markdown, RuntimeBadge],
+  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, Downloads, GetCode, Markdown, RuntimeBadge],
   templateUrl: './listing.html',
   styleUrl: './listing.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +37,14 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 export class Listing {
   /** From listingResolver; null when the listing does not exist or is not visible. */
   readonly details = input<ListingDetails | null>(null);
+
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+
+  protected async report(slug: string, name: string): Promise<void> {
+    const sent = await firstValueFrom(this.dialog.open<ReportDialog, { slug: string; name: string }, boolean>(ReportDialog, { data: { slug, name }, width: '36rem' }).afterClosed());
+    if (sent) this.snackBar.open('Thanks. An admin will review your report.', 'OK', { duration: 5000 });
+  }
 
   protected readonly platformName = (p: keyof typeof PLATFORM_NAMES) => PLATFORM_NAMES[p];
   protected readonly categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;

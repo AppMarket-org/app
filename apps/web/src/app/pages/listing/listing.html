@@ -47,6 +47,7 @@
 
       <aside>
         <app-get-code [slug]="d.listing.slug" />
+        <button mat-button type="button" class="report" (click)="report(d.listing.slug, d.listing.name)"><mat-icon>flag</mat-icon>Report this app</button>
         <mat-divider />
         <section aria-labelledby="versions-heading">
           <h2 id="versions-heading">Versions</h2>
