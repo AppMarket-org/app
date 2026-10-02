@@ -1,0 +1,19 @@
+<section aria-labelledby="downloads-heading">
+  <h2 id="downloads-heading">Downloads</h2>
+  <mat-list>
+    @for (r of releases(); track r.id) {
+      <mat-list-item lines="3">
+        <mat-icon matListItemIcon>inventory_2</mat-icon>
+        <span matListItemTitle>{{ r.filename }}</span>
+        <span matListItemLine>{{ platforms[r.platform] }} · {{ size(r.sizeBytes) }} · {{ r.tag }}</span>
+        <span matListItemLine class="sha" [title]="r.sha256">SHA-256 {{ r.sha256.slice(0, 16) }}…</span>
+        <button matListItemMeta mat-icon-button type="button" [disabled]="pending() === r.id" (click)="download(r)" [attr.aria-label]="'Download ' + r.filename" [matTooltip]="'Download ' + r.filename">
+          <mat-icon>{{ pending() === r.id ? 'hourglass_top' : 'download' }}</mat-icon>
+        </button>
+      </mat-list-item>
+    }
+  </mat-list>
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+</section>

@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, type HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { Listing, ListingEvent, ListingUpdate, RepoToken, Screenshot, TokenRecord, TransitionRequest } from '@appmarket/shared';
+import type { Listing, ListingEvent, ListingUpdate, Release, ReleasePlatform, RepoToken, Screenshot, TokenRecord, TransitionRequest } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** Owner-side API for the developer dashboard (PRD R16). */
@@ -55,6 +55,24 @@ export class Developer {
 
   revokeAllTokens(slug: string): Observable<{ revoked: number }> {
     return this.http.post<{ revoked: number }>(`/api/listings/${slug}/tokens/revoke-all`, {});
+  }
+
+  releases(slug: string): Observable<Release[]> {
+    return this.http.get<{ items: Release[] }>(`/api/listings/${slug}/releases`).pipe(map((r) => r.items));
+  }
+
+  /** Uploads the file as the body with progress events; the API and R2 verify the SHA-256. */
+  uploadRelease(slug: string, file: File, meta: { tag: string; platform: ReleasePlatform; sha256: string }): Observable<HttpEvent<Release>> {
+    return this.http.post<Release>(`/api/listings/${slug}/releases`, file, {
+      params: { ...meta, filename: file.name },
+      headers: { 'Content-Type': 'application/octet-stream' },
+      reportProgress: true,
+      observe: 'events',
+    });
+  }
+
+  deleteRelease(slug: string, id: string): Observable<void> {
+    return this.http.delete<void>(`/api/listings/${slug}/releases/${id}`);
   }
 
   events(slug: string): Observable<ListingEvent[]> {

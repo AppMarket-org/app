@@ -11,6 +11,7 @@ Google and GitHub login via Better Auth in `apps/api`, sessions in D1, Turnstile
    - **GitHub:** Settings → Developer settings → OAuth Apps → New OAuth App.
      Homepage `http://localhost:4200`; callback `http://localhost:4200/api/auth/callback/github`.
    - `TURNSTILE_SECRET_KEY`: the example's test key always passes; the web app uses the matching test site key.
+   - `DOWNLOAD_SIGNING_KEY`: `openssl rand -base64 32` (signs release download links).
 2. Create the local tables: `pnpm --filter @appmarket/api db:migrate`
 3. `pnpm dev`, open http://localhost:4200/login.
 
@@ -37,4 +38,5 @@ The browser talks only to `localhost:4200`; `ng serve` proxies `/api` to the API
 
 - Separate Google and GitHub OAuth apps per environment, with callbacks on `https://staging.appmarket.org` / `https://appmarket.org`.
 - Real Turnstile widget: site key in `apps/web/src/environments/environment.production.ts`, secret via `cf secrets`.
+- `DOWNLOAD_SIGNING_KEY` (signs download links, R14): a fresh random value per environment.
 - All secrets via `cf secrets`, never `.dev.vars`.

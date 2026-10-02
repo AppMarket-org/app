@@ -11,3 +11,5 @@ GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 # Turnstile test secret that always passes (Cloudflare published test key); use a real key outside dev.
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# Signs download links (R14). Generate: openssl rand -base64 32
+DOWNLOAD_SIGNING_KEY=

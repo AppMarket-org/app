@@ -18,6 +18,7 @@ import {
 	revokeAllRepoTokens,
 	revokeRepoToken,
 } from "../artifacts/repos.ts";
+import { canEdit, canView } from "./access.ts";
 import { ListingRepository } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
 import { Screenshots } from "./screenshots.ts";
@@ -237,13 +238,6 @@ function actorFor(listing: Listing, session: NonNullable<SessionLike>, to: Listi
 	return roles.find((role) => canTransition(listing.state, to, role)) ?? null;
 }
 
-function canEdit(listing: Listing, session: SessionLike): boolean {
-	return !!session && (session.user.id === listing.owner.id || session.user.role === "admin");
-}
-
-function canView(listing: Listing, session: SessionLike): boolean {
-	return listing.state === "published" || canEdit(listing, session);
-}
 
 /** R24: serves screenshot bytes. Mounted at /api/media. Unpublished listings' images stay private. */
 export const mediaRoutes = new Hono<{ Variables: AuthVariables }>().get("/screenshots/:id", async (c) => {

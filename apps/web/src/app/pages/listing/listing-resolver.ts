@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { RESPONSE_INIT, inject } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
-import type { Listing, ListingVersion, Screenshot } from '@appmarket/shared';
+import type { Listing, ListingVersion, Release, Screenshot } from '@appmarket/shared';
 import { catchError, forkJoin, map, of, switchMap, throwError } from 'rxjs';
 import { Catalog } from '../../api/catalog';
 
@@ -10,6 +10,7 @@ export interface ListingDetails {
   screenshots: Screenshot[];
   versions: ListingVersion[];
   readme: string | null;
+  releases: Release[];
 }
 
 /** Loads the listing and its details before render (SSR waits); a missing listing becomes an HTTP 404. */
@@ -26,6 +27,7 @@ export const listingResolver: ResolveFn<ListingDetails | null> = (route) => {
           versions: catalog.versions(slug).pipe(catchError(() => of([]))),
           // No README (404) is normal; show nothing.
           readme: catalog.readme(slug).pipe(catchError(() => of(null))),
+          releases: catalog.releases(slug).pipe(catchError(() => of([]))),
         }).pipe(map((details) => ({ listing, ...details }))),
       ),
       catchError((error: unknown) => {

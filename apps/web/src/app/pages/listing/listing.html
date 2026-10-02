@@ -32,6 +32,10 @@
       </section>
     }
 
+    @if (d.releases.length > 0) {
+      <app-downloads [releases]="d.releases" />
+    }
+
     <div class="columns">
       <section class="main" aria-label="About">
         @if (d.readme) {

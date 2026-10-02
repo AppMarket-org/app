@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { CategorySlug, ListingPage, ListingVersion, RepoToken, Runtime, Screenshot } from '@appmarket/shared';
+import type { CategorySlug, DownloadLink, ListingPage, ListingVersion, Release, RepoToken, Runtime, Screenshot } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 export interface CatalogQuery {
@@ -34,6 +34,14 @@ export class Catalog {
 
   readme(slug: string): Observable<string> {
     return this.http.get<{ markdown: string }>(`/api/listings/${slug}/readme`).pipe(map((r) => r.markdown));
+  }
+
+  releases(slug: string): Observable<Release[]> {
+    return this.http.get<{ items: Release[] }>(`/api/listings/${slug}/releases`).pipe(map((r) => r.items));
+  }
+
+  downloadLink(releaseId: string): Observable<DownloadLink> {
+    return this.http.post<DownloadLink>(`/api/releases/${releaseId}/link`, {});
   }
 
   readToken(slug: string): Observable<RepoToken> {

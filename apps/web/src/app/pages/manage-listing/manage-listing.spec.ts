@@ -27,22 +27,22 @@ async function setup(state: ListingState) {
 }
 
 function submit(el: HTMLElement, fixture: { detectChanges(): void }, tag: string) {
-  const input = el.querySelector<HTMLInputElement>('input[formcontrolname="tag"]')!;
+  const input = el.querySelector<HTMLInputElement>('app-manage-listing form input[formcontrolname="tag"], form:not(.upload) input[formcontrolname="tag"]')!;
   input.value = tag;
   input.dispatchEvent(new Event('input'));
-  el.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+  input.closest('form')!.dispatchEvent(new Event('submit'));
   fixture.detectChanges();
 }
 
 describe('ManageListing', () => {
   it('offers submit and remove for a draft, withdraw for a submitted listing', async () => {
     const draft = await setup('draft');
-    expect(draft.el.querySelector('form')).not.toBeNull();
+    expect(draft.el.querySelector('textarea[formcontrolname="releaseNotes"]')).not.toBeNull();
     expect(draft.el.textContent).toContain('Remove listing');
     expect(draft.el.textContent).not.toContain('Withdraw');
     TestBed.resetTestingModule();
     const submitted = await setup('submitted');
-    expect(submitted.el.querySelector('form')).toBeNull();
+    expect(submitted.el.querySelector('textarea[formcontrolname="releaseNotes"]')).toBeNull();
     expect(submitted.el.textContent).toContain('Withdraw from review');
   });
 
