@@ -95,3 +95,29 @@ export async function readFiles(repoName: string, commit: string, paths: readonl
 	);
 	return files;
 }
+
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".wrangler", ".cloudflare", ".angular", ".next", "coverage", "vendor"]);
+
+/**
+ * G4: the file tree of a commit, breadth first, skipping build output and dependencies, bounded so
+ * a huge repo cannot make publish slow.
+ */
+export async function listTree(repoName: string, commit: string, limits = { maxEntries: 2000, maxDirs: 300 }): Promise<{ path: string; type: string }[]> {
+	using repo = await env.ARTIFACTS.get(repoName);
+	const meta = await repo.readCommit(commit);
+	if (!meta) return [];
+	const entries: { path: string; type: string }[] = [];
+	const queue: { prefix: string; hash: string }[] = [{ prefix: "", hash: meta.treeHash }];
+	let dirs = 0;
+	while (queue.length > 0 && dirs < limits.maxDirs && entries.length < limits.maxEntries) {
+		const { prefix, hash } = queue.shift()!;
+		dirs++;
+		for (const e of (await repo.readTree(hash)) ?? []) {
+			const path = prefix + e.name;
+			entries.push({ path, type: e.type });
+			if (e.type === "tree" && !SKIP_DIRS.has(e.name)) queue.push({ prefix: `${path}/`, hash: e.hash });
+			if (entries.length >= limits.maxEntries) break;
+		}
+	}
+	return entries.sort((a, b) => a.path.localeCompare(b.path));
+}

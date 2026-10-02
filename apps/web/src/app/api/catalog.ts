@@ -44,6 +44,10 @@ export class Catalog {
     return this.http.post<DownloadLink>(`/api/releases/${releaseId}/link`, {});
   }
 
+  repoMap(slug: string): Observable<string> {
+    return this.http.get(`/api/listings/${slug}/repo-map`, { responseType: 'text' });
+  }
+
   readToken(slug: string): Observable<RepoToken> {
     return this.http.post<RepoToken>(`/api/listings/${slug}/tokens`, { scope: 'read', ttl: 3600 });
   }
