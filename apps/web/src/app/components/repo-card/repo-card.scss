@@ -15,3 +15,22 @@ p {
   color: var(--mat-sys-on-surface-variant);
   margin: 0.5rem 0 0.75rem;
 }
+
+.actions {
+  justify-content: space-between;
+  padding-right: 1rem;
+}
+
+.cowbells {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    width: 1rem;
+    height: 1rem;
+    color: #f9c12b;
+  }
+}

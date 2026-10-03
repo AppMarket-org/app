@@ -61,3 +61,17 @@ section {
   margin: 0 0 1rem;
   max-width: 45rem;
 }
+
+h2 .cowbell {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  color: #f9c12b;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+}

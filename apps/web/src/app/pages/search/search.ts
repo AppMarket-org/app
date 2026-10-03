@@ -21,14 +21,15 @@ export class Search {
   readonly q = input<string>();
   readonly category = input<string>();
   readonly runtime = input<string>();
+  readonly sort = input<string>();
 
   protected readonly categories = CATEGORIES;
   protected readonly runtimes = Object.entries(RUNTIMES).map(([key, value]) => ({ key, name: value.name }));
-  protected readonly query = computed(() => ({ q: this.q() || undefined, category: this.category() || undefined, runtime: this.runtime() || undefined }));
+  protected readonly query = computed(() => ({ q: this.q() || undefined, category: this.category() || undefined, runtime: this.runtime() || undefined, sort: this.sort() === 'cowbells' ? 'cowbells' : undefined }));
 
   constructor() {
     const params = inject(ActivatedRoute).snapshot.queryParamMap;
-    const filtered = ['q', 'category', 'runtime', 'page'].some((k) => params.has(k));
+    const filtered = ['q', 'category', 'runtime', 'sort', 'page'].some((k) => params.has(k));
     inject(Seo).set({
       title: params.get('q') ? `Apps matching "${params.get('q')}"` : 'Search apps',
       description: 'Search source-available apps you can deploy to your own Cloudflare account.',

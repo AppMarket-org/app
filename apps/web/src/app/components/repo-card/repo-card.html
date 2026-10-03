@@ -7,7 +7,8 @@
     <p>{{ repo().summary }}</p>
     <app-runtime-badge [runtime]="repo().runtime" />
   </mat-card-content>
-  <mat-card-actions>
+  <mat-card-actions class="actions">
     <a mat-button [routerLink]="['/apps', repo().slug]" [attr.aria-label]="'View app: ' + repo().name">View app</a>
+    <span class="cowbells" [attr.aria-label]="repo().cowbells + ' cowbells'"><mat-icon svgIcon="cowbell" aria-hidden="true" />{{ repo().cowbells }}</span>
   </mat-card-actions>
 </mat-card>

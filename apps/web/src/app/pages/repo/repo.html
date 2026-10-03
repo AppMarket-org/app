@@ -1,7 +1,12 @@
 @if (details(); as d) {
   <article>
     <header>
-      <h1>{{ d.repo.name }}</h1>
+      <div class="title">
+        <h1>{{ d.repo.name }}</h1>
+        @if (d.repo.state === 'published') {
+          <app-cowbell-button [slug]="d.repo.slug" [name]="d.repo.name" [initialCount]="d.repo.cowbells" />
+        }
+      </div>
       <p class="summary">{{ d.repo.summary }}</p>
       <p class="by">by {{ d.repo.owner.name }}</p>
       <div class="meta">

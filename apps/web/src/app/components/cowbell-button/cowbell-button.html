@@ -1,0 +1,25 @@
+@if (auth.user() === null) {
+  <a
+    mat-stroked-button
+    class="cowbell"
+    [routerLink]="['/login']"
+    [queryParams]="{ next: '/apps/' + slug() }"
+    [attr.aria-label]="'Sign in to cowbell ' + name() + ', ' + count() + ' cowbells'"
+    matTooltip="Sign in to ring this app's cowbell"
+  >
+    <mat-icon svgIcon="cowbell" aria-hidden="true" />Cowbell<span class="count">{{ count() }}</span>
+  </a>
+} @else {
+  <button
+    mat-stroked-button
+    type="button"
+    class="cowbell"
+    [class.on]="cowbelled()"
+    [attr.aria-pressed]="cowbelled()"
+    [attr.aria-label]="(cowbelled() ? 'Remove your cowbell from ' : 'Cowbell ') + name() + ', ' + count() + ' cowbells'"
+    [disabled]="busy() || auth.user() === undefined"
+    (click)="toggle()"
+  >
+    <mat-icon svgIcon="cowbell" aria-hidden="true" />{{ cowbelled() ? 'Cowbelled' : 'Cowbell' }}<span class="count">{{ count() }}</span>
+  </button>
+}

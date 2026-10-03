@@ -41,6 +41,7 @@ interface RepoRow {
 	published_commit: string | null;
 	submitted_checks: string | null;
 	published_manifest: string | null;
+	cowbell_count: number;
 	created_at: string;
 	updated_at: string;
 }
@@ -68,6 +69,7 @@ function toRepo(row: RepoRow): Repo {
 		publishedCommit: row.published_commit,
 		submittedChecks: row.submitted_checks ? JSON.parse(row.submitted_checks) : null,
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
+		cowbells: row.cowbell_count,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -81,7 +83,7 @@ export class RepoStore {
 		const { where, params } = buildSearchWhere(search);
 		const offset = (search.page - 1) * search.pageSize;
 		const [rows, count] = await this.db.batch([
-			this.db.prepare(`${SELECT} WHERE ${where} ORDER BY l.updated_at DESC LIMIT ? OFFSET ?`).bind(...params, search.pageSize, offset),
+			this.db.prepare(`${SELECT} WHERE ${where} ORDER BY ${search.sort === "cowbells" ? "l.cowbell_count DESC, " : ""}l.updated_at DESC LIMIT ? OFFSET ?`).bind(...params, search.pageSize, offset),
 			this.db.prepare(`SELECT COUNT(*) AS total FROM repos l WHERE ${where}`).bind(...params),
 		]);
 		return {
@@ -100,6 +102,14 @@ export class RepoStore {
 	async findById(id: string): Promise<Repo | null> {
 		const row = await this.db.prepare(`${SELECT} WHERE l.id = ?`).bind(id).first<RepoRow>();
 		return row ? toRepo(row) : null;
+	}
+
+	/** Repos by id, in the order given (missing ids are skipped). */
+	async findByIds(ids: string[]): Promise<Repo[]> {
+		if (ids.length === 0) return [];
+		const { results } = await this.db.prepare(`${SELECT} WHERE l.id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all<RepoRow>();
+		const byId = new Map(results.map((r) => [r.id, toRepo(r)]));
+		return ids.flatMap((id) => byId.get(id) ?? []);
 	}
 
 	async listByOwner(ownerId: string): Promise<Repo[]> {
