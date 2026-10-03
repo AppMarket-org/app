@@ -5,11 +5,11 @@
   </div>
 </header>
 
-<section aria-labelledby="deployed-heading">
-  <h2 id="deployed-heading">Apps you deployed</h2>
+<section aria-labelledby="running-heading">
+  <h2 id="running-heading">Running apps</h2>
   @if (deployments()?.length) {
     <mat-card appearance="outlined">
-      <mat-nav-list aria-labelledby="deployed-heading">
+      <mat-nav-list aria-labelledby="running-heading">
         @for (d of deployments(); track d.id) {
           <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
             <mat-icon matListItemIcon aria-hidden="true">{{ d.status === 'succeeded' ? 'check_circle' : d.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
@@ -20,26 +20,26 @@
       </mat-nav-list>
     </mat-card>
   } @else {
-    <p class="explain">Find an app and choose <strong>Deploy to Cloudflare</strong> to run it in your own Cloudflare account.</p>
+    <p class="explain">Apps you deployed to your own Cloudflare account. Find one and choose <strong>Deploy to Cloudflare</strong>.</p>
     <a mat-stroked-button routerLink="/search">Browse apps</a>
   }
 </section>
 
-<section class="publish" aria-labelledby="publish-heading">
+<section aria-labelledby="repos-heading">
   <header class="head">
-    <h2 id="publish-heading">Apps you publish</h2>
-    <a mat-flat-button routerLink="/dashboard/new">Publish an app</a>
+    <h2 id="repos-heading">Your repos</h2>
+    <a mat-flat-button routerLink="/dashboard/new">New repo</a>
   </header>
   <p class="explain">
-    Publishing gives your app a public page on appmarket.org and its own Git repository for the code. Push your code, submit a version
-    for review, and once it is approved anyone can deploy it.
+    Code you host on appmarket.org. A repo is private until you submit a version and it is approved; then it is public on the
+    marketplace and anyone can deploy it.
   </p>
 @switch (listings()) {
   @case (undefined) {
-    <mat-progress-bar mode="indeterminate" aria-label="Loading your apps" />
+    <mat-progress-bar mode="indeterminate" aria-label="Loading your repos" />
   }
   @case (null) {
-    <p class="error" role="alert">Could not load your apps. Reload to try again.</p>
+    <p class="error" role="alert">Could not load your repos. Reload to try again.</p>
   }
   @default {
     @for (item of listings()!; track item.id) {
@@ -52,7 +52,7 @@
           <mat-chip-set [attr.aria-label]="item.name + ' status'">
             <mat-chip [class]="item.state">{{ states[item.state].label }}</mat-chip>
             @if (item.publishedTag) {
-              <mat-chip>Live: {{ item.publishedTag }}</mat-chip>
+              <mat-chip>Public: {{ item.publishedTag }}</mat-chip>
             }
             @if (item.submittedTag) {
               <mat-chip>In review: {{ item.submittedTag }}</mat-chip>
@@ -68,10 +68,10 @@
     } @empty {
       <mat-card appearance="outlined">
         <mat-card-content>
-          <p>You have not published an app yet.</p>
+          <p>You have no repos yet.</p>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-stroked-button routerLink="/dashboard/new">Publish your first app</a>
+          <a mat-stroked-button routerLink="/dashboard/new">Create your first repo</a>
         </mat-card-actions>
       </mat-card>
     }

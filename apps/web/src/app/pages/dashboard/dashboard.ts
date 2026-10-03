@@ -15,7 +15,7 @@ import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
 import { STATE_LABELS } from '../state-labels';
 
-/** PRD R16/D6: what the signed-in user deployed and the apps they publish. */
+/** PRD R16/D6: the signed-in user's running apps (deploys) and repos (listings). */
 @Component({
   selector: 'app-dashboard',
   imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink, RuntimeBadge],
@@ -40,6 +40,6 @@ export class Dashboard {
   protected readonly deployStatus: Record<string, string> = { queued: 'Queued', building: 'Building', deploying: 'Deploying', succeeded: 'Live', failed: 'Failed' };
 
   constructor() {
-    inject(Seo).set({ title: 'Dashboard', description: 'Your deployed and published apps.', path: '/dashboard', noindex: true });
+    inject(Seo).set({ title: 'Dashboard', description: 'Your running apps and repos.', path: '/dashboard', noindex: true });
   }
 }

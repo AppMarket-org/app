@@ -38,7 +38,7 @@ describe('ManageListing', () => {
   it('offers submit and remove for a draft, withdraw for a submitted listing', async () => {
     const draft = await setup('draft');
     expect(draft.el.querySelector('textarea[formcontrolname="releaseNotes"]')).not.toBeNull();
-    expect(draft.el.textContent).toContain('Remove app');
+    expect(draft.el.textContent).toContain('Delete repo');
     expect(draft.el.textContent).not.toContain('Withdraw');
     TestBed.resetTestingModule();
     const submitted = await setup('submitted');
