@@ -59,6 +59,7 @@ export class ManageRepo {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly clipboard = inject(Clipboard);
+  private readonly seo = inject(Seo);
 
   protected readonly states = STATE_LABELS;
   protected readonly repo = signal<Repo | null>(null);
@@ -93,7 +94,7 @@ export class ManageRepo {
   });
 
   constructor() {
-    inject(Seo).set({ title: 'Manage repo', description: 'Manage your repo.', path: '/dashboard', noindex: true });
+    this.seo.set({ title: 'Manage repo', description: 'Manage your repo.', path: '/dashboard', noindex: true, heading: [{ label: 'Dashboard', link: '/dashboard' }] });
   }
 
   ngOnInit(): void {
@@ -232,6 +233,7 @@ export class ManageRepo {
     try {
       const repo = await firstValueFrom(this.api.repo(this.slug()));
       this.repo.set(repo);
+      this.seo.setHeading([{ label: repo.owner.name }, { label: repo.name }]);
       const [git, events, screenshots, tokens] = await firstValueFrom(
         forkJoin([this.api.git(this.slug()), this.api.events(this.slug()), this.api.screenshots(this.slug()), this.api.tokens(this.slug())]),
       );

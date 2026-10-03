@@ -5,13 +5,41 @@
 }
 
 .brand {
-  font: var(--mat-sys-title-large);
+  --mat-icon-button-state-layer-size: 3rem;
+  width: 3rem;
+  height: 3rem;
+  padding: 0.25rem;
 
   .logo {
     height: 2.25rem;
     width: auto;
-    margin-right: 0.5rem;
-    vertical-align: middle;
+    display: block;
+    margin: 0 auto;
+  }
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-left: 0.5rem;
+  font: var(--mat-sys-title-medium);
+  overflow: hidden;
+  white-space: nowrap;
+
+  span,
+  a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .current {
+    font-weight: 600;
+  }
+
+  .separator {
+    margin: 0 0.5rem;
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 

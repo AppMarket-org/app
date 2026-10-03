@@ -5,6 +5,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { Auth } from './auth/auth';
+import { Seo } from './seo/seo';
 
 @Component({
   selector: 'app-root',
@@ -15,6 +16,7 @@ import { Auth } from './auth/auth';
 })
 export class App {
   protected readonly auth = inject(Auth);
+  protected readonly seo = inject(Seo);
   private readonly router = inject(Router);
 
   constructor() {

@@ -1,4 +1,4 @@
-import { DOCUMENT, Injectable, inject } from '@angular/core';
+import { DOCUMENT, Injectable, inject, signal } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 
 export interface PageSeo {
@@ -10,6 +10,14 @@ export interface PageSeo {
   noindex?: boolean;
   /** schema.org object, for example a SoftwareApplication for a repo. */
   jsonLd?: Record<string, unknown>;
+  /** Header title next to the logo, GitHub-style (`owner / app`). Defaults to the title; [] for none. */
+  heading?: HeadingPart[];
+}
+
+export interface HeadingPart {
+  label: string;
+  /** Router link; plain text when absent. */
+  link?: string;
 }
 
 const ORIGIN = 'https://appmarket.org';
@@ -21,7 +29,11 @@ export class Seo {
   private readonly meta = inject(Meta);
   private readonly document = inject(DOCUMENT);
 
+  /** What the toolbar shows next to the logo. */
+  readonly heading = signal<HeadingPart[]>([]);
+
   set(page: PageSeo): void {
+    this.heading.set(page.heading ?? [{ label: page.title }]);
     const url = ORIGIN + page.path;
     this.title.setTitle(`${page.title} | appmarket.org`);
     this.meta.updateTag({ name: 'description', content: page.description });
@@ -36,6 +48,11 @@ export class Seo {
     this.meta.updateTag({ name: 'twitter:card', content: page.image ? 'summary_large_image' : 'summary' });
     this.setLink('canonical', url);
     this.setJsonLd(page.jsonLd);
+  }
+
+  /** Updates only the toolbar heading, for pages that know their subject after loading. */
+  setHeading(parts: HeadingPart[]): void {
+    this.heading.set(parts);
   }
 
   private setLink(rel: string, href: string): void {
