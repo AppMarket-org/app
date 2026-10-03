@@ -1,0 +1,25 @@
+{
+	"name": "@appmarket/cli",
+	"version": "0.1.0",
+	"description": "appmarket.org CLI: device login and checkpoints for agent commits.",
+	"license": "MIT",
+	"type": "module",
+	"bin": { "appmarket": "dist/appmarket.mjs" },
+	"files": ["dist", "README.md", "LICENSE"],
+	"repository": { "type": "git", "url": "https://github.com/AppMarket-org/app.git", "directory": "packages/cli" },
+	"engines": { "node": ">=20" },
+	"scripts": {
+		"build": "tsup",
+		"typecheck": "tsc -p .",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@napi-rs/keyring": "^1.2.0"
+	},
+	"devDependencies": {
+		"@appmarket/shared": "workspace:*",
+		"@types/node": "^22",
+		"tsup": "^8.5.1",
+		"vitest": "^5"
+	}
+}
