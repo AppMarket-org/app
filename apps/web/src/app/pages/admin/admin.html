@@ -28,13 +28,13 @@
               </mat-list>
             }
             <mat-accordion>
-              <mat-expansion-panel (opened)="loadReadme(l.slug)">
+              <mat-expansion-panel (opened)="loadReadme(l.fullName)">
                 <mat-expansion-panel-header>
                   <mat-panel-title>README at the submitted commit</mat-panel-title>
                 </mat-expansion-panel-header>
-                @if (readmes()[l.slug]; as md) {
+                @if (readmes()[l.fullName]; as md) {
                   <app-markdown [source]="md" />
-                } @else if (l.slug in readmes()) {
+                } @else if (l.fullName in readmes()) {
                   <p>No README in this version.</p>
                 } @else {
                   <mat-progress-bar mode="indeterminate" aria-label="Loading README" />
@@ -51,7 +51,7 @@
             </mat-accordion>
           </mat-card-content>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', l.slug]">Open app page</a>
+            <a mat-button [routerLink]="'/' + l.fullName">Open app page</a>
             <button mat-button type="button" [disabled]="busy()" (click)="requestChanges(l)">Request changes</button>
             <button mat-flat-button type="button" [disabled]="busy()" (click)="approve(l)">Publish</button>
           </mat-card-actions>
@@ -71,7 +71,7 @@
             <mat-card-subtitle>by {{ l.owner.name }} · live {{ l.publishedTag }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', l.slug]">Open app page</a>
+            <a mat-button [routerLink]="'/' + l.fullName">Open app page</a>
             <button mat-button type="button" class="danger" [disabled]="busy()" (click)="takeDown(l, 'unpublished')">Unpublish</button>
             <button mat-button type="button" class="danger" [disabled]="busy()" (click)="takeDown(l, 'removed')">Remove</button>
           </mat-card-actions>
@@ -104,7 +104,7 @@
             }
           </mat-card-content>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', r.repo.slug]">Open app page</a>
+            <a mat-button [routerLink]="'/' + r.repo.fullName">Open app page</a>
             @if (!r.resolvedAt) {
               <button mat-button type="button" [disabled]="busy()" (click)="dismiss(r)">Dismiss</button>
               <button mat-button type="button" class="danger" [disabled]="busy() || r.repo.state !== 'published'" (click)="takeDownReported(r)">Take down</button>

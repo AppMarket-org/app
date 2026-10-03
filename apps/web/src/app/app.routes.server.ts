@@ -11,18 +11,24 @@ export const serverRoutes: ServerRoute[] = [
     getPrerenderParams: async () => ['terms', 'developer-agreement', 'content-policy', 'privacy'].map((page) => ({ page })),
   },
   // Catalog pages: rendered per request from D1 data so new repos are indexable immediately.
-  { path: 'apps/:slug', renderMode: RenderMode.Server },
   { path: 'category/:slug', renderMode: RenderMode.Server },
   { path: 'search', renderMode: RenderMode.Server },
   // Signed-in app: single-page app, not indexed.
   { path: 'login', renderMode: RenderMode.Client },
   { path: 'dashboard/new', renderMode: RenderMode.Client },
+  { path: 'settings/orgs/new', renderMode: RenderMode.Client },
+  { path: 'settings/orgs/:handle', renderMode: RenderMode.Client },
+  { path: 'settings', renderMode: RenderMode.Client },
+  { path: 'dashboard/repos/:owner/:slug', renderMode: RenderMode.Client },
+  { path: 'dashboard/repos/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/apps/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/listings/:slug', renderMode: RenderMode.Client },
-  { path: 'dashboard/repos/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/deployments/:id', renderMode: RenderMode.Client },
   { path: 'dashboard/cloudflare', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },
   { path: 'admin', renderMode: RenderMode.Client },
+  // Owner and repo pages (#102): rendered per request for SEO.
+  { path: ':owner/:slug', renderMode: RenderMode.Server },
+  { path: ':owner', renderMode: RenderMode.Server },
   { path: '**', renderMode: RenderMode.Server, status: 404 },
 ];

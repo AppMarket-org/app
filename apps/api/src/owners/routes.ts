@@ -93,14 +93,20 @@ export const orgRoutes = new Hono<Ctx>()
 		const userId = c.get("session")!.user.id;
 		if (!org) return c.json({ error: "not_found" }, 404);
 		const store = owners();
+		// Only members may act here, so non-members never learn who is in the organization.
+		const callerRole = await store.roleIn(org.id, userId);
+		if (!callerRole) return c.json({ error: "not_found" }, 404);
 		const person = await store.byHandle(c.req.param("member"));
-		if (!person) return c.json({ error: "not_found" }, 404);
+		const personRole = person ? await store.roleIn(org.id, person.id) : null;
+		if (!person || !personRole) return c.json({ error: "not_found" }, 404);
 		// Org owners remove anyone; members can leave.
-		if (person.id !== userId && !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
-		if ((await store.roleIn(org.id, person.id)) === "owner" && (await store.ownerCount(org.id)) <= 1) return c.json({ error: "last_owner" }, 409);
+		const leaving = person.id === userId;
+		if (!leaving && callerRole !== "owner") return c.json({ error: "not_found" }, 404);
+		if (personRole === "owner" && (await store.ownerCount(org.id)) <= 1) return c.json({ error: "last_owner" }, 409);
 		await store.removeMember(org.id, person.id);
 		logEvent("org.member_removed", { org: org.handle, member: person.handle });
-		return c.json({ members: await store.members(org.id) });
+		// Someone who just left is no longer a member: no roster for them.
+		return c.json({ members: leaving ? [] : await store.members(org.id) });
 	});
 
 async function orgFor(c: Context<Ctx>) {

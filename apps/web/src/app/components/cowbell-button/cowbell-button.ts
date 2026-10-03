@@ -20,7 +20,8 @@ import { Auth } from '../../auth/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CowbellButton {
-  readonly slug = input.required<string>();
+  /** The repo's path, `owner/slug`. */
+  readonly path = input.required<string>();
   readonly name = input.required<string>();
   /** The repo's count when the page was rendered. */
   readonly initialCount = input(0);
@@ -41,14 +42,14 @@ export class CowbellButton {
     // Once the session is known, load whether this user already rang it.
     effect(() => {
       if (!this.isBrowser || !this.auth.user()) return;
-      const slug = this.slug();
-      untracked(() => void this.refresh(slug));
+      const path = this.path();
+      untracked(() => void this.refresh(path));
     });
   }
 
-  private async refresh(slug: string): Promise<void> {
+  private async refresh(path: string): Promise<void> {
     try {
-      const status = await firstValueFrom(this.api.status(slug));
+      const status = await firstValueFrom(this.api.status(path));
       this.cowbelled.set(status.cowbelled);
       this.count.set(status.count);
     } catch {
@@ -64,7 +65,7 @@ export class CowbellButton {
     this.cowbelled.set(on);
     this.count.update((n) => Math.max(0, n + (on ? 1 : -1)));
     try {
-      const status = await firstValueFrom(this.api.set(this.slug(), on));
+      const status = await firstValueFrom(this.api.set(this.path(), on));
       this.cowbelled.set(status.cowbelled);
       this.count.set(status.count);
     } catch {

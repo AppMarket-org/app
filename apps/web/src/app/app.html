@@ -21,7 +21,11 @@
       <mat-icon>account_circle</mat-icon>
     </button>
     <mat-menu #account="matMenu">
-      <div class="account" mat-menu-item disabled>{{ user.name }}</div>
+      <div class="account" mat-menu-item disabled>{{ user.name }}@if (auth.owner(); as me) { <span class="me">{{ me.handle }}</span>}</div>
+      @if (auth.owner(); as me) {
+        <a mat-menu-item [routerLink]="'/' + me.handle"><mat-icon>person</mat-icon>Your page</a>
+      }
+      <a mat-menu-item routerLink="/settings"><mat-icon>settings</mat-icon>Settings</a>
       <button mat-menu-item type="button" (click)="signOut()">Sign out</button>
     </mat-menu>
   } @else if (auth.user() === null) {

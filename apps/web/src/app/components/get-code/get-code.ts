@@ -19,7 +19,8 @@ import { Auth } from '../../auth/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GetCode {
-  readonly slug = input.required<string>();
+  /** The repo's path, `owner/slug`. */
+  readonly path = input.required<string>();
 
   protected readonly auth = inject(Auth);
   private readonly catalog = inject(Catalog);
@@ -35,7 +36,7 @@ export class GetCode {
     this.error.set(false);
     this.pending.set(true);
     try {
-      this.token.set(await firstValueFrom(this.catalog.readToken(this.slug())));
+      this.token.set(await firstValueFrom(this.catalog.readToken(this.path())));
     } catch {
       this.error.set(true);
     } finally {

@@ -1,0 +1,30 @@
+<h1>New organization</h1>
+<p class="intro">An organization owns repos together with its members. Its apps live at appmarket.org/{{ form.controls.handle.value || 'name' }}/….</p>
+
+<mat-card appearance="outlined">
+  <mat-card-content>
+    <form (ngSubmit)="create()" [formGroup]="form" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>Display name</mat-label>
+        <input matInput formControlName="name" maxlength="80" />
+        <mat-error>Enter a name.</mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Organization username</mat-label>
+        <input matInput formControlName="handle" spellcheck="false" maxlength="39" />
+        <mat-hint>Lowercase letters, numbers and hyphens. Shared with user names.</mat-hint>
+        @if (form.controls.handle.hasError('reserved')) {
+          <mat-error>That name is reserved.</mat-error>
+        } @else {
+          <mat-error>Use lowercase letters, numbers and single hyphens (up to 39).</mat-error>
+        }
+      </mat-form-field>
+      @if (error(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      <div class="actions">
+        <button mat-flat-button type="submit" [disabled]="saving()">Create organization</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

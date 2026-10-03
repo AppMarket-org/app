@@ -8,12 +8,12 @@ import { type Observable, map } from 'rxjs';
 export class CowbellsApi {
   private readonly http = inject(HttpClient);
 
-  status(slug: string): Observable<CowbellStatus> {
-    return this.http.get<CowbellStatus>(`/api/repos/${slug}/cowbell`);
+  status(path: string): Observable<CowbellStatus> {
+    return this.http.get<CowbellStatus>(`/api/repos/${path}/cowbell`);
   }
 
-  set(slug: string, on: boolean): Observable<CowbellStatus> {
-    return on ? this.http.put<CowbellStatus>(`/api/repos/${slug}/cowbell`, {}) : this.http.delete<CowbellStatus>(`/api/repos/${slug}/cowbell`);
+  set(path: string, on: boolean): Observable<CowbellStatus> {
+    return on ? this.http.put<CowbellStatus>(`/api/repos/${path}/cowbell`, {}) : this.http.delete<CowbellStatus>(`/api/repos/${path}/cowbell`);
   }
 
   mine(): Observable<Repo[]> {

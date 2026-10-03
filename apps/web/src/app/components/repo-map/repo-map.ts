@@ -14,13 +14,14 @@ import { Markdown } from '../markdown/markdown';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RepoMap {
-  readonly slug = input.required<string>();
+  /** The repo's path, `owner/slug`. */
+  readonly path = input.required<string>();
   private readonly catalog = inject(Catalog);
   /** undefined: not loaded; null: none available. */
   protected readonly map = signal<string | null | undefined>(undefined);
 
   protected async load(): Promise<void> {
     if (this.map() !== undefined) return;
-    this.map.set(await firstValueFrom(this.catalog.repoMap(this.slug())).catch(() => null));
+    this.map.set(await firstValueFrom(this.catalog.repoMap(this.path())).catch(() => null));
   }
 }

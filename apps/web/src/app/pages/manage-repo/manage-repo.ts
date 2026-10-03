@@ -53,7 +53,11 @@ import { STATE_LABELS } from '../state-labels';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ManageRepo {
+  /** From the route /dashboard/repos/:owner/:slug. */
+  readonly owner = input.required<string>();
   readonly slug = input.required<string>();
+  /** The repo's path, `owner/slug`, as the API addresses it. */
+  protected readonly path = computed(() => `${this.owner()}/${this.slug()}`);
 
   private readonly api = inject(Developer);
   private readonly dialog = inject(MatDialog);
@@ -112,8 +116,8 @@ export class ManageRepo {
 
   protected async createPushToken(): Promise<void> {
     await this.run(async () => {
-      this.token.set(await firstValueFrom(this.api.writeToken(this.slug())));
-      this.tokens.set(await firstValueFrom(this.api.tokens(this.slug())));
+      this.token.set(await firstValueFrom(this.api.writeToken(this.path())));
+      this.tokens.set(await firstValueFrom(this.api.tokens(this.path())));
     }, 'Could not create a push token.');
   }
 
@@ -121,7 +125,7 @@ export class ManageRepo {
     this.busy.set(true);
     this.detailsError.set(null);
     try {
-      this.repo.set(await firstValueFrom(this.api.update(this.slug(), input)));
+      this.repo.set(await firstValueFrom(this.api.update(this.path(), input)));
       this.editing.set(false);
       this.snackBar.open('Details saved', undefined, { duration: 3000 });
     } catch (error) {
@@ -144,7 +148,7 @@ export class ManageRepo {
     }
     this.busy.set(true);
     try {
-      const shot = await firstValueFrom(this.api.uploadScreenshot(this.slug(), file));
+      const shot = await firstValueFrom(this.api.uploadScreenshot(this.path(), file));
       this.screenshots.update((list) => [...list, shot]);
     } catch (error) {
       const code = error instanceof HttpErrorResponse ? (error.error as { error?: string } | null)?.error : undefined;
@@ -161,15 +165,15 @@ export class ManageRepo {
 
   protected async deleteScreenshot(id: string): Promise<void> {
     await this.run(async () => {
-      await firstValueFrom(this.api.deleteScreenshot(this.slug(), id));
+      await firstValueFrom(this.api.deleteScreenshot(this.path(), id));
       this.screenshots.update((list) => list.filter((s) => s.id !== id));
     }, 'Could not delete the screenshot.');
   }
 
   protected async revoke(id: string): Promise<void> {
     await this.run(async () => {
-      await firstValueFrom(this.api.revokeToken(this.slug(), id));
-      this.tokens.set(await firstValueFrom(this.api.tokens(this.slug())));
+      await firstValueFrom(this.api.revokeToken(this.path(), id));
+      this.tokens.set(await firstValueFrom(this.api.tokens(this.path())));
       if (this.token()) this.token.set(null);
     }, 'Could not revoke the token.');
   }
@@ -184,8 +188,8 @@ export class ManageRepo {
     );
     if (!confirmed) return;
     await this.run(async () => {
-      const { revoked } = await firstValueFrom(this.api.revokeAllTokens(this.slug()));
-      this.tokens.set(await firstValueFrom(this.api.tokens(this.slug())));
+      const { revoked } = await firstValueFrom(this.api.revokeAllTokens(this.path()));
+      this.tokens.set(await firstValueFrom(this.api.tokens(this.path())));
       this.token.set(null);
       this.snackBar.open(`${revoked} ${revoked === 1 ? 'token' : 'tokens'} revoked`, undefined, { duration: 3000 });
     }, 'Could not revoke the tokens.');
@@ -199,7 +203,7 @@ export class ManageRepo {
     const { tag, releaseNotes } = this.submitForm.getRawValue();
     this.busy.set(true);
     try {
-      await firstValueFrom(this.api.transition(this.slug(), { to: 'submitted', tag: tag.trim(), releaseNotes }));
+      await firstValueFrom(this.api.transition(this.path(), { to: 'submitted', tag: tag.trim(), releaseNotes }));
       // resetForm also clears the submitted state, so the empty field is not shown as an error.
       formDirective.resetForm();
       this.snackBar.open(`Submitted ${tag} for review`, undefined, { duration: 4000 });
@@ -224,18 +228,18 @@ export class ManageRepo {
     }
     const request = { to } as TransitionRequest;
     await this.run(async () => {
-      await firstValueFrom(this.api.transition(this.slug(), request));
+      await firstValueFrom(this.api.transition(this.path(), request));
       await this.load();
     }, 'That change could not be made. Reload and try again.');
   }
 
   private async load(): Promise<void> {
     try {
-      const repo = await firstValueFrom(this.api.repo(this.slug()));
+      const repo = await firstValueFrom(this.api.repo(this.path()));
       this.repo.set(repo);
-      this.seo.setHeading([{ label: repo.owner.name }, { label: repo.name }]);
+      this.seo.setHeading([{ label: repo.owner.handle, link: `/${repo.owner.handle}` }, { label: repo.slug }]);
       const [git, events, screenshots, tokens] = await firstValueFrom(
-        forkJoin([this.api.git(this.slug()), this.api.events(this.slug()), this.api.screenshots(this.slug()), this.api.tokens(this.slug())]),
+        forkJoin([this.api.git(this.path()), this.api.events(this.path()), this.api.screenshots(this.path()), this.api.tokens(this.path())]),
       );
       this.remote.set(git.remote);
       this.events.set(events);

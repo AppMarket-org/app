@@ -12,12 +12,12 @@ export class Admin {
     return this.http.get<{ items: Repo[] }>('/api/admin/repos', { params: { state } }).pipe(map((r) => r.items));
   }
 
-  readme(slug: string): Observable<string> {
-    return this.http.get<{ markdown: string }>(`/api/repos/${slug}/readme`, { params: { version: 'submitted' } }).pipe(map((r) => r.markdown));
+  readme(path: string): Observable<string> {
+    return this.http.get<{ markdown: string }>(`/api/repos/${path}/readme`, { params: { version: 'submitted' } }).pipe(map((r) => r.markdown));
   }
 
-  transition(slug: string, request: TransitionRequest): Observable<Repo> {
-    return this.http.post<Repo>(`/api/repos/${slug}/transitions`, request);
+  transition(path: string, request: TransitionRequest): Observable<Repo> {
+    return this.http.post<Repo>(`/api/repos/${path}/transitions`, request);
   }
 
   reports(status: 'open' | 'resolved'): Observable<RepoReport[]> {

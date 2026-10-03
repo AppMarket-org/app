@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { Role } from '@appmarket/shared';
+import type { OrgMembership, Owner, Role } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 
 export type Provider = 'google' | 'github';
@@ -24,6 +24,9 @@ export class Auth {
   /** undefined while loading, null when signed out. */
   readonly user = this.current.asReadonly();
   readonly signedIn = computed(() => !!this.current());
+  /** #102: the user's handle and organizations, once loaded. */
+  readonly owner = signal<Owner | null>(null);
+  readonly orgs = signal<OrgMembership[]>([]);
 
   /** Loads the session once; signed-in pages are client-rendered, so the server never needs it. */
   async load(): Promise<CurrentUser | null> {
@@ -38,7 +41,19 @@ export class Auth {
     } catch {
       this.current.set(null);
     }
+    if (this.current()) this.refreshOwner();
     return this.current()!;
+  }
+
+  /** Reloads the user's handle and organizations (after a rename or a new org). */
+  refreshOwner(): void {
+    this.http.get<{ owner: Owner; orgs: OrgMembership[] }>('/api/me/owner').subscribe({
+      next: ({ owner, orgs }) => {
+        this.owner.set(owner);
+        this.orgs.set(orgs);
+      },
+      error: () => undefined,
+    });
   }
 
   /** Starts the OAuth flow; the browser leaves the app for Google or GitHub. */
@@ -56,5 +71,7 @@ export class Auth {
   async signOut(): Promise<void> {
     await firstValueFrom(this.http.post('/api/auth/sign-out', {}));
     this.current.set(null);
+    this.owner.set(null);
+    this.orgs.set([]);
   }
 }

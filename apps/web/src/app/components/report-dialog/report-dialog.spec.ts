@@ -17,7 +17,7 @@ function setup() {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: MAT_DIALOG_DATA, useValue: { slug: 'app', name: 'App' } },
+      { provide: MAT_DIALOG_DATA, useValue: { path: 'dev/app', name: 'App' } },
       { provide: MatDialogRef, useValue: { close } },
     ],
   });
@@ -33,7 +33,7 @@ describe('ReportDialog', () => {
     cmp.form.patchValue({ reason: 'malware', details: 'Ships a crypto miner.', contact: '' });
     cmp.captchaToken.set('turnstile-token');
     const done = cmp.send();
-    const req = http.expectOne('/api/repos/app/reports');
+    const req = http.expectOne('/api/repos/dev/app/reports');
     expect(req.request.headers.get('x-captcha-response')).toBe('turnstile-token');
     expect(req.request.body).toEqual({ reason: 'malware', details: 'Ships a crypto miner.', contact: null });
     req.flush({ id: 'r1' }, { status: 201, statusText: 'Created' });
@@ -45,7 +45,7 @@ describe('ReportDialog', () => {
     const { cmp, http } = setup();
     cmp.form.patchValue({ reason: 'malware', details: 'Ships a crypto miner.' });
     await cmp.send();
-    http.expectNone('/api/repos/app/reports');
+    http.expectNone('/api/repos/dev/app/reports');
   });
 
   it('explains rate limiting', async () => {
@@ -53,7 +53,7 @@ describe('ReportDialog', () => {
     cmp.form.patchValue({ reason: 'spam', details: 'Spam repo here.' });
     cmp.captchaToken.set('t');
     const done = cmp.send();
-    http.expectOne('/api/repos/app/reports').flush({ error: 'rate_limited' }, { status: 429, statusText: 'Too Many Requests' });
+    http.expectOne('/api/repos/dev/app/reports').flush({ error: 'rate_limited' }, { status: 429, statusText: 'Too Many Requests' });
     await done;
     expect(cmp.error()).toContain('Try again in a minute');
   });

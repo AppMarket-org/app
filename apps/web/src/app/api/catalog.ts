@@ -25,31 +25,31 @@ export class Catalog {
     return this.http.get<RepoPage>('/api/repos', { params });
   }
 
-  screenshots(slug: string): Observable<Screenshot[]> {
-    return this.http.get<{ items: Screenshot[] }>(`/api/repos/${slug}/screenshots`).pipe(map((r) => r.items));
+  screenshots(path: string): Observable<Screenshot[]> {
+    return this.http.get<{ items: Screenshot[] }>(`/api/repos/${path}/screenshots`).pipe(map((r) => r.items));
   }
 
-  versions(slug: string): Observable<RepoVersion[]> {
-    return this.http.get<{ items: RepoVersion[] }>(`/api/repos/${slug}/versions`).pipe(map((r) => r.items));
+  versions(path: string): Observable<RepoVersion[]> {
+    return this.http.get<{ items: RepoVersion[] }>(`/api/repos/${path}/versions`).pipe(map((r) => r.items));
   }
 
-  readme(slug: string): Observable<string> {
-    return this.http.get<{ markdown: string }>(`/api/repos/${slug}/readme`).pipe(map((r) => r.markdown));
+  readme(path: string): Observable<string> {
+    return this.http.get<{ markdown: string }>(`/api/repos/${path}/readme`).pipe(map((r) => r.markdown));
   }
 
-  releases(slug: string): Observable<Release[]> {
-    return this.http.get<{ items: Release[] }>(`/api/repos/${slug}/releases`).pipe(map((r) => r.items));
+  releases(path: string): Observable<Release[]> {
+    return this.http.get<{ items: Release[] }>(`/api/repos/${path}/releases`).pipe(map((r) => r.items));
   }
 
   downloadLink(releaseId: string): Observable<DownloadLink> {
     return this.http.post<DownloadLink>(`/api/releases/${releaseId}/link`, {});
   }
 
-  repoMap(slug: string): Observable<string> {
-    return this.http.get(`/api/repos/${slug}/repo-map`, { responseType: 'text' });
+  repoMap(path: string): Observable<string> {
+    return this.http.get(`/api/repos/${path}/repo-map`, { responseType: 'text' });
   }
 
-  readToken(slug: string): Observable<GitToken> {
-    return this.http.post<GitToken>(`/api/repos/${slug}/tokens`, { scope: 'read', ttl: 3600 });
+  readToken(path: string): Observable<GitToken> {
+    return this.http.post<GitToken>(`/api/repos/${path}/tokens`, { scope: 'read', ttl: 3600 });
   }
 }

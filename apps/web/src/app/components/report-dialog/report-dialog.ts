@@ -19,7 +19,7 @@ import { Turnstile } from '../../auth/turnstile/turnstile';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportDialog {
-  protected readonly data = inject<{ slug: string; name: string }>(MAT_DIALOG_DATA);
+  protected readonly data = inject<{ path: string; name: string }>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<ReportDialog, boolean>>(MatDialogRef);
   private readonly http = inject(HttpClient);
 
@@ -42,7 +42,7 @@ export class ReportDialog {
     const v = this.form.getRawValue();
     try {
       await firstValueFrom(
-        this.http.post(`/api/repos/${this.data.slug}/reports`, { reason: v.reason, details: v.details.trim(), contact: v.contact.trim() || null }, { headers: { 'x-captcha-response': token } }),
+        this.http.post(`/api/repos/${this.data.path}/reports`, { reason: v.reason, details: v.details.trim(), contact: v.contact.trim() || null }, { headers: { 'x-captcha-response': token } }),
       );
       this.ref.close(true);
     } catch (e) {

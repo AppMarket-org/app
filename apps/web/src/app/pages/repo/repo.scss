@@ -21,6 +21,12 @@ h2 {
   margin: 0 0 1rem;
 }
 
+.by .owner {
+  --mat-button-text-horizontal-padding: 0.25rem;
+  min-width: 0;
+  font: inherit;
+}
+
 .by {
   font: var(--mat-sys-body-medium);
   color: var(--mat-sys-on-surface-variant);

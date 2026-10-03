@@ -3,7 +3,7 @@
     mat-stroked-button
     class="cowbell"
     [routerLink]="['/login']"
-    [queryParams]="{ next: '/apps/' + slug() }"
+    [queryParams]="{ next: '/' + path() }"
     [attr.aria-label]="'Sign in to cowbell ' + name() + ', ' + count() + ' cowbells'"
     matTooltip="Sign in to ring this app's cowbell"
   >

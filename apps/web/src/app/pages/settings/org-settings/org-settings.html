@@ -1,0 +1,72 @@
+@if (org(); as o) {
+  <header class="head">
+    <div>
+      <h1>{{ o.name }}</h1>
+      <p class="sub">appmarket.org/{{ o.handle }} · you are {{ role() === 'owner' ? 'an owner' : 'a member' }}</p>
+    </div>
+    <a mat-stroked-button [routerLink]="'/' + o.handle">View public page</a>
+  </header>
+
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Members</mat-card-title>
+      <mat-card-subtitle>Members manage the organization's repos. Owners also manage members.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Saving" />
+      }
+      <mat-list aria-label="Members">
+        @for (m of members(); track m.userId) {
+          <mat-list-item>
+            <mat-icon matListItemIcon aria-hidden="true">{{ m.role === 'owner' ? 'shield_person' : 'person' }}</mat-icon>
+            <span matListItemTitle>{{ m.name }} <span class="handle">{{ m.handle }}</span></span>
+            <span matListItemLine>{{ m.role === 'owner' ? 'Owner' : 'Member' }}{{ isMe(m) ? ' · you' : '' }}</span>
+            <span matListItemMeta class="member-actions">
+              @if (role() === 'owner' && !isMe(m)) {
+                <button mat-button type="button" [disabled]="busy()" (click)="setRole(m, m.role === 'owner' ? 'member' : 'owner')">
+                  {{ m.role === 'owner' ? 'Make member' : 'Make owner' }}
+                </button>
+                <button mat-button type="button" class="danger" [disabled]="busy()" (click)="remove(m)">Remove</button>
+              }
+              @if (isMe(m)) {
+                <button mat-button type="button" class="danger" [disabled]="busy()" (click)="remove(m)">Leave</button>
+              }
+            </span>
+          </mat-list-item>
+        }
+      </mat-list>
+      @if (error(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (role() === 'owner') {
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>Add a member</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <form class="row" [formGroup]="add" (ngSubmit)="addMember()" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="handle" spellcheck="false" maxlength="39" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Role</mat-label>
+            <mat-select formControlName="role">
+              <mat-option value="member">Member</mat-option>
+              <mat-option value="owner">Owner</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-flat-button type="submit" [disabled]="busy() || add.invalid">Add</button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+} @else if (notFound()) {
+  <h1>Organization not found</h1>
+  <p>It does not exist, or you are not a member.</p>
+  <a mat-button routerLink="/settings">Back to settings</a>
+} @else {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading organization" />
+}
