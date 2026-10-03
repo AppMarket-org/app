@@ -13,6 +13,6 @@ describe('App', () => {
 
     TestBed.inject(Seo).setHeading([{ label: 'dev' }, { label: 'Hello' }]);
     fixture.detectChanges();
-    expect(el.querySelector('.heading')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('dev / Hello');
+    expect(el.querySelector('.heading')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('dev/Hello');
   });
 });
