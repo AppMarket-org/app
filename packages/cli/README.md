@@ -4,10 +4,25 @@ Checkpoints for agent commits on [appmarket.org](https://appmarket.org): which p
 model and effort produced each commit. Open source (MIT) so you can read exactly what it records.
 
 ```sh
-npx @appmarket/cli login        # device code sign-in; the token goes in your OS keychain
-cd my-app && appmarket init     # post-commit hook + repo config
-git commit ...                  # every commit gets a checkpoint
+npx @appmarket/cli login                 # device code sign-in; the token goes in your OS keychain
+appmarket adapter install claude-code    # once per machine: record Claude Code sessions
+cd my-app && appmarket init              # post-commit hook + repo config
+git commit ...                           # every commit gets a checkpoint
 ```
+
+## Claude Code
+
+`appmarket adapter install claude-code` adds hooks to `~/.claude/settings.json` (a backup is kept
+next to it; `uninstall` removes only these hooks). They record, for sessions working in a repo where
+you ran `appmarket init` and nowhere else:
+
+- each prompt you send, and each tool call (name, plus the command or file path relative to the repo)
+- at commit time, from the session transcript: model, Claude Code version, effort setting, token
+  usage (thinking tokens separately) and the assistant's last message before the commit
+
+When an agent runs `git commit`, the hook also makes the checkpoint itself, so commits are recorded
+even where the git hook is missing. Hook failures never interrupt Claude Code; they go to
+`~/.appmarket/cli.log`.
 
 ## What it records, and where
 
@@ -40,7 +55,8 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `init [owner/repo]` | Turn on checkpoints in this Git repo |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
-| `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0) |
+| `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
+| `adapter install\|uninstall claude-code` | Add or remove the Claude Code hooks |
 | `sync` | Upload queued checkpoints now (offline uploads retry with backoff for 7 days) |
 | `status` | Queue and sign-in state |
 

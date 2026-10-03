@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { advanceMarker, bufferKey, readSinceMarker } from "../buffer.ts";
+import { advanceMarker, bufferKey, readSinceMarker, type BufferEvent } from "../buffer.ts";
+import { transcriptEvents } from "../adapters/claude-code.ts";
 import { buildRecord, type CommitInfo } from "../build-record.ts";
 import { apiBase, HOME } from "../config.ts";
 import { git, gitOr, repoRoot } from "../git.ts";
@@ -45,14 +46,26 @@ function redactionSettings(root: string): { extra: string[]; ignore: string[] } 
 	return { extra: [...(read(join(HOME, "config.json")).redact ?? []), ...(read(join(root, ".appmarket.json")).redact ?? [])], ignore };
 }
 
+/** Claude Code: adds model, effort, usage and the assistant's last text from each session transcript in the window. */
+function withTranscripts(events: BufferEvent[], committedAt: string): BufferEvent[] {
+	const until = new Date(Date.parse(committedAt) + 2000).toISOString();
+	const starts = new Map<string, number>();
+	for (const e of events) {
+		if (!e.transcript_path) continue;
+		const offset = e.transcript_offset ?? 0;
+		starts.set(e.transcript_path, Math.min(starts.get(e.transcript_path) ?? offset, offset));
+	}
+	return [...events, ...[...starts].flatMap(([path, offset]) => transcriptEvents(path, offset, until))];
+}
+
 /**
  * C7 (#109, #110): build the checkpoint for a commit (HEAD by default), redact it, write the local
  * git note, queue the upload and advance the buffer marker. Exits 0 in every case: a commit never
  * fails because of a checkpoint.
  */
-export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: boolean }): number {
+export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: boolean; force?: boolean; cwd?: string }): number {
 	try {
-		const root = repoRoot();
+		const root = repoRoot(flags.cwd);
 		if (!root) return 0;
 		if (gitOr(["config", "--get", "appmarket.disabled"], "", { cwd: root }) === "true") return 0;
 		const repo = gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root });
@@ -62,9 +75,13 @@ export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: bo
 		}
 		const api = gitOr(["config", "--get", "appmarket.api"], apiBase(), { cwd: root });
 		const sha = git(["rev-parse", flags.commit ?? "HEAD"], { cwd: root });
+		// One checkpoint per commit: the git hook and the Claude Code fast path both land here.
+		if (!flags.force && gitOr(["notes", "--ref=appmarket", "list", sha], "", { cwd: root })) return 0;
 		const key = bufferKey(root);
 		const settings = redactionSettings(root);
-		const record = buildRecord(readSinceMarker(key), commitInfo(root, sha), createRedactor({ envValues: envValues(root), ...settings }));
+		const info = commitInfo(root, sha);
+		const events = withTranscripts(readSinceMarker(key), info.committedAt);
+		const record = buildRecord(events, info, createRedactor({ envValues: envValues(root), ...settings }));
 		// Local note first, so it travels with any push even if the upload never happens.
 		git(["notes", "--ref=appmarket", "add", "-f", "-F", "-", sha], { cwd: root, input: JSON.stringify(record, null, 2) });
 		enqueue(api, repo, record);

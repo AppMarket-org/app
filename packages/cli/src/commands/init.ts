@@ -96,7 +96,7 @@ export async function init(api: string, explicit?: string): Promise<number> {
 	const harnesses = detectHarnesses();
 	console.log(`Checkpoints on for ${repo}.`);
 	console.log(`  Hook:       ${hook}`);
-	console.log(`  Harnesses:  ${harnesses.length ? harnesses.join(", ") : "none found"}${harnesses.includes("claude-code") ? " (install the appmarket Claude Code plugin to record prompts)" : ""}`);
+	console.log(`  Harnesses:  ${harnesses.length ? harnesses.join(", ") : "none found"}${harnesses.includes("claude-code") ? " (run `appmarket adapter install claude-code` to record prompts)" : ""}`);
 	console.log(`  Notes:      shown in \`git log\`; push them with \`git push ${remote ?? "<remote>"} refs/notes/appmarket\``);
 	console.log("Every commit now gets a checkpoint; agent prompts are added when a harness adapter is installed.");
 	return 0;

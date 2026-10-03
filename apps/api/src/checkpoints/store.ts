@@ -112,6 +112,15 @@ export class CheckpointStore {
 		return true;
 	}
 
+	/** Pending checkpoints whose commits have since reached the repo. */
+	async attach(repoId: string, shas: string[]): Promise<void> {
+		if (!shas.length) return;
+		await this.db
+			.prepare(`UPDATE checkpoints SET state = 'attached' WHERE repo_id = ? AND state = 'pending' AND commit_sha IN (${shas.map(() => "?").join(",")})`)
+			.bind(repoId, ...shas)
+			.run();
+	}
+
 	async delete(repoId: string, sha: string): Promise<boolean> {
 		const result = await this.db.prepare("DELETE FROM checkpoints WHERE repo_id = ? AND commit_sha = ?").bind(repoId, sha).run();
 		return result.meta.changes > 0;

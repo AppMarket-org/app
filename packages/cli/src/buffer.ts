@@ -22,6 +22,9 @@ export interface BufferEvent {
 	output_tokens?: number;
 	reasoning_tokens?: number;
 	cost_usd?: number;
+	/** Claude Code: the session transcript, and its size when this event was written (where to start reading). */
+	transcript_path?: string;
+	transcript_offset?: number;
 }
 
 const ROTATE_BYTES = 50 * 1024 * 1024;
