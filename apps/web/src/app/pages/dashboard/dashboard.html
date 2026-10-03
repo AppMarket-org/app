@@ -13,7 +13,7 @@
         @for (d of deployments(); track d.id) {
           <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
             <mat-icon matListItemIcon aria-hidden="true">{{ d.status === 'succeeded' ? 'check_circle' : d.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
-            <span matListItemTitle>{{ d.listingName }} → {{ d.workerName }}</span>
+            <span matListItemTitle>{{ d.repoName }} → {{ d.workerName }}</span>
             <span matListItemLine>{{ deployStatus[d.status] }} · {{ d.versionTag }} · {{ d.createdAt | date: 'medium' }}</span>
           </a>
         }
@@ -34,7 +34,7 @@
     Code you host on appmarket.org. A repo is private until you submit a version and it is approved; then it is public on the
     marketplace and anyone can deploy it.
   </p>
-@switch (listings()) {
+@switch (repos()) {
   @case (undefined) {
     <mat-progress-bar mode="indeterminate" aria-label="Loading your repos" />
   }
@@ -42,7 +42,7 @@
     <p class="error" role="alert">Could not load your repos. Reload to try again.</p>
   }
   @default {
-    @for (item of listings()!; track item.id) {
+    @for (item of repos()!; track item.id) {
       <mat-card appearance="outlined">
         <mat-card-header>
           <mat-card-title>{{ item.name }}</mat-card-title>
@@ -62,7 +62,7 @@
           <span class="updated">Updated {{ item.updatedAt | date: 'mediumDate' }}</span>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-button [routerLink]="['/dashboard/apps', item.slug]" [attr.aria-label]="'Manage ' + item.name">Manage</a>
+          <a mat-button [routerLink]="['/dashboard/repos', item.slug]" [attr.aria-label]="'Manage ' + item.name">Manage</a>
         </mat-card-actions>
       </mat-card>
     } @empty {

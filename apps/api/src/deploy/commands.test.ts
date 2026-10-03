@@ -22,7 +22,7 @@ describe("deploy commands", () => {
 		expect(command).toContain("cd /tmp/appmarket-deploy");
 		expect(command).toContain("/usr/local/bin/wrangler deploy --config wrangler.json --secrets-file /tmp/appmarket-secrets.json");
 		expect(command).toContain("/usr/local/bin/wrangler d1 migrations apply DB --remote --config wrangler.json");
-		// Nothing from the listing runs here: no package scripts, no npx, no workspace-relative Wrangler.
+		// Nothing from the repo runs here: no package scripts, no npx, no workspace-relative Wrangler.
 		expect(command).not.toMatch(/npm |npx |pnpm |node_modules/);
 	});
 

@@ -1,4 +1,4 @@
-/** PRD R18: reasons a visitor can report a listing. */
+/** PRD R18: reasons a visitor can report a repo. */
 export const REPORT_REASONS = {
 	malware: "Malware or security risk",
 	copyright: "Copyright or trademark (DMCA)",
@@ -8,9 +8,9 @@ export const REPORT_REASONS = {
 } as const;
 export type ReportReason = keyof typeof REPORT_REASONS;
 
-export interface ListingReport {
+export interface RepoReport {
 	id: string;
-	listing: { slug: string; name: string; state: string };
+	repo: { slug: string; name: string; state: string };
 	reason: ReportReason;
 	details: string;
 	contact: string | null;

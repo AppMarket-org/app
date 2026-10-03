@@ -4,7 +4,7 @@ import { buildRepoMap } from "./repo-map";
 describe("buildRepoMap", () => {
 	it("orients an agent: start here, bindings, layout", () => {
 		const map = buildRepoMap({
-			listingName: "Todo",
+			repoName: "Todo",
 			tag: "v1.0.0",
 			commit: "abc123",
 			entries: [
@@ -30,7 +30,7 @@ describe("buildRepoMap", () => {
 	it("caps depth and length", () => {
 		const entries = Array.from({ length: 600 }, (_, i) => ({ path: `f${i}.ts`, type: "blob" }));
 		entries.push({ path: "a/b/c/d/e/deep.ts", type: "blob" });
-		const map = buildRepoMap({ listingName: "Big", tag: "v1", commit: "c", entries, manifest: null, hasAgentsMd: false });
+		const map = buildRepoMap({ repoName: "Big", tag: "v1", commit: "c", entries, manifest: null, hasAgentsMd: false });
 		expect(map).not.toContain("deep.ts");
 		expect(map).toMatch(/… \d+ more entries not shown/);
 	});

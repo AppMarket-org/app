@@ -4,29 +4,29 @@ import { buildDeployConfig, CONTRACT_FILES } from "@appmarket/template-contract"
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { readFiles } from "../artifacts/repos.ts";
+import { readFiles } from "../artifacts/git.ts";
 import { cloudflareAccounts } from "../cloudflare/oauth.ts";
-import { ListingRepository } from "../listings/repository.ts";
+import { RepoStore } from "../repos/repository.ts";
 import { deploymentFor, deploymentsFor, insertDeployment } from "./store.ts";
 import type { DeployParams } from "./workflow.ts";
 import { logEvent } from "../observability/log.ts";
 
 type Ctx = { Variables: AuthVariables };
 
-/** PRD D6: start a deploy of a listing's published version. Mounted under /api/listings. */
-export const listingDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", requireRole(), async (c) => {
+/** PRD D6: start a deploy of a repo's published version. Mounted under /api/repos. */
+export const repoDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", requireRole(), async (c) => {
 	const request = deploymentRequestSchema.safeParse(await c.req.json().catch(() => null));
 	if (!request.success) return c.json({ error: "invalid", issues: request.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
 	const { accountId, workerName, secrets } = request.data;
 	const userId = c.get("session")!.user.id;
 
-	const listing = await new ListingRepository(env.DB).findBySlug(c.req.param("slug"));
-	if (!listing || listing.state !== "published" || !listing.repoName || !listing.publishedTag || !listing.publishedCommit) return c.json({ error: "not_found" }, 404);
-	// D4: the same rule the listing page uses to show the Deploy action.
-	const availability = deployAvailability(listing);
+	const repo = await new RepoStore(env.DB).findBySlug(c.req.param("slug"));
+	if (!repo || repo.state !== "published" || !repo.gitRepo || !repo.publishedTag || !repo.publishedCommit) return c.json({ error: "not_found" }, 404);
+	// D4: the same rule the repo page uses to show the Deploy action.
+	const availability = deployAvailability(repo);
 	if (!availability.ok) return availability.reason === "paid" ? c.json({ error: "purchase_required" }, 402) : c.json({ error: "not_deployable", reason: DEPLOY_UNAVAILABLE[availability.reason] }, 422);
 
-	const expected = listing.manifest?.secrets ?? [];
+	const expected = repo.manifest?.secrets ?? [];
 	const missing = expected.filter((name) => !secrets[name]);
 	const unknown = Object.keys(secrets).filter((name) => !expected.includes(name));
 	if (missing.length || unknown.length) return c.json({ error: "secrets_mismatch", missing, unknown }, 400);
@@ -35,7 +35,7 @@ export const listingDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", re
 	if (!Array.isArray(accounts)) return c.json({ error: accounts }, 409);
 	if (!accounts.some((a) => a.id === accountId)) return c.json({ error: "account_not_connected" }, 403);
 
-	const plan = buildDeployConfig(await readFiles(listing.repoName, listing.publishedCommit, CONTRACT_FILES), workerName);
+	const plan = buildDeployConfig(await readFiles(repo.gitRepo, repo.publishedCommit, CONTRACT_FILES), workerName);
 	if (!plan.ok) return c.json({ error: "not_deployable", reason: plan.reason }, 422);
 
 	// R20: each deploy runs a build container. Counted here so fixing form errors is not limited.
@@ -44,21 +44,21 @@ export const listingDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", re
 		return c.json({ error: "rate_limited", retryAfter: env.RATE_LIMIT_CONFIG.DEPLOY.period }, 429);
 	}
 	const id = crypto.randomUUID();
-	await insertDeployment({ id, userId, listingId: listing.id, versionTag: listing.publishedTag, commitSha: listing.publishedCommit, accountId, workerName, deploy: plan.deploy, secrets });
+	await insertDeployment({ id, userId, repoId: repo.id, versionTag: repo.publishedTag, commitSha: repo.publishedCommit, accountId, workerName, deploy: plan.deploy, secrets });
 	const params: DeployParams = {
 		provider: "cloudflare-artifacts",
 		providerData: { namespace: env.ARTIFACTS_NAMESPACE },
 		event: { type: "tag" },
 		owner: env.ARTIFACTS_NAMESPACE,
-		repo: listing.repoName,
-		sha: listing.publishedCommit,
+		repo: repo.gitRepo,
+		sha: repo.publishedCommit,
 		trigger: "tag",
-		ref: `refs/tags/${listing.publishedTag}`,
-		tag: listing.publishedTag,
+		ref: `refs/tags/${repo.publishedTag}`,
+		tag: repo.publishedTag,
 		deploymentId: id,
 	};
 	await env.DEPLOY_WORKFLOW.create({ id, params });
-	logEvent("deploy.started", { deployment: id, listing: listing.slug, version: listing.publishedTag, user: userId });
+	logEvent("deploy.started", { deployment: id, repo: repo.slug, version: repo.publishedTag, user: userId });
 	return c.json(await deploymentFor(userId, id), 202);
 });
 

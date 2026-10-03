@@ -1,4 +1,4 @@
-/** PRD D3: what deploying a listing creates in the buyer's Cloudflare account. */
+/** PRD D3: what deploying a repo creates in the buyer's Cloudflare account. */
 export type ManifestResourceType =
 	| "kv"
 	| "d1"

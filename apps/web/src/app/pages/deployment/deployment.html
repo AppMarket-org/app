@@ -10,7 +10,7 @@
   }
   @default {
     @let d = deployment()!;
-    <h1>Deploying {{ d.listingName }}</h1>
+    <h1>Deploying {{ d.repoName }}</h1>
     <p class="sub">
       {{ d.versionTag }} as <strong>{{ d.workerName }}</strong> · started {{ d.createdAt | date: 'medium' }}
     </p>
@@ -43,7 +43,7 @@
           @if (d.error) {
             <pre><code>{{ d.error }}</code></pre>
           }
-          <a mat-stroked-button [routerLink]="['/apps', d.listingSlug]" [queryParams]="{ deploy: 1 }">Try again</a>
+          <a mat-stroked-button [routerLink]="['/apps', d.repoSlug]" [queryParams]="{ deploy: 1 }">Try again</a>
         }
       </mat-card-content>
     </mat-card>

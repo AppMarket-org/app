@@ -1,7 +1,7 @@
 // PRD D6: the Wrangler config a one-click deploy uploads to the buyer's account. It is built here,
 // from the published commit's config, instead of using the repo's file as-is: the deploy step holds
-// the buyer's Cloudflare token, so it must not run anything the listing controls (custom builds,
-// plugins, .env files). The listing's build runs earlier, without the token, and writes its bundle
+// the buyer's Cloudflare token, so it must not run anything the repo controls (custom builds,
+// plugins, .env files). The repo's build runs earlier, without the token, and writes its bundle
 // to `out/`; the deploy step uploads that bundle with this config and `no_bundle`.
 import { readWrangler, type WranglerConfig } from "./wrangler";
 
@@ -16,7 +16,7 @@ export interface DeployConfig {
 
 export type DeployConfigResult = { ok: true; deploy: DeployConfig } | { ok: false; reason: string };
 
-/** Keys copied from the listing's config. Anything else (build, routes, env, account_id, ...) is dropped. */
+/** Keys copied from the repo's config. Anything else (build, routes, env, account_id, ...) is dropped. */
 const COPIED = [
 	"compatibility_date",
 	"compatibility_flags",
@@ -42,7 +42,7 @@ const COPIED = [
 	"version_metadata",
 ] as const;
 
-/** Bindings a deploy cannot set up yet; the listing page says so instead of failing mid-deploy. */
+/** Bindings a deploy cannot set up yet; the repo page says so instead of failing mid-deploy. */
 const UNSUPPORTED: [key: string, label: string][] = [
 	["containers", "Containers"],
 	["hyperdrive", "Hyperdrive"],
@@ -66,7 +66,7 @@ export function buildDeployConfig(files: Map<string, string>, workerName: string
 	for (const key of COPIED) if (source[key] !== undefined) config[key] = JSON.parse(JSON.stringify(source[key]));
 
 	const scoped = (name: unknown) => scopedName(workerName, typeof name === "string" ? name : "");
-	// Resource IDs in the listing belong to the developer's account. Without them Wrangler provisions
+	// Resource IDs in the repo belong to the developer's account. Without them Wrangler provisions
 	// the resources in the buyer's account; names are scoped to the Worker so two apps never share one.
 	for (const kv of list(config.kv_namespaces)) {
 		delete kv.id;

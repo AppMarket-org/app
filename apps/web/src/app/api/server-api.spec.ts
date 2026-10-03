@@ -21,9 +21,9 @@ describe('serverApiInterceptor', () => {
         { provide: REQUEST_CONTEXT, useValue: context },
       ],
     });
-    const body = await firstValueFrom(TestBed.inject(HttpClient).get<{ name: string }>('/api/listings/app'));
+    const body = await firstValueFrom(TestBed.inject(HttpClient).get<{ name: string }>('/api/repos/app'));
     expect(body.name).toBe('App');
-    expect(seen[0]!.url).toBe('https://appmarket.org/api/listings/app');
+    expect(seen[0]!.url).toBe('https://appmarket.org/api/repos/app');
     expect(seen[0]!.headers.get('cookie')).toBe('session=1');
   });
 
@@ -35,7 +35,7 @@ describe('serverApiInterceptor', () => {
         { provide: REQUEST_CONTEXT, useValue: { apiFetch: async () => Response.json({ error: 'not_found' }, { status: 404 }) } },
       ],
     });
-    const error = await firstValueFrom(TestBed.inject(HttpClient).get('/api/listings/x')).catch((e: unknown) => e);
+    const error = await firstValueFrom(TestBed.inject(HttpClient).get('/api/repos/x')).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(HttpErrorResponse);
     expect((error as HttpErrorResponse).status).toBe(404);
   });

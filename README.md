@@ -8,7 +8,7 @@ A marketplace for apps whose source lives in Cloudflare Artifacts and deploys in
 | --- | --- |
 | `apps/web` | Angular 22 + Angular Material UI: server-rendered SEO pages and the signed-in SPA (Wrangler Worker) |
 | `apps/api` | Hono API on Workers: Artifacts, D1, R2, auth (`cf` project) |
-| `packages/shared` | Shared types: listing lifecycle, roles, platforms |
+| `packages/shared` | Shared types: repo lifecycle, roles, platforms |
 | `packages/template-contract` | Submit-time template lint and deploy manifest (D2, D3) |
 | `db/migrations` | D1 schema |
 | `docs` | PRD link, Phase 0 setup, ADRs |

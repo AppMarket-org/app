@@ -1,14 +1,14 @@
 import { RESPONSE_INIT, inject } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
-import { CATEGORIES, RUNTIMES, type CategorySlug, type ListingPage, type Runtime } from '@appmarket/shared';
+import { CATEGORIES, RUNTIMES, type CategorySlug, type RepoPage, type Runtime } from '@appmarket/shared';
 import { type Observable, catchError, of } from 'rxjs';
 import { Catalog } from '../api/catalog';
 
 const PAGE_SIZE = 24;
-const EMPTY: ListingPage = { items: [], page: 1, pageSize: PAGE_SIZE, total: 0 };
+const EMPTY: RepoPage = { items: [], page: 1, pageSize: PAGE_SIZE, total: 0 };
 
 /** If the API is unreachable, render an empty page with 503 so crawlers retry instead of indexing it. */
-function orUnavailable(source: Observable<ListingPage>, response: ResponseInit | null): Observable<ListingPage> {
+function orUnavailable(source: Observable<RepoPage>, response: ResponseInit | null): Observable<RepoPage> {
   return source.pipe(
     catchError(() => {
       if (response) response.status = 503;
@@ -21,11 +21,11 @@ const isCategory = (v: string | null): v is CategorySlug => CATEGORIES.some((c) 
 const isRuntime = (v: string | null): v is Runtime => v !== null && v in RUNTIMES;
 const pageOf = (v: string | null) => Math.max(1, Number.parseInt(v ?? '1', 10) || 1);
 
-/** Home: the newest published listings. */
-export const latestResolver: ResolveFn<ListingPage> = () => orUnavailable(inject(Catalog).search({ pageSize: 12 }), inject(RESPONSE_INIT, { optional: true }));
+/** Home: the newest published repos. */
+export const latestResolver: ResolveFn<RepoPage> = () => orUnavailable(inject(Catalog).search({ pageSize: 12 }), inject(RESPONSE_INIT, { optional: true }));
 
 /** Search: q, category, runtime and page from the query string; unknown filters are ignored. */
-export const searchResolver: ResolveFn<ListingPage> = (route) => {
+export const searchResolver: ResolveFn<RepoPage> = (route) => {
   const q = route.queryParamMap;
   const response = inject(RESPONSE_INIT, { optional: true });
   return orUnavailable(inject(Catalog).search({
@@ -38,7 +38,7 @@ export const searchResolver: ResolveFn<ListingPage> = (route) => {
 };
 
 /** Category page; an unknown category is a 404. */
-export const categoryResolver: ResolveFn<ListingPage> = (route) => {
+export const categoryResolver: ResolveFn<RepoPage> = (route) => {
   const slug = route.paramMap.get('slug');
   if (!isCategory(slug)) {
     const response = inject(RESPONSE_INIT, { optional: true });

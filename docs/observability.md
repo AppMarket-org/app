@@ -16,12 +16,12 @@ Configuration: `observability` in `apps/api/cloudflare.config.ts` and `apps/web/
 
 | Event | When | Fields |
 | --- | --- | --- |
-| `repo.created` | Listing created with its Artifacts repo (R2) | `listing`, `repo`, `user` |
-| `token.minted` | Repo token issued (R3) | `listing`, `scope`, `ttl`, `user`, `auditId` |
-| `listing.transition` | Submit, publish, unpublish, remove (R5) | `listing`, `from`, `to`, `actor` |
-| `download.link_issued` | Signed download link issued (R14) | `listing`, `release` |
+| `repo.created` | Repo created with its Artifacts repo (R2) | `repo`, `repo`, `user` |
+| `token.minted` | Repo token issued (R3) | `repo`, `scope`, `ttl`, `user`, `auditId` |
+| `repo.transition` | Submit, publish, unpublish, remove (R5) | `repo`, `from`, `to`, `actor` |
+| `download.link_issued` | Signed download link issued (R14) | `repo`, `release` |
 | `download.started` | Release download started, once per file (R14) | `release`, `platform`, `size` |
-| `deploy.started` / `deploy.succeeded` / `deploy.failed` | One-click deploy (D6) | `deployment`, `listing`, `version`, `user`, `error` |
+| `deploy.started` / `deploy.succeeded` / `deploy.failed` | One-click deploy (D6) | `deployment`, `repo`, `version`, `user`, `error` |
 | `repo_map.failed`, `cloudflare.token_request_failed`, `request.error` | Failures | context, `error` |
 
 ## Redaction

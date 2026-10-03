@@ -10,7 +10,7 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Prerender,
     getPrerenderParams: async () => ['terms', 'developer-agreement', 'content-policy', 'privacy'].map((page) => ({ page })),
   },
-  // Catalog pages: rendered per request from D1 data so new listings are indexable immediately.
+  // Catalog pages: rendered per request from D1 data so new repos are indexable immediately.
   { path: 'apps/:slug', renderMode: RenderMode.Server },
   { path: 'category/:slug', renderMode: RenderMode.Server },
   { path: 'search', renderMode: RenderMode.Server },
@@ -19,6 +19,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'dashboard/new', renderMode: RenderMode.Client },
   { path: 'dashboard/apps/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/listings/:slug', renderMode: RenderMode.Client },
+  { path: 'dashboard/repos/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/deployments/:id', renderMode: RenderMode.Client },
   { path: 'dashboard/cloudflare', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },

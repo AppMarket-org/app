@@ -9,7 +9,7 @@ export class DeploymentsApi {
   private readonly http = inject(HttpClient);
 
   start(slug: string, request: DeploymentRequest): Observable<Deployment> {
-    return this.http.post<Deployment>(`/api/listings/${slug}/deployments`, request);
+    return this.http.post<Deployment>(`/api/repos/${slug}/deployments`, request);
   }
 
   get(id: string): Observable<Deployment> {

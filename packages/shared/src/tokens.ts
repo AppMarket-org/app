@@ -7,17 +7,17 @@ export const TOKEN_TTL = {
 
 
 /** Returned once; never stored or logged by appmarket.org. */
-export interface RepoToken {
+export interface GitToken {
 	scope: "read" | "write";
 	remote: string;
 	token: string;
 	expiresAt: string;
 }
 
-/** PRD R19: per-developer limit on listings that are not removed. Admins are exempt. */
-export const MAX_LISTINGS_PER_DEVELOPER = 25;
+/** PRD R19: per-developer limit on repos that are not removed. Admins are exempt. */
+export const MAX_REPOS_PER_DEVELOPER = 25;
 
-/** A minted token as shown to its listing's owner or an admin (never the token itself). */
+/** A minted token as shown to its repo's owner or an admin (never the token itself). */
 export interface TokenRecord {
 	id: string;
 	scope: "read" | "write";

@@ -10,7 +10,7 @@ const secretsAad = (id: string, userId: string) => `deployment:${id}:${userId}`;
 export interface NewDeployment {
 	id: string;
 	userId: string;
-	listingId: string;
+	repoId: string;
 	versionTag: string;
 	commitSha: string;
 	accountId: string;
@@ -22,10 +22,10 @@ export interface NewDeployment {
 export async function insertDeployment(d: NewDeployment): Promise<void> {
 	const sealed = Object.keys(d.secrets).length ? await encryptToken(env.CF_TOKEN_ENCRYPTION_KEY, JSON.stringify(d.secrets), secretsAad(d.id, d.userId)) : null;
 	await env.DB.prepare(
-		`INSERT INTO deployments (id, user_id, listing_id, version_tag, commit_sha, account_id, worker_name, deploy_config, secrets_enc)
+		`INSERT INTO deployments (id, user_id, repo_id, version_tag, commit_sha, account_id, worker_name, deploy_config, secrets_enc)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
-		.bind(d.id, d.userId, d.listingId, d.versionTag, d.commitSha, d.accountId, d.workerName, JSON.stringify(d.deploy), sealed)
+		.bind(d.id, d.userId, d.repoId, d.versionTag, d.commitSha, d.accountId, d.workerName, JSON.stringify(d.deploy), sealed)
 		.run();
 }
 
@@ -77,12 +77,12 @@ interface DeploymentRow {
 }
 
 const SELECT = `SELECT d.id, l.slug, l.name, d.version_tag, d.account_id, d.worker_name, d.status, d.url, d.error, d.created_at, d.updated_at
-	FROM deployments d JOIN listings l ON l.id = d.listing_id`;
+	FROM deployments d JOIN repos l ON l.id = d.repo_id`;
 
 const toDeployment = (r: DeploymentRow): Deployment => ({
 	id: r.id,
-	listingSlug: r.slug,
-	listingName: r.name,
+	repoSlug: r.slug,
+	repoName: r.name,
 	versionTag: r.version_tag,
 	accountId: r.account_id,
 	workerName: r.worker_name,

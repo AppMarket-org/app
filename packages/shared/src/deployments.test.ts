@@ -15,7 +15,7 @@ describe("deployAvailability", () => {
 		expect(deployAvailability({ ...base, runtime: "static" })).toEqual({ ok: true });
 	});
 
-	it("says why other listings cannot deploy", () => {
+	it("says why other repos cannot deploy", () => {
 		expect(deployAvailability({ ...base, state: "draft" })).toEqual({ ok: false, reason: "not_published" });
 		expect(deployAvailability({ ...base, platforms: ["download"] })).toEqual({ ok: false, reason: "platform" });
 		expect(deployAvailability({ ...base, runtime: "workers-rust" })).toEqual({ ok: false, reason: "runtime" });

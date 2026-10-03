@@ -2,7 +2,7 @@ import { RELEASE_LIMITS, type Release, type ReleasePlatform, type ReleaseUpload 
 
 interface ReleaseRow {
 	id: string;
-	listing_id: string;
+	repo_id: string;
 	tag: string;
 	platform: ReleasePlatform;
 	filename: string;
@@ -33,34 +33,34 @@ export class Releases {
 		private readonly bucket: R2Bucket,
 	) {}
 
-	async list(listingId: string, tag?: string): Promise<Release[]> {
+	async list(repoId: string, tag?: string): Promise<Release[]> {
 		const { results } = await this.db
-			.prepare(`SELECT * FROM releases WHERE listing_id = ?${tag ? " AND tag = ?" : ""} ORDER BY created_at DESC LIMIT 200`)
-			.bind(...(tag ? [listingId, tag] : [listingId]))
+			.prepare(`SELECT * FROM releases WHERE repo_id = ?${tag ? " AND tag = ?" : ""} ORDER BY created_at DESC LIMIT 200`)
+			.bind(...(tag ? [repoId, tag] : [repoId]))
 			.all<ReleaseRow>();
 		return results.map(toRelease);
 	}
 
-	async find(id: string): Promise<(ReleaseRow & { listingId: string }) | null> {
+	async find(id: string): Promise<(ReleaseRow & { repoId: string }) | null> {
 		const row = await this.db.prepare("SELECT * FROM releases WHERE id = ?").bind(id).first<ReleaseRow>();
-		return row ? { ...row, listingId: row.listing_id } : null;
+		return row ? { ...row, repoId: row.repo_id } : null;
 	}
 
 	/**
 	 * Streams the body into R2. R2 checks the SHA-256 the developer declared and rejects a
 	 * mismatching upload, so a corrupted or tampered file is never stored.
 	 */
-	async add(listingId: string, userId: string, meta: ReleaseUpload, body: ReadableStream, sizeBytes: number): Promise<AddReleaseResult> {
-		const count = await this.db.prepare("SELECT COUNT(*) AS n FROM releases WHERE listing_id = ? AND tag = ?").bind(listingId, meta.tag).first<{ n: number }>();
+	async add(repoId: string, userId: string, meta: ReleaseUpload, body: ReadableStream, sizeBytes: number): Promise<AddReleaseResult> {
+		const count = await this.db.prepare("SELECT COUNT(*) AS n FROM releases WHERE repo_id = ? AND tag = ?").bind(repoId, meta.tag).first<{ n: number }>();
 		if ((count?.n ?? 0) >= RELEASE_LIMITS.maxPerVersion) return { ok: false, status: 409, error: "too_many" };
 		const duplicate = await this.db
-			.prepare("SELECT 1 FROM releases WHERE listing_id = ? AND tag = ? AND platform = ? AND filename = ?")
-			.bind(listingId, meta.tag, meta.platform, meta.filename)
+			.prepare("SELECT 1 FROM releases WHERE repo_id = ? AND tag = ? AND platform = ? AND filename = ?")
+			.bind(repoId, meta.tag, meta.platform, meta.filename)
 			.first();
 		if (duplicate) return { ok: false, status: 409, error: "exists" };
 
 		const id = crypto.randomUUID();
-		const key = `listings/${listingId}/releases/${id}`;
+		const key = `repos/${repoId}/releases/${id}`;
 		try {
 			await this.bucket.put(key, body, { sha256: meta.sha256, httpMetadata: { contentType: "application/octet-stream" } });
 		} catch (error) {
@@ -74,18 +74,18 @@ export class Releases {
 		}
 		try {
 			await this.db
-				.prepare("INSERT INTO releases (id, listing_id, tag, platform, filename, r2_key, size_bytes, sha256, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-				.bind(id, listingId, meta.tag, meta.platform, meta.filename, key, stored.size, meta.sha256, userId)
+				.prepare("INSERT INTO releases (id, repo_id, tag, platform, filename, r2_key, size_bytes, sha256, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+				.bind(id, repoId, meta.tag, meta.platform, meta.filename, key, stored.size, meta.sha256, userId)
 				.run();
 		} catch (error) {
 			await this.bucket.delete(key);
 			throw error;
 		}
-		return { ok: true, release: (await this.list(listingId, meta.tag)).find((r) => r.id === id)! };
+		return { ok: true, release: (await this.list(repoId, meta.tag)).find((r) => r.id === id)! };
 	}
 
-	async remove(listingId: string, id: string): Promise<boolean> {
-		const row = await this.db.prepare("SELECT * FROM releases WHERE id = ? AND listing_id = ?").bind(id, listingId).first<ReleaseRow>();
+	async remove(repoId: string, id: string): Promise<boolean> {
+		const row = await this.db.prepare("SELECT * FROM releases WHERE id = ? AND repo_id = ?").bind(id, repoId).first<ReleaseRow>();
 		if (!row) return false;
 		await this.db.prepare("DELETE FROM releases WHERE id = ?").bind(id).run();
 		await this.bucket.delete(row.r2_key);

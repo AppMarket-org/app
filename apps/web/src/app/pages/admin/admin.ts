@@ -12,7 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
-import { REPORT_REASONS, type Listing, type ListingReport, type TransitionRequest } from '@appmarket/shared';
+import { REPORT_REASONS, type Repo, type RepoReport, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Admin as AdminApi } from '../../api/admin';
 import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
@@ -21,7 +21,7 @@ import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/no
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
 
-/** PRD R18: moderation. Review submissions, take listings down, handle reports. Admin role only. */
+/** PRD R18: moderation. Review submissions, take repos down, handle reports. Admin role only. */
 @Component({
   selector: 'app-admin',
   imports: [
@@ -52,9 +52,9 @@ export class Admin {
   private readonly snackBar = inject(MatSnackBar);
 
   protected readonly reasons = REPORT_REASONS;
-  protected readonly queue = signal<Listing[] | null>(null);
-  protected readonly published = signal<Listing[] | null>(null);
-  protected readonly reports = signal<ListingReport[] | null>(null);
+  protected readonly queue = signal<Repo[] | null>(null);
+  protected readonly published = signal<Repo[] | null>(null);
+  protected readonly reports = signal<RepoReport[] | null>(null);
   protected readonly reportStatus = signal<'open' | 'resolved'>('open');
   protected readonly readmes = signal<Record<string, string | null>>({});
   protected readonly busy = signal(false);
@@ -73,20 +73,20 @@ export class Admin {
     this.readmes.update((all) => ({ ...all, [slug]: markdown }));
   }
 
-  protected async approve(listing: Listing): Promise<void> {
-    const note = await this.ask({ title: `Publish ${listing.name} ${listing.submittedTag}?`, message: 'It becomes public, pinned to the reviewed commit.', label: 'Note for the owner (optional)', confirm: 'Publish', required: false });
-    if (note !== undefined) await this.decide(listing, { to: 'published', note: note || undefined }, `${listing.name} published`);
+  protected async approve(repo: Repo): Promise<void> {
+    const note = await this.ask({ title: `Publish ${repo.name} ${repo.submittedTag}?`, message: 'It becomes public, pinned to the reviewed commit.', label: 'Note for the owner (optional)', confirm: 'Publish', required: false });
+    if (note !== undefined) await this.decide(repo, { to: 'published', note: note || undefined }, `${repo.name} published`);
   }
 
-  protected async requestChanges(listing: Listing): Promise<void> {
-    const note = await this.ask({ title: `Request changes to ${listing.name}?`, message: 'It goes back to draft. The owner sees your note in its history.', label: 'What should change?', confirm: 'Request changes', required: true });
-    if (note) await this.decide(listing, { to: 'draft', note }, 'Changes requested');
+  protected async requestChanges(repo: Repo): Promise<void> {
+    const note = await this.ask({ title: `Request changes to ${repo.name}?`, message: 'It goes back to draft. The owner sees your note in its history.', label: 'What should change?', confirm: 'Request changes', required: true });
+    if (note) await this.decide(repo, { to: 'draft', note }, 'Changes requested');
   }
 
-  protected async takeDown(listing: Listing, to: 'unpublished' | 'removed'): Promise<boolean> {
+  protected async takeDown(repo: Repo, to: 'unpublished' | 'removed'): Promise<boolean> {
     const removing = to === 'removed';
     const note = await this.ask({
-      title: `${removing ? 'Remove' : 'Unpublish'} ${listing.name}?`,
+      title: `${removing ? 'Remove' : 'Unpublish'} ${repo.name}?`,
       message: removing ? 'It leaves the catalog for good and every repository token is revoked. This cannot be undone.' : 'It is hidden from the catalog until the owner resubmits and it is approved again.',
       label: 'Reason (shown to the owner)',
       confirm: removing ? 'Remove' : 'Unpublish',
@@ -94,10 +94,10 @@ export class Admin {
       danger: true,
     });
     if (!note) return false;
-    return this.decide(listing, { to, note }, `${listing.name} ${removing ? 'removed' : 'unpublished'}`);
+    return this.decide(repo, { to, note }, `${repo.name} ${removing ? 'removed' : 'unpublished'}`);
   }
 
-  protected async dismiss(report: ListingReport): Promise<void> {
+  protected async dismiss(report: RepoReport): Promise<void> {
     const note = await this.ask({ title: 'Dismiss report?', message: 'Use this when the app does not break the rules.', label: 'Note (optional)', confirm: 'Dismiss', required: false });
     if (note === undefined) return;
     await this.run(async () => {
@@ -106,13 +106,13 @@ export class Admin {
     });
   }
 
-  protected async takeDownReported(report: ListingReport): Promise<void> {
-    const listing = (this.published() ?? []).find((l) => l.slug === report.listing.slug);
-    if (!listing) {
+  protected async takeDownReported(report: RepoReport): Promise<void> {
+    const repo = (this.published() ?? []).find((l) => l.slug === report.repo.slug);
+    if (!repo) {
       this.snackBar.open('Only published apps can be taken down from here.', 'OK', { duration: 5000 });
       return;
     }
-    if (await this.takeDown(listing, 'unpublished')) {
+    if (await this.takeDown(repo, 'unpublished')) {
       await this.run(async () => {
         await firstValueFrom(this.api.resolveReport(report.id, 'taken_down'));
       });
@@ -125,9 +125,9 @@ export class Admin {
     this.reports.set(await firstValueFrom(this.api.reports(status)).catch(() => []));
   }
 
-  private async decide(listing: Listing, request: TransitionRequest, done: string): Promise<boolean> {
+  private async decide(repo: Repo, request: TransitionRequest, done: string): Promise<boolean> {
     return this.run(async () => {
-      await firstValueFrom(this.api.transition(listing.slug, request));
+      await firstValueFrom(this.api.transition(repo.slug, request));
       this.snackBar.open(done, undefined, { duration: 3000 });
     });
   }
@@ -152,8 +152,8 @@ export class Admin {
 
   private async reload(): Promise<void> {
     const [queue, published, reports] = await Promise.all([
-      firstValueFrom(this.api.listings('submitted')).catch(() => []),
-      firstValueFrom(this.api.listings('published')).catch(() => []),
+      firstValueFrom(this.api.repos('submitted')).catch(() => []),
+      firstValueFrom(this.api.repos('published')).catch(() => []),
       firstValueFrom(this.api.reports(this.reportStatus())).catch(() => []),
     ]);
     this.queue.set(queue);

@@ -8,7 +8,7 @@ export interface PageSeo {
   path: string;
   image?: string;
   noindex?: boolean;
-  /** schema.org object, for example a SoftwareApplication for a listing. */
+  /** schema.org object, for example a SoftwareApplication for a repo. */
   jsonLd?: Record<string, unknown>;
 }
 

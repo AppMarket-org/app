@@ -3,8 +3,8 @@ import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { canView } from "../listings/access.ts";
-import { ListingRepository } from "../listings/repository.ts";
+import { canView } from "../repos/access.ts";
+import { RepoStore } from "../repos/repository.ts";
 import { clientIp, rateLimit } from "../rate-limit.ts";
 import { Reports } from "./reports.ts";
 import { verifyTurnstile } from "./turnstile.ts";
@@ -12,19 +12,19 @@ import { verifyTurnstile } from "./turnstile.ts";
 type Ctx = { Variables: AuthVariables };
 const perUserOrIp = (c: Context<Ctx>) => c.get("session")?.user.id ?? `ip:${clientIp(c)}`;
 
-/** PRD R18: anyone can report a visible listing (Turnstile + rate limit). Mounted under /api/listings. */
+/** PRD R18: anyone can report a visible repo (Turnstile + rate limit). Mounted under /api/repos. */
 export const reportRoutes = new Hono<Ctx>().post(
 	"/:slug/reports",
 	rateLimit<Ctx>(() => env.RL_REPORT, perUserOrIp, env.RATE_LIMIT_CONFIG.REPORT.period),
 	async (c) => {
-		const listing = await new ListingRepository(env.DB).findBySlug(c.req.param("slug"));
-		if (!listing || !canView(listing, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const repo = await new RepoStore(env.DB).findBySlug(c.req.param("slug"));
+		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		if (!(await verifyTurnstile(env.TURNSTILE_SECRET_KEY, c.req.header("x-captcha-response"), c.req.header("cf-connecting-ip")))) {
 			return c.json({ error: "captcha_failed" }, 403);
 		}
 		const input = reportInputSchema.safeParse(await c.req.json().catch(() => null));
 		if (!input.success) return c.json({ error: "invalid", issues: input.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
-		const id = await new Reports(env.DB).add(listing.id, input.data, c.get("session")?.user.id ?? null);
+		const id = await new Reports(env.DB).add(repo.id, input.data, c.get("session")?.user.id ?? null);
 		return c.json({ id }, 201);
 	},
 );

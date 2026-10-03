@@ -16,7 +16,7 @@ export interface DeployDialogData {
   slug: string;
   name: string;
   version: string;
-  /** Secret names from the listing's deploy manifest (D3). */
+  /** Secret names from the repo's deploy manifest (D3). */
   secrets: string[];
 }
 

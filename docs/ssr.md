@@ -4,7 +4,7 @@ Public pages (`/apps/:slug`, `/category/:slug`, `/search`) are rendered by Angul
 
 ## How a server render gets data
 
-1. A route resolver (for example `pages/listing/listing-resolver.ts`) calls `HttpClient.get('/api/...')`. SSR waits for it.
+1. A route resolver (for example `pages/repo/repo-resolver.ts`) calls `HttpClient.get('/api/...')`. SSR waits for it.
 2. `serverApiInterceptor` (`app/api/server-api.ts`) runs only on the server: it makes the URL absolute, forwards the visitor's `Cookie` (so owners can render their own drafts), and
    - **on Workers:** sends it over the `API` service binding via `REQUEST_CONTEXT.apiFetch`, set in `src/server.ts` (no public hop);
    - **under `ng serve`:** lets it go to the dev server, which proxies `/api` to the API on :5173.

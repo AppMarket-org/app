@@ -70,12 +70,12 @@ export const RATE_LIMITS = {
 	/** Per signed-in user. */
 	TOKENS: { offset: 1, limit: 20, period: 60 },
 	/** Per signed-in user. */
-	LISTING_CREATE: { offset: 2, limit: 5, period: 60 },
+	REPO_CREATE: { offset: 2, limit: 5, period: 60 },
 	/** Per client IP (no user yet); Turnstile is the main defence. */
 	SIGN_IN: { offset: 3, limit: 10, period: 60 },
 	/** Download links, per signed-in user or client IP (R14). */
 	DOWNLOAD_LINK: { offset: 4, limit: 30, period: 60 },
-	/** Listing reports, per signed-in user or client IP (R18). */
+	/** Repo reports, per signed-in user or client IP (R18). */
 	REPORT: { offset: 5, limit: 5, period: 60 },
 	/** One-click deploys, per signed-in user (D6); each runs a build container. */
 	DEPLOY: { offset: 6, limit: 3, period: 60 },
