@@ -7,6 +7,8 @@ import { logout, whoami } from "./commands/account.ts";
 import { init, setEnabled } from "./commands/init.ts";
 import { record } from "./commands/record.ts";
 import { checkpoint } from "./commands/checkpoint.ts";
+import { adapter } from "./commands/adapter.ts";
+import { hook } from "./commands/hook.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
 
@@ -18,7 +20,8 @@ Usage: appmarket <command> [options]
   init [<owner>/<repo>]                                          Turn on checkpoints in this Git repo
   disable | enable                                               Pause or resume checkpoints here
   record [--prompt <text>] [--tool <name> --args <a>] [--for <sha>]   Add events (adapters pipe JSON on stdin)
-  checkpoint [--commit <sha>]                                    Checkpoint a commit (the git hook runs this)
+  checkpoint [--commit <sha>] [--force]                          Checkpoint a commit (the git hook runs this)
+  adapter install|uninstall claude-code                          Record Claude Code sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
   status                                                         Queue and sign-in state
 
@@ -42,6 +45,7 @@ async function main(argv: string[]): Promise<number> {
 			"device-name": { type: "string" },
 			"no-keychain": { type: "boolean" },
 			hook: { type: "boolean" },
+			force: { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
 			tool: { type: "string" },
@@ -61,7 +65,7 @@ async function main(argv: string[]): Promise<number> {
 	if (values.version) return (console.log(VERSION), 0);
 	if (!command || values.help) return (console.log(HELP), 0);
 	// C8: queued uploads go out at the start of every interactive command.
-	if (!["checkpoint", "record", "sync"].includes(command)) await flush().catch(() => undefined);
+	if (!["checkpoint", "record", "sync", "hook"].includes(command)) await flush().catch(() => undefined);
 	switch (command) {
 		case "login":
 			return login(api, { noBrowser: !!values["no-browser"], deviceName: values["device-name"] as string | undefined, noKeychain: !!values["no-keychain"] });
@@ -78,7 +82,11 @@ async function main(argv: string[]): Promise<number> {
 		case "record":
 			return record(values as Record<string, string | boolean | undefined>, await readStdin());
 		case "checkpoint":
-			return checkpoint({ hook: !!values.hook, commit: values.commit as string | undefined });
+			return checkpoint({ hook: !!values.hook, commit: values.commit as string | undefined, force: !!values.force });
+		case "hook":
+			return hook(rest[0] ?? "", await readStdin());
+		case "adapter":
+			return adapter(rest[0], rest[1]);
 		case "sync": {
 			const r = await flush({ all: !values.quiet });
 			if (!values.quiet) console.log(`Uploaded ${r.sent}, waiting ${r.pending}, dropped ${r.failed}.`);

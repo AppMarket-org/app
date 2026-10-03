@@ -1,4 +1,4 @@
-import { CHECKPOINT_LIMITS, type CheckpointVisibility, type Repo } from "@appmarket/shared";
+import { CHECKPOINT_LIMITS, type Checkpoint, type CheckpointVisibility, type Repo } from "@appmarket/shared";
 import { checkpointPatchSchema, checkpointRecordSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -17,6 +17,20 @@ const SHA = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
 
 async function repoFor(c: Context<Ctx>): Promise<Repo | null> {
 	return new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
+}
+
+/**
+ * The API does not see pushes (they go straight to the Artifacts remote), so a pending checkpoint is
+ * re-checked when it is read: at most 20 per request, in parallel.
+ */
+async function reconcile(repo: Repo, items: Checkpoint[]): Promise<Checkpoint[]> {
+	const gitRepo = repo.gitRepo;
+	const pending = items.filter((i) => i.state === "pending").slice(0, 20);
+	if (!gitRepo || !pending.length) return items;
+	const found = (await Promise.all(pending.map(async (i) => ((await commitExists(gitRepo, i.commit).catch(() => false)) ? i.commit : null)))).filter((sha): sha is string => !!sha);
+	if (!found.length) return items;
+	await checkpoints().attach(repo.id, found);
+	return items.map((i) => (found.includes(i.commit) ? { ...i, state: "attached" } : i));
 }
 
 /** Owners (the user, or members of the owning org) see private checkpoints in full; admins too (moderation, M4 adds the access log). */
@@ -72,14 +86,15 @@ export const checkpointRoutes = new Hono<Ctx>()
 		const repo = await repoFor(c);
 		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		const q = c.req.query();
-		return c.json(await checkpoints().list({ id: repo.id, path: repo.fullName }, viewerOf(c, repo), { before: q.before, branch: q.branch, session: q.session, limit: q.limit ? Number(q.limit) : undefined }));
+		const page = await checkpoints().list({ id: repo.id, path: repo.fullName }, viewerOf(c, repo), { before: q.before, branch: q.branch, session: q.session, limit: q.limit ? Number(q.limit) : undefined });
+		return c.json({ ...page, items: await reconcile(repo, page.items) });
 	})
 	.get("/:owner/:slug/checkpoints/:sha", async (c) => {
 		const repo = await repoFor(c);
 		const sha = c.req.param("sha");
 		if (!repo || !canView(repo, c.get("session")) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
 		const checkpoint = await checkpoints().get({ id: repo.id, path: repo.fullName }, sha, viewerOf(c, repo));
-		return checkpoint ? c.json(checkpoint) : c.json({ error: "not_found" }, 404);
+		return checkpoint ? c.json((await reconcile(repo, [checkpoint]))[0]) : c.json({ error: "not_found" }, 404);
 	})
 	.patch("/:owner/:slug/checkpoints/:sha", requireRole(), async (c) => {
 		const repo = await repoFor(c);
