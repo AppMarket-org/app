@@ -12,7 +12,7 @@ export const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){0,38}$/;
 export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
 	"about", "account", "admin", "api", "apps", "assets", "auth", "blog", "brand", "category", "cdn-cgi", "contact",
 	"dashboard", "deploy", "deployments", "docs", "explore", "help", "home", "legal", "login", "logout", "marketplace",
-	"me", "new", "orgs", "organizations", "pricing", "privacy", "search", "security", "settings", "signin", "signup",
+	"device", "me", "new", "orgs", "organizations", "pricing", "privacy", "search", "security", "settings", "signin", "signup",
 	"sitemap", "sitemaps", "static", "status", "support", "terms", "user", "users", "www", "appmarket", "cloudflare",
 ]);
 
@@ -41,4 +41,14 @@ export interface OrgMember {
 	handle: string;
 	name: string;
 	role: OrgRole;
+}
+
+/** #104: one signed-in browser or device (no token). */
+export interface SessionInfo {
+	id: string;
+	/** Browser user agent; null for device logins (CLIs, agents). */
+	userAgent: string | null;
+	createdAt: string;
+	expiresAt: string;
+	current: boolean;
 }

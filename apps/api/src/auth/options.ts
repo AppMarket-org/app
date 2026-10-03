@@ -1,6 +1,10 @@
 import type { BetterAuthOptions } from "better-auth";
-import { captcha } from "better-auth/plugins";
+import { bearer, captcha } from "better-auth/plugins";
+import { deviceAuthorization } from "better-auth/plugins/device-authorization";
 import { ROLES } from "@appmarket/shared";
+
+/** #104: clients allowed to use device login (public clients: no secret, RFC 8628). */
+export const DEVICE_CLIENTS: ReadonlySet<string> = new Set(["appmarket-cli"]);
 
 export interface AuthSettings {
 	baseURL: string;
@@ -39,6 +43,16 @@ export function authOptions(database: BetterAuthOptions["database"], settings: A
 			user: { create: { after: async (user: { id: string; email: string }) => void (await settings.onUserCreated?.(user)) } },
 		},
 		plugins: [
+			// #104: CLIs and agents sign in with a code the user approves at /device, then call the API
+			// with the session token as a bearer token.
+			deviceAuthorization({
+				expiresIn: "10m",
+				interval: "5s",
+				userCodeLength: 8,
+				verificationUri: `${settings.baseURL}/device`,
+				validateClient: (clientId) => DEVICE_CLIENTS.has(clientId),
+			}),
+			bearer(),
 			captcha({
 				provider: "cloudflare-turnstile",
 				secretKey: settings.turnstileSecretKey,

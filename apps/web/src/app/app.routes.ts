@@ -13,6 +13,7 @@ export const routes: Routes = [
   { path: 'search', resolve: { results: searchResolver }, runGuardsAndResolvers: 'paramsOrQueryParamsChange', loadComponent: () => import('./pages/search/search').then((m) => m.Search) },
   { path: 'legal/:page', loadComponent: () => import('./pages/legal/legal').then((m) => m.Legal) },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
+  { path: 'device', canActivate: [authGuard()], loadComponent: () => import('./pages/device/device').then((m) => m.DevicePage) },
   { path: 'settings/orgs/new', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/new-org/new-org').then((m) => m.NewOrg) },
   { path: 'settings/orgs/:handle', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/org-settings/org-settings').then((m) => m.OrgSettings) },
   { path: 'settings', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
