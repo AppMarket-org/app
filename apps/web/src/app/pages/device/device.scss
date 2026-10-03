@@ -45,3 +45,21 @@ form {
 .error {
   color: var(--mat-sys-error);
 }
+
+.scopes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.scope {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  mat-icon {
+    flex: none;
+    color: var(--mat-sys-primary);
+  }
+}

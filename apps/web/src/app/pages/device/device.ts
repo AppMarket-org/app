@@ -12,6 +12,13 @@ import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../auth/auth';
 import { Seo } from '../../seo/seo';
 
+/** What each scope lets a device do, in words (#107). */
+const SCOPE_TEXT: Record<string, string> = {
+  'checkpoints:write': 'upload checkpoints (prompts and agent activity) for your commits',
+  'checkpoints:read': 'read your checkpoints',
+  'repos:read': 'see your repos',
+};
+
 /** Names people recognize for the device-login clients the API accepts (#104). */
 const CLIENT_NAMES: Record<string, string> = { 'appmarket-cli': 'appmarket CLI' };
 
@@ -37,6 +44,7 @@ export class DevicePage {
 
   protected readonly step = signal<Step>('enter');
   protected readonly client = signal<string>('');
+  protected readonly scopes = signal<string[]>([]);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly code = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8), Validators.maxLength(9)] });
@@ -61,9 +69,12 @@ export class DevicePage {
   protected async check(): Promise<void> {
     if (this.normalized().length !== 8 || this.busy()) return;
     await this.run(async () => {
-      const status = await firstValueFrom(this.http.get<{ status: string; client_id?: string }>('/api/auth/device', { params: { user_code: this.normalized() } }));
+      const status = await firstValueFrom(this.http.get<{ status: string; client_id?: string; scope?: string | null }>('/api/auth/device', { params: { user_code: this.normalized() } }));
       if (status.status !== 'pending') throw new Error('used');
       this.client.set(CLIENT_NAMES[status.client_id ?? ''] ?? status.client_id ?? 'An app');
+      // No scope requested means the client's default set (the API grants the same).
+      const asked = (status.scope ?? '').split(/\s+/).filter(Boolean);
+      this.scopes.set((asked.length ? asked : Object.keys(SCOPE_TEXT)).map((s) => SCOPE_TEXT[s] ?? s));
       this.step.set('confirm');
     });
   }

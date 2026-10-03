@@ -27,6 +27,15 @@ export const meRoutes = new Hono<Ctx>()
 		const store = owners();
 		return c.json({ owner: await store.forUser(user), orgs: await store.membershipsOf(user.id) });
 	})
+	// #107: a device session names itself (the CLI sends the hostname or --device-name).
+	.put("/device", async (c) => {
+		const session = c.get("session")!;
+		if (!session.deviceScopes) return c.json({ error: "not_a_device" }, 400);
+		const name = String(((await c.req.json().catch(() => ({}))) as { name?: unknown }).name ?? "").trim().slice(0, 64);
+		if (!name) return c.json({ error: "invalid", issues: [{ path: "name", message: "Give the device a name." }] }, 400);
+		await env.DB.prepare(`UPDATE "session" SET deviceName = ? WHERE id = ?`).bind(name, session.session.id).run();
+		return c.json({ deviceName: name });
+	})
 	.patch("/handle", async (c) => {
 		const body = handleSchema.safeParse(((await c.req.json().catch(() => ({}))) as { handle?: unknown }).handle);
 		if (!body.success) return c.json(invalid(body.error), 400);
@@ -43,12 +52,21 @@ export const sessionRoutes = new Hono<Ctx>()
 	.use(requireRole())
 	.get("/", async (c) => {
 		const session = c.get("session")!;
-		const { results } = await env.DB.prepare(`SELECT id, userAgent, createdAt, expiresAt FROM "session" WHERE userId = ? AND expiresAt > ? ORDER BY createdAt DESC`)
+		const { results } = await env.DB.prepare(
+			`SELECT id, userAgent, createdAt, expiresAt, clientId, scopes, deviceName FROM "session" WHERE userId = ? AND expiresAt > ? ORDER BY createdAt DESC`,
+		)
 			.bind(session.user.id, Date.now())
-			.all<{ id: string; userAgent: string | null; createdAt: number | string; expiresAt: number | string }>();
+			.all<{ id: string; userAgent: string | null; createdAt: number | string; expiresAt: number | string; clientId: string | null; scopes: string | null; deviceName: string | null }>();
 		const iso = (v: number | string) => new Date(typeof v === "number" ? v : Number.isNaN(Number(v)) ? v : Number(v)).toISOString();
 		return c.json({
-			items: results.map((r): SessionInfo => ({ id: r.id, userAgent: r.userAgent || null, createdAt: iso(r.createdAt), expiresAt: iso(r.expiresAt), current: r.id === session.session.id })),
+			items: results.map((r): SessionInfo => ({
+				id: r.id,
+				userAgent: r.userAgent || null,
+				createdAt: iso(r.createdAt),
+				expiresAt: iso(r.expiresAt),
+				current: r.id === session.session.id,
+				device: r.scopes == null ? null : { clientId: r.clientId ?? "", name: r.deviceName ?? "Device", scopes: r.scopes.split(" ").filter(Boolean) },
+			})),
 		});
 	})
 	.delete("/:id", async (c) => {

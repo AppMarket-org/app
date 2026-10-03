@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { requireAccess } from "./auth/access.ts";
 import { auth } from "./auth/auth.ts";
-import { type AuthVariables, requireRole, sessionMiddleware } from "./auth/middleware.ts";
+import { type AuthVariables, deviceAuthGate, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminRepoRoutes, repoRoutes, mediaRoutes } from "./repos/routes.ts";
 import { cloudflareRoutes } from "./cloudflare/routes.ts";
 import { cowbellRoutes, repoCowbellRoutes } from "./cowbells/routes.ts";
@@ -21,7 +21,7 @@ api.get("/health", (c) => c.json({ ok: true, env: env.APP_ENV }));
 
 // R11: Better Auth handles sign-in, OAuth callbacks, sessions and sign-out under /api/auth/*.
 api.post("/auth/sign-in/*", rateLimit(() => env.RL_SIGN_IN, (c) => `sign-in:${clientIp(c)}`, env.RATE_LIMIT_CONFIG.SIGN_IN.period));
-api.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
+api.on(["GET", "POST"], "/auth/*", deviceAuthGate, (c) => auth.handler(c.req.raw));
 
 api.use("*", sessionMiddleware);
 

@@ -75,9 +75,12 @@
         <mat-list aria-label="Signed-in devices">
           @for (s of sessions(); track s.id) {
             <mat-list-item>
-              <mat-icon matListItemIcon aria-hidden="true">{{ s.current ? 'computer' : 'devices' }}</mat-icon>
-              <span matListItemTitle>{{ device(s.userAgent) }}{{ s.current ? ' · this browser' : '' }}</span>
+              <mat-icon matListItemIcon aria-hidden="true">{{ s.device ? 'terminal' : s.current ? 'computer' : 'devices' }}</mat-icon>
+              <span matListItemTitle>{{ label(s) }}{{ s.current ? ' · this browser' : '' }}</span>
               <span matListItemLine>Signed in {{ s.createdAt | date: 'medium' }} · expires {{ s.expiresAt | date: 'mediumDate' }}</span>
+              @if (s.device) {
+                <span matListItemLine>Can: {{ s.device.scopes.join(', ') }}</span>
+              }
               @if (!s.current) {
                 <button matListItemMeta mat-button type="button" class="danger" (click)="signOut(s)">Sign out</button>
               }
