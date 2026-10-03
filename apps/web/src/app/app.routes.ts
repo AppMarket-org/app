@@ -18,6 +18,7 @@ export const routes: Routes = [
   { path: 'settings/orgs/:handle', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/org-settings/org-settings').then((m) => m.OrgSettings) },
   { path: 'settings', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
   { path: 'dashboard/new', canActivate: [authGuard()], loadComponent: () => import('./pages/new-repo/new-repo').then((m) => m.NewRepo) },
+  { path: 'dashboard/repos/:owner/:slug/checkpoints', canActivate: [authGuard()], loadComponent: () => import('./pages/checkpoints/checkpoints').then((m) => m.CheckpointsPage) },
   { path: 'dashboard/repos/:owner/:slug', canActivate: [authGuard()], loadComponent: () => import('./pages/manage-repo/manage-repo').then((m) => m.ManageRepo) },
   // Older links without an owner (before #102).
   { path: 'dashboard/repos/:slug', redirectTo: 'dashboard' },

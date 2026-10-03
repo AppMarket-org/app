@@ -18,6 +18,12 @@
 
 
 
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(21.25rem, 100%), 1fr));

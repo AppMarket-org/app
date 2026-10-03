@@ -10,9 +10,12 @@
         <span>{{ states[l.state].help }}</span>
       </div>
     </div>
-    @if (l.state !== 'removed') {
-      <a mat-stroked-button [routerLink]="'/' + l.fullName">View public page</a>
-    }
+    <div class="head-actions">
+      <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"><mat-icon>history_edu</mat-icon>Checkpoints</a>
+      @if (l.state !== 'removed') {
+        <a mat-stroked-button [routerLink]="'/' + l.fullName">View public page</a>
+      }
+    </div>
   </header>
 
   @if (busy()) {

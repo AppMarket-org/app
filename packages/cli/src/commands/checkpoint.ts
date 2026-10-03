@@ -49,13 +49,17 @@ function redactionSettings(root: string): { extra: string[]; ignore: string[] } 
 /** Claude Code: adds model, effort, usage and the assistant's last text from each session transcript in the window. */
 function withTranscripts(events: BufferEvent[], committedAt: string): BufferEvent[] {
 	const until = new Date(Date.parse(committedAt) + 2000).toISOString();
-	const starts = new Map<string, number>();
+	// Per transcript: where to start reading (an optimisation) and the earliest event of this window
+	// (the bound: a session that ended before this window contributes nothing).
+	const windows = new Map<string, { offset: number; since: string }>();
 	for (const e of events) {
 		if (!e.transcript_path) continue;
-		const offset = e.transcript_offset ?? 0;
-		starts.set(e.transcript_path, Math.min(starts.get(e.transcript_path) ?? offset, offset));
+		const w = windows.get(e.transcript_path) ?? { offset: Number.POSITIVE_INFINITY, since: e.ts };
+		if (e.transcript_offset !== undefined) w.offset = Math.min(w.offset, e.transcript_offset);
+		if (e.ts < w.since) w.since = e.ts;
+		windows.set(e.transcript_path, w);
 	}
-	return [...events, ...[...starts].flatMap(([path, offset]) => transcriptEvents(path, offset, until))];
+	return [...events, ...[...windows].flatMap(([path, w]) => transcriptEvents(path, Number.isFinite(w.offset) ? w.offset : 0, until, w.since))];
 }
 
 /**

@@ -20,6 +20,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'settings/orgs/new', renderMode: RenderMode.Client },
   { path: 'settings/orgs/:handle', renderMode: RenderMode.Client },
   { path: 'settings', renderMode: RenderMode.Client },
+  { path: 'dashboard/repos/:owner/:slug/checkpoints', renderMode: RenderMode.Client },
   { path: 'dashboard/repos/:owner/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/repos/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/apps/:slug', renderMode: RenderMode.Client },

@@ -1,5 +1,5 @@
 import { CHECKPOINT_LIMITS, type Checkpoint, type CheckpointVisibility, type Repo } from "@appmarket/shared";
-import { checkpointPatchSchema, checkpointRecordSchema } from "@appmarket/shared/schemas";
+import { checkpointPatchSchema, checkpointRecordSchema, checkpointVisibilitySchema, sessionVisibilitySchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
@@ -88,6 +88,22 @@ export const checkpointRoutes = new Hono<Ctx>()
 		const q = c.req.query();
 		const page = await checkpoints().list({ id: repo.id, path: repo.fullName }, viewerOf(c, repo), { before: q.before, branch: q.branch, session: q.session, limit: q.limit ? Number(q.limit) : undefined });
 		return c.json({ ...page, items: await reconcile(repo, page.items) });
+	})
+	// #116: the repo's default for new checkpoints, and one visibility for a whole session.
+	.put("/:owner/:slug/checkpoint-settings", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		if (!repo || !ownedBy(c, repo)) return c.json({ error: "not_found" }, 404);
+		const body = checkpointVisibilitySchema.safeParse(await c.req.json().catch(() => null));
+		if (!body.success) return c.json(invalid(body.error), 400);
+		await checkpoints().setRepoDefault(repo.id, body.data.visibility);
+		return c.json({ visibility: body.data.visibility });
+	})
+	.post("/:owner/:slug/checkpoints/visibility", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		if (!repo || !ownedBy(c, repo)) return c.json({ error: "not_found" }, 404);
+		const body = sessionVisibilitySchema.safeParse(await c.req.json().catch(() => null));
+		if (!body.success) return c.json(invalid(body.error), 400);
+		return c.json({ updated: await checkpoints().setSessionVisibility(repo.id, body.data.session, body.data.visibility) });
 	})
 	.get("/:owner/:slug/checkpoints/:sha", async (c) => {
 		const repo = await repoFor(c);
