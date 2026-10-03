@@ -18,7 +18,7 @@ describe('CreateListing', () => {
     expect(req.request.body).toEqual(input);
     req.flush({ slug: 'my-app' });
     await done;
-    expect(navigate).toHaveBeenCalledWith(['/dashboard/listings', 'my-app']);
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/apps', 'my-app']);
   });
 
   it('passes server field errors to the form', async () => {

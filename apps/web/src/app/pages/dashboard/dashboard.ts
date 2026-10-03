@@ -15,7 +15,7 @@ import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
 import { STATE_LABELS } from '../state-labels';
 
-/** PRD R16: the signed-in developer's listings. */
+/** PRD R16/D6: what the signed-in user deployed and the apps they publish. */
 @Component({
   selector: 'app-dashboard',
   imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink, RuntimeBadge],
@@ -35,11 +35,11 @@ export class Dashboard {
       ),
   );
 
-  /** D6: the user's deploys into Cloudflare; empty on error (the section is then hidden). */
+  /** D6: the user's deploys into Cloudflare; empty on error. */
   protected readonly deployments = toSignal(inject(DeploymentsApi).mine().pipe(catchError(() => of([]))));
   protected readonly deployStatus: Record<string, string> = { queued: 'Queued', building: 'Building', deploying: 'Deploying', succeeded: 'Live', failed: 'Failed' };
 
   constructor() {
-    inject(Seo).set({ title: 'Developer dashboard', description: 'Manage your listings.', path: '/dashboard', noindex: true });
+    inject(Seo).set({ title: 'Dashboard', description: 'Your deployed and published apps.', path: '/dashboard', noindex: true });
   }
 }

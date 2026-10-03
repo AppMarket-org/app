@@ -28,7 +28,7 @@ export class CreateListing {
   protected readonly fieldErrors = signal<Record<string, string>>({});
 
   constructor() {
-    inject(Seo).set({ title: 'New listing', description: 'Create an app listing.', path: '/dashboard/new', noindex: true });
+    inject(Seo).set({ title: 'Publish an app', description: 'Publish an app on appmarket.org.', path: '/dashboard/new', noindex: true });
   }
 
   protected async create(input: ListingInput): Promise<void> {
@@ -37,7 +37,7 @@ export class CreateListing {
     try {
       const listing = await firstValueFrom(this.http.post<Listing>('/api/listings', input));
       this.snackBar.open('Draft created. Push your code, then submit a version for review.', 'OK', { duration: 6000 });
-      await this.router.navigate(['/dashboard/listings', listing.slug]);
+      await this.router.navigate(['/dashboard/apps', listing.slug]);
     } catch (error) {
       const { message, fieldErrors } = describeListingError(error);
       this.errorMessage.set(message);

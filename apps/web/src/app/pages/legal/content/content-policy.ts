@@ -1,7 +1,7 @@
 export const CONTENT_POLICY = `
 # Content policy
 
-Listings, code, releases, READMEs and screenshots on appmarket.org must follow this policy.
+Apps, code, releases, READMEs and screenshots on appmarket.org must follow this policy.
 
 ## Not allowed
 
@@ -19,7 +19,7 @@ Listings, code, releases, READMEs and screenshots on appmarket.org must follow t
 
 ## Reporting and enforcement
 
-Use **Report this app** on a listing. For copyright claims, identify the work and where it appears on the listing. Admins review reports and may request changes, unpublish or remove a listing. Developers can respond and resubmit a fixed version.
+Use **Report this app** on the app's page. For copyright claims, identify the work and where it appears on the page. Admins review reports and may request changes, unpublish or remove an app. Developers can respond and resubmit a fixed version.
 
 Contact: [contact email].
 `;

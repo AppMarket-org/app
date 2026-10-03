@@ -1,17 +1,45 @@
 <header class="head">
-  <h1>Your listings</h1>
+  <h1>Dashboard</h1>
   <div class="head-actions">
     <a mat-stroked-button routerLink="/dashboard/cloudflare"><mat-icon>cloud</mat-icon>Cloudflare account</a>
-    <a mat-flat-button routerLink="/dashboard/new">New listing</a>
   </div>
 </header>
 
+<section aria-labelledby="deployed-heading">
+  <h2 id="deployed-heading">Apps you deployed</h2>
+  @if (deployments()?.length) {
+    <mat-card appearance="outlined">
+      <mat-nav-list aria-labelledby="deployed-heading">
+        @for (d of deployments(); track d.id) {
+          <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
+            <mat-icon matListItemIcon aria-hidden="true">{{ d.status === 'succeeded' ? 'check_circle' : d.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
+            <span matListItemTitle>{{ d.listingName }} → {{ d.workerName }}</span>
+            <span matListItemLine>{{ deployStatus[d.status] }} · {{ d.versionTag }} · {{ d.createdAt | date: 'medium' }}</span>
+          </a>
+        }
+      </mat-nav-list>
+    </mat-card>
+  } @else {
+    <p class="explain">Find an app and choose <strong>Deploy to Cloudflare</strong> to run it in your own Cloudflare account.</p>
+    <a mat-stroked-button routerLink="/search">Browse apps</a>
+  }
+</section>
+
+<section class="publish" aria-labelledby="publish-heading">
+  <header class="head">
+    <h2 id="publish-heading">Apps you publish</h2>
+    <a mat-flat-button routerLink="/dashboard/new">Publish an app</a>
+  </header>
+  <p class="explain">
+    Publishing gives your app a public page on appmarket.org and its own Git repository for the code. Push your code, submit a version
+    for review, and once it is approved anyone can deploy it.
+  </p>
 @switch (listings()) {
   @case (undefined) {
-    <mat-progress-bar mode="indeterminate" aria-label="Loading listings" />
+    <mat-progress-bar mode="indeterminate" aria-label="Loading your apps" />
   }
   @case (null) {
-    <p class="error" role="alert">Could not load your listings. Reload to try again.</p>
+    <p class="error" role="alert">Could not load your apps. Reload to try again.</p>
   }
   @default {
     @for (item of listings()!; track item.id) {
@@ -34,35 +62,19 @@
           <span class="updated">Updated {{ item.updatedAt | date: 'mediumDate' }}</span>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-button [routerLink]="['/dashboard/listings', item.slug]" [attr.aria-label]="'Manage ' + item.name">Manage</a>
+          <a mat-button [routerLink]="['/dashboard/apps', item.slug]" [attr.aria-label]="'Manage ' + item.name">Manage</a>
         </mat-card-actions>
       </mat-card>
     } @empty {
       <mat-card appearance="outlined">
         <mat-card-content>
-          <p>You have no listings yet. Create one to get a Git repository for your app.</p>
+          <p>You have not published an app yet.</p>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-stroked-button routerLink="/dashboard/new">Create your first listing</a>
+          <a mat-stroked-button routerLink="/dashboard/new">Publish your first app</a>
         </mat-card-actions>
       </mat-card>
     }
   }
 }
-
-@if (deployments()?.length) {
-  <section class="deploys" aria-labelledby="deploys-heading">
-    <h2 id="deploys-heading">Your deploys</h2>
-    <mat-card appearance="outlined">
-      <mat-nav-list aria-labelledby="deploys-heading">
-        @for (d of deployments(); track d.id) {
-          <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
-            <mat-icon matListItemIcon aria-hidden="true">{{ d.status === 'succeeded' ? 'check_circle' : d.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
-            <span matListItemTitle>{{ d.listingName }} → {{ d.workerName }}</span>
-            <span matListItemLine>{{ deployStatus[d.status] }} · {{ d.versionTag }} · {{ d.createdAt | date: 'medium' }}</span>
-          </a>
-        }
-      </mat-nav-list>
-    </mat-card>
-  </section>
-}
+</section>

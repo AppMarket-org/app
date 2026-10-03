@@ -51,7 +51,7 @@
             </mat-accordion>
           </mat-card-content>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', l.slug]">Open listing</a>
+            <a mat-button [routerLink]="['/apps', l.slug]">Open app page</a>
             <button mat-button type="button" [disabled]="busy()" (click)="requestChanges(l)">Request changes</button>
             <button mat-flat-button type="button" [disabled]="busy()" (click)="approve(l)">Publish</button>
           </mat-card-actions>
@@ -71,13 +71,13 @@
             <mat-card-subtitle>by {{ l.owner.name }} · live {{ l.publishedTag }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', l.slug]">Open listing</a>
+            <a mat-button [routerLink]="['/apps', l.slug]">Open app page</a>
             <button mat-button type="button" class="danger" [disabled]="busy()" (click)="takeDown(l, 'unpublished')">Unpublish</button>
             <button mat-button type="button" class="danger" [disabled]="busy()" (click)="takeDown(l, 'removed')">Remove</button>
           </mat-card-actions>
         </mat-card>
       } @empty {
-        <p class="empty">No published listings.</p>
+        <p class="empty">No published apps.</p>
       }
     </div>
   </mat-tab>
@@ -104,7 +104,7 @@
             }
           </mat-card-content>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', r.listing.slug]">Open listing</a>
+            <a mat-button [routerLink]="['/apps', r.listing.slug]">Open app page</a>
             @if (!r.resolvedAt) {
               <button mat-button type="button" [disabled]="busy()" (click)="dismiss(r)">Dismiss</button>
               <button mat-button type="button" class="danger" [disabled]="busy() || r.listing.state !== 'published'" (click)="takeDownReported(r)">Take down</button>

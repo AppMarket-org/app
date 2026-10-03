@@ -5,7 +5,7 @@ These terms govern your use of appmarket.org, operated by [Legal entity name], [
 
 ## What appmarket.org is
 
-appmarket.org lists source-available apps. You can browse listings, clone published source, download release files and, where offered, deploy an app into **your own** Cloudflare account. We do not host apps you deploy; you run them under your own Cloudflare account and agreements.
+appmarket.org lists source-available apps. You can browse apps, clone published source, download release files and, where offered, deploy an app into **your own** Cloudflare account. We do not host apps you deploy; you run them under your own Cloudflare account and agreements.
 
 ## Accounts
 
@@ -13,8 +13,8 @@ You sign in with Google or GitHub. You are responsible for activity on your acco
 
 ## Using apps from the marketplace
 
-- Apps are provided by their developers under the license shown on each listing. We are not a party to that license.
-- Listings are reviewed before publication, but we do not guarantee that any app is secure, error-free or fit for a purpose. Review the code before you deploy it.
+- Apps are provided by their developers under the license shown on each app's page. We are not a party to that license.
+- Apps are reviewed before publication, but we do not guarantee that any app is secure, error-free or fit for a purpose. Review the code before you deploy it.
 - Costs from deploying an app (for example Cloudflare usage) are between you and your providers.
 
 ## Your obligations
@@ -23,7 +23,7 @@ Do not misuse the service: no attempts to break security, scrape at scale, overl
 
 ## Reporting problems
 
-Use **Report this app** on any listing to report malware, illegal content or copyright infringement.
+Use **Report this app** on any app page to report malware, illegal content or copyright infringement.
 
 ## Liability
 
