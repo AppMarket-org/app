@@ -11,6 +11,8 @@ export const auth = betterAuth(
 		github: { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET },
 		turnstileSecretKey: env.TURNSTILE_SECRET_KEY,
 		onUserCreated: (user) => new OwnerStore(env.DB).forUser(user),
+		onDeviceToken: (token, clientId, scopes) =>
+			env.DB.prepare(`UPDATE "session" SET clientId = ?, scopes = ?, deviceName = COALESCE(deviceName, 'Device') WHERE token = ?`).bind(clientId, scopes.join(" "), token).run(),
 	}),
 );
 

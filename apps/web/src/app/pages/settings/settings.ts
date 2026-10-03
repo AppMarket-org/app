@@ -53,6 +53,11 @@ export class Settings {
     this.sessions.set(await firstValueFrom(this.api.sessions()).catch(() => []));
   }
 
+  /** Device logins show their name; browsers a short label from the user agent. */
+  protected label(s: SessionInfo): string {
+    return s.device ? `${s.device.name} · ${s.device.clientId === 'appmarket-cli' ? 'appmarket CLI' : s.device.clientId}` : this.device(s.userAgent);
+  }
+
   /** A short label from a user agent: browser and system, or the tool's name. */
   protected device(ua: string | null): string {
     if (!ua) return 'Unknown device';

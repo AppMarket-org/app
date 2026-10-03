@@ -23,7 +23,13 @@
       @case ('confirm') {
         <p><strong>{{ client() }}</strong> wants to sign in to appmarket.org as you.</p>
         <p class="code-display" aria-label="Code">{{ normalized().slice(0, 4) }}-{{ normalized().slice(4) }}</p>
-        <p class="warn">Approve only if this code matches the one on your screen and you started this sign-in. The device can then create and manage your repos and start deploys until you sign it out in Settings.</p>
+        <p>It will be able to:</p>
+        <div class="scopes" role="list" aria-label="Permissions">
+          @for (s of scopes(); track s) {
+            <div class="scope" role="listitem"><mat-icon aria-hidden="true">check</mat-icon><span>{{ s }}</span></div>
+          }
+        </div>
+        <p class="warn">It cannot create or change repos, get Git tokens or deploy. Approve only if this code matches the one on your screen and you started this sign-in. You can sign it out any time in Settings.</p>
       }
       @case ('approved') {
         <p class="done" role="status"><mat-icon aria-hidden="true">check_circle</mat-icon> {{ client() }} is signed in. You can close this page.</p>

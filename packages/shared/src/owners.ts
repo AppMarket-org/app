@@ -51,4 +51,6 @@ export interface SessionInfo {
 	createdAt: string;
 	expiresAt: string;
 	current: boolean;
+	/** #107: set for device logins (CLIs, agents): client, name and granted scopes. */
+	device: { clientId: string; name: string; scopes: string[] } | null;
 }
