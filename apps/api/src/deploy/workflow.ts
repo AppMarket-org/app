@@ -14,10 +14,10 @@ export { CiSandbox } from "./sandbox.ts";
 export type DeployParams = CiParams<CloudflareArtifacts> & { deploymentId: string };
 
 /**
- * PRD D6: build a listing version in appmarket.org's account and deploy it into the buyer's.
+ * PRD D6: build a repo version in appmarket.org's account and deploy it into the buyer's.
  * Workflow params and step outputs are persisted, so the buyer's token and secrets are read when the
  * deploy step runs and passed only to that step's command environment. The build step, which runs
- * the listing's own install and build scripts, never sees them.
+ * the repo's own install and build scripts, never sees them.
  */
 export class DeployWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBindings> {
 	protected async pipeline(event: WorkflowEvent<CiParams<CloudflareArtifacts>>, step: WorkflowStep, ci: CiContext): Promise<void> {

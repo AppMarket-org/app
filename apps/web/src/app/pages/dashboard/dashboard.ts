@@ -15,7 +15,7 @@ import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
 import { STATE_LABELS } from '../state-labels';
 
-/** PRD R16/D6: the signed-in user's running apps (deploys) and repos (listings). */
+/** PRD R16/D6: the signed-in user's running apps (deploys) and repos (repos). */
 @Component({
   selector: 'app-dashboard',
   imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink, RuntimeBadge],
@@ -26,7 +26,7 @@ import { STATE_LABELS } from '../state-labels';
 export class Dashboard {
   protected readonly states = STATE_LABELS;
   /** undefined while loading; null on error. */
-  protected readonly listings = toSignal(
+  protected readonly repos = toSignal(
     inject(Developer)
       .mine()
       .pipe(

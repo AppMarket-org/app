@@ -1,0 +1,91 @@
+@if (details(); as d) {
+  <article>
+    <header>
+      <h1>{{ d.repo.name }}</h1>
+      <p class="summary">{{ d.repo.summary }}</p>
+      <p class="by">by {{ d.repo.owner.name }}</p>
+      <div class="meta">
+        <app-runtime-badge [runtime]="d.repo.runtime" />
+        <mat-chip-set aria-label="Details">
+          <a mat-chip [routerLink]="['/category', d.repo.category]">{{ categoryName(d.repo.category) }}</a>
+          @if (d.repo.publishedTag) {
+            <mat-chip>{{ d.repo.publishedTag }}</mat-chip>
+          }
+          @if (d.repo.license) {
+            <mat-chip>{{ d.repo.license }}</mat-chip>
+          }
+          @for (p of d.repo.platforms; track p) {
+            <mat-chip>{{ platformName(p) }}</mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+      @if (d.repo.state !== 'published') {
+        <p class="state" role="status">Not public: {{ d.repo.state }}</p>
+      }
+    </header>
+
+    @if (d.screenshots.length > 0) {
+      <section class="screenshots" aria-label="Screenshots">
+        @for (shot of d.screenshots; track shot.id; let i = $index) {
+          <img [src]="shot.url" [alt]="d.repo.name + ' screenshot ' + (i + 1)" loading="lazy" decoding="async" />
+        }
+      </section>
+    }
+
+    @if (d.releases.length > 0) {
+      <app-downloads [releases]="d.releases" />
+    }
+
+    <div class="columns">
+      <section class="main" aria-label="About">
+        @if (d.readme) {
+          <app-markdown [source]="d.readme" />
+        } @else {
+          <p class="description">{{ d.repo.description || d.repo.summary }}</p>
+        }
+      </section>
+
+      <aside>
+        <app-deploy-action [repo]="d.repo" [hasReleases]="d.releases.length > 0" />
+        @if (d.repo.manifest; as manifest) {
+          <section aria-labelledby="deploy-heading">
+            <h2 id="deploy-heading">What deploying creates</h2>
+            <app-deploy-manifest [manifest]="manifest" />
+          </section>
+          @if (d.repo.platforms.includes('workers')) {
+            <app-domain-guide />
+          }
+          <mat-divider />
+        }
+        <app-get-code [slug]="d.repo.slug" />
+        @if (d.repo.state === 'published') {
+          <app-repo-map [slug]="d.repo.slug" />
+        }
+        <button mat-button type="button" class="report" (click)="report(d.repo.slug, d.repo.name)"><mat-icon>flag</mat-icon>Report this app</button>
+        <mat-divider />
+        <section aria-labelledby="versions-heading">
+          <h2 id="versions-heading">Versions</h2>
+          <mat-list>
+            @for (v of d.versions; track v.tag + v.publishedAt) {
+              <mat-list-item [lines]="v.releaseNotes ? 3 : 2">
+                <span matListItemTitle>{{ v.tag }}</span>
+                <span matListItemLine>{{ v.publishedAt | date: 'mediumDate' }}</span>
+                @if (v.releaseNotes) {
+                  <span matListItemLine>{{ v.releaseNotes }}</span>
+                }
+              </mat-list-item>
+            } @empty {
+              <mat-list-item>No published versions yet.</mat-list-item>
+            }
+          </mat-list>
+        </section>
+      </aside>
+    </div>
+  </article>
+} @else {
+  <section>
+    <h1>App not found</h1>
+    <p>This app does not exist or is not published.</p>
+    <a mat-button routerLink="/search">Browse apps</a>
+  </section>
+}

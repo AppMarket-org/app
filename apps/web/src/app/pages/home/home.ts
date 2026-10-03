@@ -2,20 +2,20 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { RouterLink } from '@angular/router';
-import { CATEGORIES, type ListingPage } from '@appmarket/shared';
-import { ListingCard } from '../../components/listing-card/listing-card';
+import { CATEGORIES, type RepoPage } from '@appmarket/shared';
+import { RepoCard } from '../../components/repo-card/repo-card';
 import { Seo } from '../../seo/seo';
 
 @Component({
   selector: 'app-home',
-  imports: [MatButtonModule, MatChipsModule, RouterLink, ListingCard],
+  imports: [MatButtonModule, MatChipsModule, RouterLink, RepoCard],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Home {
   /** From latestResolver. */
-  readonly latest = input.required<ListingPage>();
+  readonly latest = input.required<RepoPage>();
   protected readonly categories = CATEGORIES;
 
   constructor() {

@@ -1,6 +1,6 @@
 @if (category; as c) {
   <h1>{{ c.name }} apps</h1>
-  <app-listing-results [results]="results()" />
+  <app-repo-results [results]="results()" />
 } @else {
   <h1>Category not found</h1>
   <a mat-button routerLink="/search">Browse all apps</a>

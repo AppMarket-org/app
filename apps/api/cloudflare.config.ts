@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
 	const rateLimit = ({ offset, limit, period }: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) =>
 		bindings.rateLimit({ namespace: String(rateLimitBase + offset), simple: { limit, period } });
 
-	// D6: one-click deploys build listings in a Sandbox container driven by a @cloudflare/ci Workflow.
+	// D6: one-click deploys build repos in a Sandbox container driven by a @cloudflare/ci Workflow.
 	const buildContainer = defineContainer({
 		name: `${workerName}-build`,
 		image: { dockerfile: "./sandbox/Dockerfile" },
@@ -62,7 +62,7 @@ export default defineConfig(({ mode }) => {
 				// R20 rate limits. RATE_LIMIT_CONFIG gives Worker code the same settings (it may not import this file).
 				RATE_LIMIT_CONFIG: bindings.json(RATE_LIMITS),
 				RL_TOKENS: rateLimit(RATE_LIMITS.TOKENS),
-				RL_LISTING_CREATE: rateLimit(RATE_LIMITS.LISTING_CREATE),
+				RL_REPO_CREATE: rateLimit(RATE_LIMITS.REPO_CREATE),
 				RL_SIGN_IN: rateLimit(RATE_LIMITS.SIGN_IN),
 				RL_DOWNLOAD_LINK: rateLimit(RATE_LIMITS.DOWNLOAD_LINK),
 				RL_REPORT: rateLimit(RATE_LIMITS.REPORT),

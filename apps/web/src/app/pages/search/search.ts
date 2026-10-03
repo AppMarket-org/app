@@ -4,20 +4,20 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute } from '@angular/router';
-import { CATEGORIES, RUNTIMES, type ListingPage } from '@appmarket/shared';
-import { ListingResults } from '../../components/listing-results/listing-results';
+import { CATEGORIES, RUNTIMES, type RepoPage } from '@appmarket/shared';
+import { RepoResults } from '../../components/repo-results/repo-results';
 import { Seo } from '../../seo/seo';
 
 @Component({
   selector: 'app-search',
-  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, ListingResults],
+  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RepoResults],
   templateUrl: './search.html',
   styleUrl: './search.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Search {
   /** From searchResolver. */
-  readonly results = input.required<ListingPage>();
+  readonly results = input.required<RepoPage>();
   readonly q = input<string>();
   readonly category = input<string>();
   readonly runtime = input<string>();

@@ -1,6 +1,6 @@
 # Deploying into buyers' Cloudflare accounts (Path B: D5, D6)
 
-Buyers connect their Cloudflare account to appmarket.org with OAuth, then deploy a listing into it with one click. Decided 2026-10-02: Path B ships in Phase 1; no Deploy button, no GitHub mirror.
+Buyers connect their Cloudflare account to appmarket.org with OAuth, then deploy a repo into it with one click. Decided 2026-10-02: Path B ships in Phase 1; no Deploy button, no GitHub mirror.
 
 ## 1. Register the OAuth client (owner, one time per environment)
 

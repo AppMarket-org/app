@@ -18,7 +18,7 @@
   @if (latest().items.length > 0) {
     <div class="grid">
       @for (item of latest().items; track item.id) {
-        <app-listing-card [listing]="item" />
+        <app-repo-card [repo]="item" />
       }
     </div>
   } @else {

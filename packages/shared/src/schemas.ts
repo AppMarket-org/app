@@ -1,7 +1,7 @@
 // Zod validation schemas. Server-side only: import from "@appmarket/shared/schemas".
 // Kept out of the main entry so the browser bundle does not include zod.
 import { z } from "zod";
-import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./listing";
+import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
@@ -21,8 +21,8 @@ export const licenseSchema = z
 
 const categorySlugs = CATEGORIES.map((c) => c.slug) as [CategorySlug, ...CategorySlug[]];
 
-/** Fields a developer sets when creating or editing a listing (PRD R1). Price is free-only in Phase 1 (R17). */
-const listingFields = {
+/** Fields a developer sets when creating or editing a repo (PRD R1). Price is free-only in Phase 1 (R17). */
+const repoFields = {
 	name: z.string().trim().min(3).max(80),
 	summary: z.string().trim().min(10).max(160),
 	description: z.string().trim().max(20_000),
@@ -36,26 +36,26 @@ const listingFields = {
 	license: licenseSchema.nullable(),
 };
 
-export const listingInputSchema = z.object({
-	...listingFields,
-	description: listingFields.description.default(""),
-	runtime: listingFields.runtime.default("workers-js"),
-	platforms: listingFields.platforms.default(["workers"]),
-	license: listingFields.license.default(null),
+export const repoInputSchema = z.object({
+	...repoFields,
+	description: repoFields.description.default(""),
+	runtime: repoFields.runtime.default("workers-js"),
+	platforms: repoFields.platforms.default(["workers"]),
+	license: repoFields.license.default(null),
 });
-export type ListingInput = z.infer<typeof listingInputSchema>;
+export type RepoInput = z.infer<typeof repoInputSchema>;
 /** Built from the fields without defaults: Zod 4 applies defaults inside .partial(), which would reset omitted fields. */
-export const listingUpdateSchema = z.object(listingFields).partial();
-export type ListingUpdate = z.infer<typeof listingUpdateSchema>;
+export const repoUpdateSchema = z.object(repoFields).partial();
+export type RepoUpdate = z.infer<typeof repoUpdateSchema>;
 
-export const listingSearchSchema = z.object({
+export const repoSearchSchema = z.object({
 	q: z.string().trim().max(100).optional(),
 	category: z.enum(categorySlugs).optional(),
 	runtime: runtimeSchema.optional(),
 	page: z.coerce.number().int().min(1).default(1),
 	pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
-export type ListingSearch = z.infer<typeof listingSearchSchema>;
+export type RepoSearch = z.infer<typeof repoSearchSchema>;
 
 /** A Git tag name we accept for a submitted version: a safe subset of git's ref rules. */
 export const gitTagSchema = z
@@ -106,7 +106,7 @@ export const releaseUploadSchema = z.object({
 });
 export type ReleaseUpload = z.infer<typeof releaseUploadSchema>;
 
-/** PRD R18: a visitor's report about a listing. */
+/** PRD R18: a visitor's report about a repo. */
 export const reportInputSchema = z.object({
 	reason: z.enum(Object.keys(REPORT_REASONS) as [ReportReason, ...ReportReason[]]),
 	details: z.string().trim().min(10).max(5000),

@@ -1,20 +1,20 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CATEGORIES, type ListingPage } from '@appmarket/shared';
-import { ListingResults } from '../../components/listing-results/listing-results';
+import { CATEGORIES, type RepoPage } from '@appmarket/shared';
+import { RepoResults } from '../../components/repo-results/repo-results';
 import { Seo } from '../../seo/seo';
 
 @Component({
   selector: 'app-category',
-  imports: [MatButtonModule, RouterLink, ListingResults],
+  imports: [MatButtonModule, RouterLink, RepoResults],
   templateUrl: './category.html',
   styleUrl: './category.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Category {
   /** From categoryResolver. */
-  readonly results = input.required<ListingPage>();
+  readonly results = input.required<RepoPage>();
   protected readonly category = CATEGORIES.find((c) => c.slug === inject(ActivatedRoute).snapshot.paramMap.get('slug'));
 
   constructor() {

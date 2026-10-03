@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
-import type { RepoToken } from '@appmarket/shared';
+import type { GitToken } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Catalog } from '../../api/catalog';
 import { Auth } from '../../auth/auth';
@@ -23,7 +23,7 @@ export class GetCode {
 
   protected readonly auth = inject(Auth);
   private readonly catalog = inject(Catalog);
-  protected readonly token = signal<RepoToken | null>(null);
+  protected readonly token = signal<GitToken | null>(null);
   protected readonly error = signal(false);
   protected readonly pending = signal(false);
   protected readonly command = computed(() => {

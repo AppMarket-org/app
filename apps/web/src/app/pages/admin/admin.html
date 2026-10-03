@@ -92,7 +92,7 @@
         <mat-card appearance="outlined">
           <mat-card-header>
             <mat-card-title>{{ reasons[r.reason] }}</mat-card-title>
-            <mat-card-subtitle>{{ r.listing.name }} ({{ r.listing.state }}) · {{ r.createdAt | date: 'medium' }}</mat-card-subtitle>
+            <mat-card-subtitle>{{ r.repo.name }} ({{ r.repo.state }}) · {{ r.createdAt | date: 'medium' }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <p class="details">{{ r.details }}</p>
@@ -104,10 +104,10 @@
             }
           </mat-card-content>
           <mat-card-actions align="end">
-            <a mat-button [routerLink]="['/apps', r.listing.slug]">Open app page</a>
+            <a mat-button [routerLink]="['/apps', r.repo.slug]">Open app page</a>
             @if (!r.resolvedAt) {
               <button mat-button type="button" [disabled]="busy()" (click)="dismiss(r)">Dismiss</button>
-              <button mat-button type="button" class="danger" [disabled]="busy() || r.listing.state !== 'published'" (click)="takeDownReported(r)">Take down</button>
+              <button mat-button type="button" class="danger" [disabled]="busy() || r.repo.state !== 'published'" (click)="takeDownReported(r)">Take down</button>
             }
           </mat-card-actions>
         </mat-card>

@@ -10,7 +10,7 @@ import { REPORT_REASONS, type ReportReason } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Turnstile } from '../../auth/turnstile/turnstile';
 
-/** PRD R18: report a listing (abuse, DMCA, malware). Closes with true once sent. */
+/** PRD R18: report a repo (abuse, DMCA, malware). Closes with true once sent. */
 @Component({
   selector: 'app-report-dialog',
   imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, Turnstile],
@@ -42,7 +42,7 @@ export class ReportDialog {
     const v = this.form.getRawValue();
     try {
       await firstValueFrom(
-        this.http.post(`/api/listings/${this.data.slug}/reports`, { reason: v.reason, details: v.details.trim(), contact: v.contact.trim() || null }, { headers: { 'x-captcha-response': token } }),
+        this.http.post(`/api/repos/${this.data.slug}/reports`, { reason: v.reason, details: v.details.trim(), contact: v.contact.trim() || null }, { headers: { 'x-captcha-response': token } }),
       );
       this.ref.close(true);
     } catch (e) {

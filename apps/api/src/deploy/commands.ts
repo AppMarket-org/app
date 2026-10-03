@@ -1,7 +1,7 @@
 // PRD D6: shell commands for the two Sandbox runners. Paths come from buildDeployConfig, which only
 // accepts repo-relative paths; they are still quoted.
 
-/** Installed in sandbox/Dockerfile, outside the listing's workspace. */
+/** Installed in sandbox/Dockerfile, outside the repo's workspace. */
 const WRANGLER = "/usr/local/bin/wrangler";
 const DEPLOY_DIR = "/tmp/appmarket-deploy";
 const SECRETS_FILE = "/tmp/appmarket-secrets.json";
@@ -18,7 +18,7 @@ export interface DeployPlan {
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
 
 /**
- * Runs without the buyer's token: installs dependencies with the lockfile the listing ships and
+ * Runs without the buyer's token: installs dependencies with the lockfile the repo ships and
  * bundles the Worker (running any custom build from its Wrangler config) into .appmarket/out.
  */
 export function buildCommand(plan: DeployPlan): string {
@@ -34,7 +34,7 @@ export function buildCommand(plan: DeployPlan): string {
 
 /**
  * Runs with the buyer's token. Copies only the build output, assets and migrations into a clean
- * directory (no listing scripts, package.json or .env files), then runs the image's Wrangler there.
+ * directory (no repo scripts, package.json or .env files), then runs the image's Wrangler there.
  */
 export function deployCommand(plan: DeployPlan): string {
 	const copy: string[] = [];

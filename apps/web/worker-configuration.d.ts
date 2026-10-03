@@ -131,13 +131,13 @@ interface Console {
      */
     debug(...data: any[]): void;
     /**
-     * The **`console.dir()`** static method displays a list of the properties of the specified JavaScript object. In browser consoles, the output is presented as a hierarchical listing with disclosure triangles that let you see the contents of child objects.
+     * The **`console.dir()`** static method displays a list of the properties of the specified JavaScript object. In browser consoles, the output is presented as a hierarchical repo with disclosure triangles that let you see the contents of child objects.
      *
      * [MDN Reference](https://developer.mozilla.org/docs/Web/API/console/dir_static)
      */
     dir(item?: any, options?: any): void;
     /**
-     * The **`console.dirxml()`** static method displays an interactive tree of the descendant elements of the specified XML/HTML element. If it is not possible to display as an element the JavaScript Object view is shown instead. The output is presented as a hierarchical listing of expandable nodes that let you see the contents of child nodes.
+     * The **`console.dirxml()`** static method displays an interactive tree of the descendant elements of the specified XML/HTML element. If it is not possible to display as an element the JavaScript Object view is shown instead. The output is presented as a hierarchical repo of expandable nodes that let you see the contents of child nodes.
      *
      * [MDN Reference](https://developer.mozilla.org/docs/Web/API/console/dirxml_static)
      */
@@ -4179,7 +4179,7 @@ type AiSearchInstanceInfo = {
     metadata?: Record<string, unknown>;
     [key: string]: unknown;
 };
-/** Pagination, search, and ordering parameters for listing instances within a namespace. */
+/** Pagination, search, and ordering parameters for repo instances within a namespace. */
 type AiSearchListInstancesParams = {
     page?: number;
     per_page?: number;
@@ -11916,12 +11916,12 @@ type BrowserRunLiveView = {
         guardrails?: BrowserRunConnectionGuardrails;
     };
 };
-/** Options for listing active browser sessions. */
+/** Options for repo active browser sessions. */
 type BrowserRunListSessionsOptions = {
     limit?: number;
     offset?: number;
 };
-/** Options for listing session history. */
+/** Options for repo session history. */
 type BrowserRunHistoryOptions = {
     limit?: number;
     offset?: number;
@@ -11986,7 +11986,7 @@ interface BrowserRunDevToolsProtocol extends Record<string, any> {
         minor: string;
     };
 }
-/** Options shared by DevTools target-listing and target-creation methods. */
+/** Options shared by DevTools target-repo and target-creation methods. */
 type BrowserRunTargetOptions = {
     liveViewUrlExpiresInMs?: number;
 };

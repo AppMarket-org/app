@@ -31,7 +31,7 @@ export function checkTemplate({ runtime, rootEntries, files }: TemplateInput): C
 	const error = (rule: string, file: string, message: string) => errors.push({ rule, file, message });
 	const warn = (rule: string, file: string, message: string) => warnings.push({ rule, file, message });
 
-	// G4: every listing ships orientation for agents.
+	// G4: every repo ships orientation for agents.
 	const agents = files.get("AGENTS.md")?.replace(/\s+/g, "") ?? "";
 	if (agents.length < MIN_AGENTS_MD) {
 		error("agents-md", "AGENTS.md", "Add an AGENTS.md at the repo root that tells an AI agent what the app does, how it is laid out and how to run and test it.");

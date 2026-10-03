@@ -1,4 +1,4 @@
-// Listing state chip colours, shared by the dashboard pages (@use in their component styles).
+// Repo state chip colours, shared by the dashboard pages (@use in their component styles).
 @mixin state-chip-colours {
   mat-chip.published {
     --mat-chip-elevated-container-color: var(--mat-sys-primary-container);
