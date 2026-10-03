@@ -1,5 +1,6 @@
 // Constants, types and pure helpers, safe for the browser (no zod).
 // Validation schemas live in "@appmarket/shared/schemas".
+export * from "./checkpoints";
 export * from "./cloudflare";
 export * from "./deployments";
 export * from "./repo";
@@ -9,4 +10,4 @@ export * from "./releases";
 export * from "./reports";
 export * from "./roles";
 export * from "./tokens";
-export type { DeploymentRequest, OrgCreate, OrgMemberInput, RepoInput, RepoSearch, RepoUpdate, ReleaseUpload, ReportInput, TokenRequest, TransitionRequest } from "./schemas";
+export type { CheckpointPatch, CheckpointUpload, DeploymentRequest, OrgCreate, OrgMemberInput, RepoInput, RepoSearch, RepoUpdate, ReleaseUpload, ReportInput, TokenRequest, TransitionRequest } from "./schemas";

@@ -5,6 +5,7 @@ import { CATEGORIES, REPO_SORTS, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, 
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
+import { CHECKPOINT_LIMITS, CHECKPOINT_SCHEMA, CHECKPOINT_VISIBILITIES, EFFORT_LEVELS, HARNESSES } from "./checkpoints";
 import { WORKER_NAME_PATTERN } from "./deployments";
 import { ORG_ROLES, handleProblem } from "./owners";
 
@@ -141,3 +142,38 @@ export type OrgCreate = z.infer<typeof orgCreateSchema>;
 
 export const orgMemberSchema = z.object({ handle: z.string().trim().toLowerCase().min(1).max(39), role: z.enum(ORG_ROLES).default("member") });
 export type OrgMemberInput = z.infer<typeof orgMemberSchema>;
+
+/** Checkpoints PRD: the record a CLI uploads. Strings are capped; arrays are truncated by the CLI before upload. */
+const sha = z.string().regex(/^[0-9a-f]{40}([0-9a-f]{24})?$/, "Full commit SHA");
+const iso = z.string().datetime({ offset: true });
+const count = z.number().int().nonnegative();
+export const checkpointRecordSchema = z.object({
+	schema: z.literal(CHECKPOINT_SCHEMA),
+	commit: sha,
+	parents: z.array(sha).max(16),
+	branch: z.string().max(255),
+	author: z.object({ name: z.string().max(255), email: z.string().max(320) }),
+	harness: z.enum(HARNESSES),
+	harness_version: z.string().max(64),
+	session_id: z.string().max(128),
+	model: z.string().max(128),
+	effort: z.object({ raw: z.string().max(64), level: z.enum(EFFORT_LEVELS) }),
+	effort_metrics: z.object({ turns: count, wall_clock_s: count, tool_calls: count, retries: count, reasoning_tokens: count.nullable() }),
+	prompts: z.array(z.object({ ts: iso, text: z.string().max(100_000) })).max(CHECKPOINT_LIMITS.prompts),
+	assistant_summary: z.string().max(CHECKPOINT_LIMITS.assistantSummaryChars),
+	tools: z.array(z.object({ name: z.string().max(128), args_summary: z.string().max(1024), outcome: z.enum(["ok", "error"]), ts: iso })).max(CHECKPOINT_LIMITS.tools),
+	usage: z.object({ input_tokens: count.nullable(), output_tokens: count.nullable(), cost_usd: z.number().nonnegative().nullable() }),
+	files: z.array(z.object({ path: z.string().max(1024), added: count, removed: count })).max(CHECKPOINT_LIMITS.files),
+	redactions: count,
+	source: z.enum(["harness", "agent-reported"]),
+	created_at: iso,
+	rewritten_from: sha.optional(),
+	truncated: z.boolean().optional(),
+});
+
+/** Owner edits: visibility, or a prompt added after the fact (`appmarket record --for <sha>`). */
+export const checkpointPatchSchema = z
+	.object({ visibility: z.enum(CHECKPOINT_VISIBILITIES).optional(), add_prompt: z.string().trim().min(1).max(100_000).optional() })
+	.refine((p) => p.visibility || p.add_prompt, "Nothing to change");
+export type CheckpointUpload = z.infer<typeof checkpointRecordSchema>;
+export type CheckpointPatch = z.infer<typeof checkpointPatchSchema>;

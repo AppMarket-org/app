@@ -79,4 +79,6 @@ export const RATE_LIMITS = {
 	REPORT: { offset: 5, limit: 5, period: 60 },
 	/** One-click deploys, per signed-in user (D6); each runs a build container. */
 	DEPLOY: { offset: 6, limit: 3, period: 60 },
+	/** Checkpoint uploads, per device session (Checkpoints PRD: 60/min per device). */
+	CHECKPOINT: { offset: 7, limit: 60, period: 60 },
 } as const;
