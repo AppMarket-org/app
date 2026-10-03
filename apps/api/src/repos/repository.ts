@@ -13,7 +13,7 @@ import type {
 	TransitionActor,
 	TransitionRequest,
 } from "@appmarket/shared";
-import { slugify, type OwnerKind } from "@appmarket/shared";
+import { slugify, type CheckpointVisibility, type OwnerKind } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 import { transitionUpdate } from "./transition-sql.ts";
 
@@ -44,6 +44,7 @@ interface RepoRow {
 	submitted_checks: string | null;
 	published_manifest: string | null;
 	cowbell_count: number;
+	checkpoint_visibility: CheckpointVisibility;
 	created_at: string;
 	updated_at: string;
 }
@@ -75,6 +76,7 @@ function toRepo(row: RepoRow): Repo {
 		submittedChecks: row.submitted_checks ? JSON.parse(row.submitted_checks) : null,
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		cowbells: row.cowbell_count,
+		checkpointVisibility: row.checkpoint_visibility,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};

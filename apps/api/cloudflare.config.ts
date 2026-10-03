@@ -78,6 +78,7 @@ export default defineConfig(({ mode }) => {
 				CF_TOKEN_ENCRYPTION_KEY: bindings.secret(),
 				// D6 deploys. RL_DEPLOY limits container builds per user.
 				RL_DEPLOY: rateLimit(RATE_LIMITS.DEPLOY),
+				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
 				CLOUDFLARE_ACCOUNT_ID: bindings.text(CLOUDFLARE_ACCOUNT_ID),

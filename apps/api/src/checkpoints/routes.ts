@@ -1,0 +1,100 @@
+import { CHECKPOINT_LIMITS, type CheckpointVisibility, type Repo } from "@appmarket/shared";
+import { checkpointPatchSchema, checkpointRecordSchema } from "@appmarket/shared/schemas";
+import { env } from "cloudflare:workers";
+import { type Context, Hono } from "hono";
+import type { z } from "zod";
+import { commitExists } from "../artifacts/git.ts";
+import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { logEvent } from "../observability/log.ts";
+import { canView, isOwner } from "../repos/access.ts";
+import { RepoStore } from "../repos/repository.ts";
+import { CheckpointStore, type CheckpointViewer } from "./store.ts";
+
+type Ctx = { Variables: AuthVariables };
+const checkpoints = () => new CheckpointStore(env.DB);
+const invalid = (error: z.ZodError) => ({ error: "invalid", issues: error.issues.slice(0, 20).map((i) => ({ path: i.path.join("."), message: i.message })) });
+const SHA = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
+
+async function repoFor(c: Context<Ctx>): Promise<Repo | null> {
+	return new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
+}
+
+/** Owners (the user, or members of the owning org) see private checkpoints in full; admins too (moderation, M4 adds the access log). */
+function viewerOf(c: Context<Ctx>, repo: Repo): CheckpointViewer {
+	const session = c.get("session");
+	if (!session) return "public";
+	return isOwner(repo, { id: session.user.id, orgIds: session.orgIds }) || session.user.role === "admin" ? "owner" : "public";
+}
+
+function ownedBy(c: Context<Ctx>, repo: Repo): boolean {
+	const session = c.get("session");
+	return !!session && isOwner(repo, { id: session.user.id, orgIds: session.orgIds });
+}
+
+/** Checkpoints PRD (#111). Mounted under /api/repos: /:owner/:slug/checkpoints[/:sha]. */
+export const checkpointRoutes = new Hono<Ctx>()
+	.post("/:owner/:slug/checkpoints", requireRole(), async (c) => {
+		const size = Number(c.req.header("content-length") ?? "0");
+		if (size > CHECKPOINT_LIMITS.inlineBytes) return c.json({ error: "too_large", maxBytes: CHECKPOINT_LIMITS.inlineBytes }, 413);
+		const repo = await repoFor(c);
+		// Membership is checked on every upload: someone who left the org gets 404.
+		if (!repo || !ownedBy(c, repo) || repo.state === "removed") return c.json({ error: "not_found" }, 404);
+		const session = c.get("session")!;
+		if (!(await env.RL_CHECKPOINT.limit({ key: session.session.id })).success) {
+			c.header("Retry-After", String(env.RATE_LIMIT_CONFIG.CHECKPOINT.period));
+			return c.json({ error: "rate_limited", retryAfter: env.RATE_LIMIT_CONFIG.CHECKPOINT.period }, 429);
+		}
+		const text = await c.req.text();
+		if (new TextEncoder().encode(text).length > CHECKPOINT_LIMITS.inlineBytes) return c.json({ error: "too_large", maxBytes: CHECKPOINT_LIMITS.inlineBytes }, 413);
+		let body: unknown;
+		try {
+			body = JSON.parse(text);
+		} catch {
+			return c.json({ error: "invalid_json" }, 400);
+		}
+		const parsed = checkpointRecordSchema.safeParse(body);
+		if (!parsed.success) return c.json(invalid(parsed.error), 400);
+		const record = parsed.data;
+		const attached = repo.gitRepo ? await commitExists(repo.gitRepo, record.commit) : false;
+		const device = (session.session as { deviceName?: string | null }).deviceName ?? null;
+		const result = await checkpoints().put({ id: repo.id, path: repo.fullName }, record, {
+			state: attached ? "attached" : "pending",
+			visibility: repo.checkpointVisibility,
+			uploadedBy: session.user.id,
+			device,
+			force: c.req.query("force") === "1",
+		});
+		if (result.status === 409) return c.json({ error: "conflict", message: "A different checkpoint exists for this commit; retry with ?force=1 to replace it.", checkpoint: result.checkpoint }, 409);
+		if (result.status === 201) logEvent("checkpoint.created", { repo: repo.fullName, harness: record.harness, state: result.checkpoint.state, redactions: record.redactions });
+		return c.json(result.checkpoint, result.status);
+	})
+	.get("/:owner/:slug/checkpoints", async (c) => {
+		const repo = await repoFor(c);
+		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const q = c.req.query();
+		return c.json(await checkpoints().list({ id: repo.id, path: repo.fullName }, viewerOf(c, repo), { before: q.before, branch: q.branch, session: q.session, limit: q.limit ? Number(q.limit) : undefined }));
+	})
+	.get("/:owner/:slug/checkpoints/:sha", async (c) => {
+		const repo = await repoFor(c);
+		const sha = c.req.param("sha");
+		if (!repo || !canView(repo, c.get("session")) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
+		const checkpoint = await checkpoints().get({ id: repo.id, path: repo.fullName }, sha, viewerOf(c, repo));
+		return checkpoint ? c.json(checkpoint) : c.json({ error: "not_found" }, 404);
+	})
+	.patch("/:owner/:slug/checkpoints/:sha", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		const sha = c.req.param("sha");
+		if (!repo || !ownedBy(c, repo) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
+		const patch = checkpointPatchSchema.safeParse(await c.req.json().catch(() => null));
+		if (!patch.success) return c.json(invalid(patch.error), 400);
+		const store = checkpoints();
+		if (patch.data.visibility && !(await store.setVisibility(repo.id, sha, patch.data.visibility as CheckpointVisibility))) return c.json({ error: "not_found" }, 404);
+		if (patch.data.add_prompt && !(await store.addPrompt(repo.id, sha, patch.data.add_prompt))) return c.json({ error: "not_found" }, 404);
+		return c.json(await store.get({ id: repo.id, path: repo.fullName }, sha, "owner"));
+	})
+	.delete("/:owner/:slug/checkpoints/:sha", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		const sha = c.req.param("sha");
+		if (!repo || !ownedBy(c, repo) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
+		return (await checkpoints().delete(repo.id, sha)) ? c.json({ deleted: true }) : c.json({ error: "not_found" }, 404);
+	});

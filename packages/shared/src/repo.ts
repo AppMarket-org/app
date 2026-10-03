@@ -1,3 +1,4 @@
+import type { CheckpointVisibility } from "./checkpoints";
 import type { OwnerKind } from "./owners";
 import type { ContractIssue, DeployManifest } from "./manifest";
 
@@ -85,6 +86,8 @@ export interface Repo {
 	/** D3: what deploying the published version creates. */
 	manifest: DeployManifest | null;
 	createdAt: string;
+	/** Checkpoints PRD: default visibility for new checkpoints on this repo. */
+	checkpointVisibility: CheckpointVisibility;
 	/** Cowbells (appmarket's stars) from signed-in users. */
 	cowbells: number;
 	updatedAt: string;

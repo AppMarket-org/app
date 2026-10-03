@@ -121,3 +121,9 @@ export async function listTree(gitRepo: string, commit: string, limits = { maxEn
 	}
 	return entries.sort((a, b) => a.path.localeCompare(b.path));
 }
+
+/** Checkpoints: whether a commit has reached appmarket.org yet (pending vs attached). */
+export async function commitExists(gitRepo: string, sha: string): Promise<boolean> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	return !!(await git.readCommit(sha).catch(() => null));
+}
