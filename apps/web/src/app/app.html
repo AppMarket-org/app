@@ -1,5 +1,17 @@
 <mat-toolbar>
-  <a mat-button class="brand" routerLink="/"><img class="logo" src="/brand/logo.png" alt="" />appmarket.org</a>
+  <a mat-icon-button class="brand" routerLink="/" aria-label="appmarket.org home"><img class="logo" src="/brand/logo.png" alt="" /></a>
+  <nav class="heading" aria-label="Current page">
+    @for (part of seo.heading(); track $index; let last = $last) {
+      @if (part.link) {
+        <a mat-button [routerLink]="part.link" [class.current]="last">{{ part.label }}</a>
+      } @else {
+        <span [class.current]="last" [attr.aria-current]="last ? 'page' : null">{{ part.label }}</span>
+      }
+      @if (!last) {
+        <span class="separator" aria-hidden="true">/</span>
+      }
+    }
+  </nav>
   <span class="spacer"></span>
   <a mat-button routerLink="/search">Search</a>
 

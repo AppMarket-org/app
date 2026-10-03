@@ -34,6 +34,7 @@ export class Search {
       title: params.get('q') ? `Apps matching "${params.get('q')}"` : 'Search apps',
       description: 'Search source-available apps you can deploy to your own Cloudflare account.',
       path: '/search',
+      heading: [{ label: 'Search' }],
       // Only the unfiltered search page is indexed; filtered pages are duplicates.
       noindex: filtered,
     });

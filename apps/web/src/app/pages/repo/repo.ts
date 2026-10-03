@@ -67,6 +67,7 @@ export class RepoPage {
       title: app.name,
       description: app.summary,
       path: `/apps/${app.slug}`,
+      heading: [{ label: app.owner.name }, { label: app.name }],
       image: data.screenshots[0] ? `https://appmarket.org${data.screenshots[0].url}` : undefined,
       noindex: app.state !== 'published',
       jsonLd: {

@@ -23,6 +23,7 @@ export class Home {
       title: 'App marketplace',
       description: 'Discover, try and deploy apps into your own Cloudflare account.',
       path: '/',
+      heading: [],
       jsonLd: { '@type': 'WebSite', name: 'appmarket.org', url: 'https://appmarket.org/', potentialAction: { '@type': 'SearchAction', target: 'https://appmarket.org/search?q={q}', 'query-input': 'required name=q' } },
     });
   }
