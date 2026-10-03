@@ -20,10 +20,12 @@ function urlset(urls: { loc: string; lastmod?: string }[]): string {
 	return `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${items}</urlset>`;
 }
 
-async function publishedRepos(offset: number, limit: number): Promise<{ slug: string; updated_at: string }[]> {
-	const { results } = await env.DB.prepare("SELECT slug, updated_at FROM repos WHERE state = 'published' ORDER BY created_at, id LIMIT ? OFFSET ?")
+async function publishedRepos(offset: number, limit: number): Promise<{ path: string; updated_at: string }[]> {
+	const { results } = await env.DB.prepare(
+		"SELECT o.handle || '/' || r.slug AS path, r.updated_at FROM repos r JOIN owners o ON o.id = r.owner_id WHERE r.state = 'published' ORDER BY r.created_at, r.id LIMIT ? OFFSET ?",
+	)
 		.bind(limit, offset)
-		.all<{ slug: string; updated_at: string }>();
+		.all<{ path: string; updated_at: string }>();
 	return results;
 }
 
@@ -37,7 +39,7 @@ export async function sitemap(c: Context): Promise<Response> {
 	const count = (await env.DB.prepare("SELECT COUNT(*) AS n FROM repos WHERE state = 'published'").first<{ n: number }>())?.n ?? 0;
 	if (fixed.length + count <= SITEMAP_PAGE_SIZE) {
 		const repos = await publishedRepos(0, SITEMAP_PAGE_SIZE);
-		return xml(c, urlset([...fixed, ...repos.map((l) => ({ loc: `${origin}/apps/${l.slug}`, lastmod: l.updated_at }))]));
+		return xml(c, urlset([...fixed, ...repos.map((l) => ({ loc: `${origin}/${l.path}`, lastmod: l.updated_at }))]));
 	}
 	const pages = Math.ceil(count / SITEMAP_PAGE_SIZE);
 	const entries = [`${origin}/sitemaps/static.xml`, ...Array.from({ length: pages }, (_, i) => `${origin}/sitemaps/repos-${i + 1}.xml`)];
@@ -53,7 +55,7 @@ export async function sitemapPage(c: Context): Promise<Response> {
 	if (!Number.isSafeInteger(page) || page < 1) return c.notFound();
 	const repos = await publishedRepos((page - 1) * SITEMAP_PAGE_SIZE, SITEMAP_PAGE_SIZE);
 	if (repos.length === 0) return c.notFound();
-	return xml(c, urlset(repos.map((l) => ({ loc: `${origin}/apps/${l.slug}`, lastmod: l.updated_at }))));
+	return xml(c, urlset(repos.map((l) => ({ loc: `${origin}/${l.path}`, lastmod: l.updated_at }))));
 }
 
 /**
@@ -61,6 +63,6 @@ export async function sitemapPage(c: Context): Promise<Response> {
  * centers expire within the web Worker's cache TTL (5 minutes); a global purge needs the zone purge
  * API (#24).
  */
-export async function purgeRepoPage(slug: string): Promise<void> {
-	await caches.default.delete(new Request(`${env.PUBLIC_ORIGIN}/apps/${slug}`)).catch(() => false);
+export async function purgeRepoPage(fullName: string): Promise<void> {
+	await caches.default.delete(new Request(`${env.PUBLIC_ORIGIN}/${fullName}`)).catch(() => false);
 }

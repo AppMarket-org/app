@@ -10,7 +10,7 @@ export type ReportReason = keyof typeof REPORT_REASONS;
 
 export interface RepoReport {
 	id: string;
-	repo: { slug: string; name: string; state: string };
+	repo: { fullName: string; name: string; state: string };
 	reason: ReportReason;
 	details: string;
 	contact: string | null;

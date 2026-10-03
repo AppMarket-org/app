@@ -6,6 +6,7 @@ import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
 import { WORKER_NAME_PATTERN } from "./deployments";
+import { ORG_ROLES, handleProblem } from "./owners";
 
 const runtimeKeys = Object.keys(RUNTIMES) as [Runtime, ...Runtime[]];
 export const runtimeSchema = z.enum(runtimeKeys);
@@ -38,6 +39,8 @@ const repoFields = {
 
 export const repoInputSchema = z.object({
 	...repoFields,
+	/** Handle of the user or org to create it under; defaults to the signed-in user. */
+	owner: z.string().trim().toLowerCase().max(39).optional(),
 	description: repoFields.description.default(""),
 	runtime: repoFields.runtime.default("workers-js"),
 	platforms: repoFields.platforms.default(["workers"]),
@@ -122,3 +125,19 @@ export const deploymentRequestSchema = z.object({
 	secrets: z.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), z.string().min(1).max(5120)).default({}),
 });
 export type DeploymentRequest = z.infer<typeof deploymentRequestSchema>;
+
+/** #102: a user or organization handle. */
+export const handleSchema = z
+	.string()
+	.trim()
+	.toLowerCase()
+	.superRefine((h, ctx) => {
+		const problem = handleProblem(h);
+		if (problem) ctx.addIssue({ code: "custom", message: problem });
+	});
+
+export const orgCreateSchema = z.object({ handle: handleSchema, name: z.string().trim().min(1).max(80) });
+export type OrgCreate = z.infer<typeof orgCreateSchema>;
+
+export const orgMemberSchema = z.object({ handle: z.string().trim().toLowerCase().min(1).max(39), role: z.enum(ORG_ROLES).default("member") });
+export type OrgMemberInput = z.infer<typeof orgMemberSchema>;

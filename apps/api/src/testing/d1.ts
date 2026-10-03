@@ -37,4 +37,6 @@ export function seedUser(sqlite: Database.Database, id: string, role = "develope
 	sqlite
 		.prepare(`INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt, role) VALUES (?, ?, ?, 1, 0, 0, ?)`)
 		.run(id, id, `${id}@example.test`, role);
+	// #102: every user has an owner row (handle) with the same id.
+	sqlite.prepare(`INSERT INTO owners (id, handle, kind, user_id) VALUES (?, ?, 'user', ?)`).run(id, id.toLowerCase(), id);
 }

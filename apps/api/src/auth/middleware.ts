@@ -1,12 +1,17 @@
 import type { Role } from "@appmarket/shared";
 import { createMiddleware } from "hono/factory";
+import { env } from "cloudflare:workers";
+import { OwnerStore } from "../owners/store.ts";
 import { auth, type Session } from "./auth.ts";
 
-export type AuthVariables = { session: Session | null };
+/** The Better Auth session plus the organizations (#102) the user belongs to. */
+export type AppSession = Session & { orgIds: string[] };
+export type AuthVariables = { session: AppSession | null };
 
-/** Loads the current session (or null) into the Hono context. */
+/** Loads the current session (or null) and the user's organization ids into the Hono context. */
 export const sessionMiddleware = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
-	c.set("session", await auth.api.getSession({ headers: c.req.raw.headers }));
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	c.set("session", session ? { ...session, orgIds: await new OwnerStore(env.DB).orgIdsOf(session.user.id) } : null);
 	await next();
 });
 

@@ -8,6 +8,8 @@ export interface AuthSettings {
 	google: { clientId: string; clientSecret: string };
 	github: { clientId: string; clientSecret: string };
 	turnstileSecretKey: string;
+	/** #102: gives every new user a handle. */
+	onUserCreated?: (user: { id: string; email: string }) => Promise<unknown>;
 }
 
 // PRD R11: Google and GitHub login, sessions in D1, a role on every user.
@@ -32,6 +34,9 @@ export function authOptions(database: BetterAuthOptions["database"], settings: A
 				// Everyone starts as a buyer; becoming a developer or admin is a server-side change.
 				role: { type: [...ROLES], required: true, defaultValue: "buyer", input: false },
 			},
+		},
+		databaseHooks: {
+			user: { create: { after: async (user: { id: string; email: string }) => void (await settings.onUserCreated?.(user)) } },
 		},
 		plugins: [
 			captcha({

@@ -5,7 +5,7 @@ import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import { resolveTag } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { canEdit, canView } from "../repos/access.ts";
+import { canEdit, canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { clientIp, rateLimit } from "../rate-limit.ts";
 import { signDownload, verifyDownload } from "./signing.ts";
@@ -24,19 +24,19 @@ function visible(release: Pick<Release, "tag">, repo: { publishedTag: string | n
 
 /** PRD R13: release binaries per repo. Mounted under /api/repos. */
 export const repoReleaseRoutes = new Hono<Ctx>()
-	.get("/:slug/releases", async (c) => {
-		const repo = await repos().findBySlug(c.req.param("slug"));
+	.get("/:owner/:slug/releases", async (c) => {
+		const repo = await repos().findByPath(c.req.param("owner"), c.req.param("slug"));
 		const session = c.get("session");
 		if (!repo || !canView(repo, session)) return c.json({ error: "not_found" }, 404);
 		const editor = canEdit(repo, session);
 		const items = (await releases().list(repo.id)).filter((r) => visible(r, repo, editor));
 		return c.json({ items });
 	})
-	.post("/:slug/releases", requireRole(), async (c) => {
-		const repo = await repos().findBySlug(c.req.param("slug"));
+	.post("/:owner/:slug/releases", requireRole(), async (c) => {
+		const repo = await repos().findByPath(c.req.param("owner"), c.req.param("slug"));
 		const session = c.get("session")!;
 		if (!repo || !canView(repo, session)) return c.json({ error: "not_found" }, 404);
-		if (repo.owner.id !== session.user.id) return c.json({ error: "forbidden" }, 403);
+		if (!isOwner(repo, { id: session.user.id, orgIds: session.orgIds })) return c.json({ error: "forbidden" }, 403);
 		if (repo.state === "removed") return c.json({ error: "removed" }, 409);
 		const meta = releaseUploadSchema.safeParse(c.req.query());
 		if (!meta.success) return c.json({ error: "invalid", issues: meta.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
@@ -50,8 +50,8 @@ export const repoReleaseRoutes = new Hono<Ctx>()
 		const result = await releases().add(repo.id, session.user.id, meta.data, body, size);
 		return result.ok ? c.json(result.release, 201) : c.json({ error: result.error }, result.status);
 	})
-	.delete("/:slug/releases/:id", requireRole(), async (c) => {
-		const repo = await repos().findBySlug(c.req.param("slug"));
+	.delete("/:owner/:slug/releases/:id", requireRole(), async (c) => {
+		const repo = await repos().findByPath(c.req.param("owner"), c.req.param("slug"));
 		if (!repo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		return (await releases().remove(repo.id, c.req.param("id"))) ? c.body(null, 204) : c.json({ error: "not_found" }, 404);
 	});
@@ -73,7 +73,7 @@ export const releaseLinkRoutes = new Hono<Ctx>().post(
 		if (repo.priceCents > 0) return c.json({ error: "payment_required" }, 402);
 		const expiresAt = Math.floor(Date.now() / 1000) + LINK_TTL_SECONDS;
 		const sig = await signDownload(env.DOWNLOAD_SIGNING_KEY, release.id, expiresAt);
-		logEvent("download.link_issued", { repo: repo.slug, release: release.id });
+		logEvent("download.link_issued", { repo: repo.fullName, release: release.id });
 		c.header("Cache-Control", "no-store");
 		return c.json({ url: `/api/downloads/${release.id}?exp=${expiresAt}&sig=${sig}`, expiresAt: new Date(expiresAt * 1000).toISOString() });
 	},

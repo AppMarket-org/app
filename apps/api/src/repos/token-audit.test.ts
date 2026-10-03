@@ -11,7 +11,7 @@ describe("TokenAudit", () => {
 		sqlite = db.sqlite;
 		seedUser(sqlite, "owner");
 		seedUser(sqlite, "admin", "admin");
-		sqlite.prepare(`INSERT INTO repos (id, owner_id, slug, name, summary, category, git_repo) VALUES ('l1', 'owner', 'a', 'A', 'Summary text', 'ai', 'a-1')`).run();
+		sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, git_repo) VALUES ('l1', 'owner', 'owner', 'a', 'A', 'Summary text', 'ai', 'a-1')`).run();
 		audit = new TokenAudit(db.d1);
 	});
 

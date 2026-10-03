@@ -8,7 +8,7 @@ describe("CowbellStore", () => {
 	beforeEach(() => {
 		const db = testD1();
 		for (const id of ["owner", "u1", "u2"]) seedUser(db.sqlite, id);
-		const insert = db.sqlite.prepare(`INSERT INTO repos (id, owner_id, slug, name, summary, category, git_repo, state) VALUES (?, 'owner', ?, ?, 'Summary text', 'ai', ?, ?)`);
+		const insert = db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, git_repo, state) VALUES (?, 'owner', 'owner', ?, ?, 'Summary text', 'ai', ?, ?)`);
 		insert.run("r1", "a", "A", "a-1", "published");
 		insert.run("r2", "b", "B", "b-1", "published");
 		insert.run("r3", "c", "C", "c-1", "draft");
