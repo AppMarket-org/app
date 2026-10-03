@@ -10,7 +10,7 @@ This explains what [Legal entity name] collects when you use appmarket.org.
 | Name, email address and profile image from Google or GitHub | Your account and sign-in |
 | Session cookie | Keeping you signed in |
 | IP address (short-lived) | Rate limiting and bot protection |
-| Listings, repositories, releases, screenshots | Running the marketplace |
+| Apps, repositories, releases, screenshots | Running the marketplace |
 | Report details and the optional email you give | Handling reports |
 | Download counts and access logs | Operations and abuse prevention |
 

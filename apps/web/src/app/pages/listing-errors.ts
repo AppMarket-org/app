@@ -13,9 +13,9 @@ export function describeListingError(error: unknown): ListingSaveError {
   if (error.status === 400 && body?.issues) {
     return { message: 'Please fix the highlighted fields.', fieldErrors: Object.fromEntries(body.issues.map((i) => [i.path, i.message])) };
   }
-  if (error.status === 409 && body?.error === 'quota_exceeded') return { message: `You have reached the limit of ${body.limit} listings. Remove one first.`, fieldErrors: {} };
-  if (error.status === 409 && body?.error === 'removed') return { message: 'This listing was removed and can no longer be edited.', fieldErrors: {} };
+  if (error.status === 409 && body?.error === 'quota_exceeded') return { message: `You have reached the limit of ${body.limit} apps. Remove one first.`, fieldErrors: {} };
+  if (error.status === 409 && body?.error === 'removed') return { message: 'This app was removed and can no longer be edited.', fieldErrors: {} };
   if (error.status === 429) return { message: 'Too many requests in a short time. Wait a minute and try again.', fieldErrors: {} };
   if (error.status === 401) return { message: 'Your session expired. Sign in again.', fieldErrors: {} };
-  return { message: 'Could not save the listing. Please try again.', fieldErrors: {} };
+  return { message: 'Could not save the app. Please try again.', fieldErrors: {} };
 }

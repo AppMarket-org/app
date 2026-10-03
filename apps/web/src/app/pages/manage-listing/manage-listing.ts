@@ -93,7 +93,7 @@ export class ManageListing {
   });
 
   constructor() {
-    inject(Seo).set({ title: 'Manage listing', description: 'Manage your listing.', path: '/dashboard', noindex: true });
+    inject(Seo).set({ title: 'Manage app', description: 'Manage your app.', path: '/dashboard', noindex: true });
   }
 
   ngOnInit(): void {
@@ -150,7 +150,7 @@ export class ManageListing {
       const messages: Record<string, string> = {
         unsupported_image: 'Use a PNG, JPEG or WebP image.',
         too_large: `Screenshots can be at most ${this.maxShotMb} MB.`,
-        too_many: `A listing can have at most ${SCREENSHOT_LIMITS.maxCount} screenshots.`,
+        too_many: `An app can have at most ${SCREENSHOT_LIMITS.maxCount} screenshots.`,
       };
       this.snackBar.open(messages[code ?? ''] ?? 'Upload failed. Please try again.', 'OK', { duration: 5000 });
     } finally {
@@ -215,7 +215,7 @@ export class ManageListing {
       const confirmed = await firstValueFrom(
         this.dialog
           .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, {
-            data: { title: 'Remove listing?', message: 'It leaves the catalog for good, and every token for its repository is revoked. This cannot be undone.', confirm: 'Remove' },
+            data: { title: 'Remove app?', message: 'It leaves the catalog for good, and every token for its repository is revoked. This cannot be undone.', confirm: 'Remove' },
           })
           .afterClosed(),
       );
@@ -262,7 +262,7 @@ export class ManageListing {
         this.submitError.set(`Tag ${tag} is not in the repository. Push it first: git push appmarket ${tag}`);
         return;
       case 'runtime_mismatch':
-        this.submitError.set(`Version ${tag} does not look like this listing's runtime:`);
+        this.submitError.set(`Version ${tag} does not look like this app's runtime:`);
         this.submitIssues.set(body.issues as string[]);
         return;
       case 'contract_failed':
@@ -274,7 +274,7 @@ export class ManageListing {
         return;
       case 'transition_not_allowed':
       case 'conflict':
-        this.submitError.set('The listing changed. Reload and try again.');
+        this.submitError.set('The app changed. Reload and try again.');
         return;
       default:
         this.submitError.set('Could not submit. Please try again.');

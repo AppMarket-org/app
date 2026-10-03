@@ -42,10 +42,22 @@ mat-card {
   gap: 0.5rem;
 }
 
-.deploys {
-  margin-top: 2rem;
+h2 {
+  font: var(--mat-sys-title-large);
+  margin: 0;
+}
 
-  h2 {
-    font: var(--mat-sys-title-large);
+section {
+  margin-bottom: 2rem;
+
+  > h2 {
+    margin-bottom: 0.75rem;
   }
+}
+
+.explain {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 1rem;
+  max-width: 45rem;
 }

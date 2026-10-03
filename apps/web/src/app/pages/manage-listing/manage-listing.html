@@ -1,7 +1,7 @@
 @if (listing(); as l) {
   <header class="head">
     <div>
-      <a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Your listings</a>
+      <a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Dashboard</a>
       <h1>{{ l.name }}</h1>
       <div class="status">
         <mat-chip-set aria-label="Status">
@@ -11,7 +11,7 @@
       </div>
     </div>
     @if (l.state !== 'removed') {
-      <a mat-stroked-button [routerLink]="['/apps', l.slug]">View listing page</a>
+      <a mat-stroked-button [routerLink]="['/apps', l.slug]">View public page</a>
     }
   </header>
 
@@ -113,7 +113,7 @@
             <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('unpublished')">Unpublish</button>
           }
           @if (can('removed')) {
-            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="change('removed')">Remove listing</button>
+            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="change('removed')">Remove app</button>
           }
         </mat-card-content>
       </mat-card>
@@ -252,8 +252,8 @@
     </mat-card>
   </div>
 } @else if (loadError()) {
-  <p class="error" role="alert">This listing could not be loaded. It may not exist, or it is not yours.</p>
-  <a mat-button routerLink="/dashboard">Back to your listings</a>
+  <p class="error" role="alert">This app could not be loaded. It may not exist, or it is not yours.</p>
+  <a mat-button routerLink="/dashboard">Back to the dashboard</a>
 } @else {
-  <mat-progress-bar mode="indeterminate" aria-label="Loading listing" />
+  <mat-progress-bar mode="indeterminate" aria-label="Loading app" />
 }

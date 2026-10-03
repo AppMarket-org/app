@@ -98,7 +98,7 @@ export class Admin {
   }
 
   protected async dismiss(report: ListingReport): Promise<void> {
-    const note = await this.ask({ title: 'Dismiss report?', message: 'Use this when the listing does not break the rules.', label: 'Note (optional)', confirm: 'Dismiss', required: false });
+    const note = await this.ask({ title: 'Dismiss report?', message: 'Use this when the app does not break the rules.', label: 'Note (optional)', confirm: 'Dismiss', required: false });
     if (note === undefined) return;
     await this.run(async () => {
       await firstValueFrom(this.api.resolveReport(report.id, 'dismissed', note || undefined));
@@ -109,7 +109,7 @@ export class Admin {
   protected async takeDownReported(report: ListingReport): Promise<void> {
     const listing = (this.published() ?? []).find((l) => l.slug === report.listing.slug);
     if (!listing) {
-      this.snackBar.open('Only published listings can be taken down from here.', 'OK', { duration: 5000 });
+      this.snackBar.open('Only published apps can be taken down from here.', 'OK', { duration: 5000 });
       return;
     }
     if (await this.takeDown(listing, 'unpublished')) {
