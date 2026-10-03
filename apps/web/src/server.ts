@@ -2,7 +2,7 @@ import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 
 const angularApp = new AngularAppEngine({
 	// localhost is safe to allow: in production Cloudflare never routes it as the host.
-	allowedHosts: ['localhost', 'appmarket.org', 'www.appmarket.org'],
+	allowedHosts: ['localhost', 'appmarket.org', 'www.appmarket.org', 'staging.appmarket.org'],
 });
 
 const API_PATHS = /^\/(api\/|sitemap\.xml$|sitemaps\/)/;
