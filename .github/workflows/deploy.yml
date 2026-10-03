@@ -80,8 +80,13 @@ jobs:
           pnpm exec ng build
           if [ "$MODE" = staging ]; then pnpm exec wrangler deploy --env staging; else pnpm exec wrangler deploy; fi
 
+      # Retries for a minute: new DNS records and Worker versions take a few seconds to reach every
+      # location, and the old web version may briefly call the new API.
       - name: Smoke test
         run: |
           origin=$([ "$MODE" = staging ] && echo https://staging.appmarket.org || echo https://appmarket.org)
-          curl -fsS "$origin/api/health"
-          curl -fsS -o /dev/null "$origin/"
+          for i in $(seq 1 12); do
+            if curl -fsS "$origin/api/health" && curl -fsS -o /dev/null "$origin/" && curl -fsS -o /dev/null "$origin/search"; then exit 0; fi
+            sleep 5
+          done
+          exit 1
