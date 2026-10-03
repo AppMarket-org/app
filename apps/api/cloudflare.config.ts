@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => {
 			compatibilityDate: "2026-10-01",
 			// Better Auth uses AsyncLocalStorage.
 			compatibilityFlags: ["nodejs_compat"],
+			// Reached only through the web Worker's service binding (and its Access-protected routes),
+			// never on a public workers.dev or preview URL.
+			workersDev: false,
+			previewUrls: false,
 			// R23: logs, traces and Issues (error tracking) in Workers Observability. Query strings are
 			// stripped from logged URLs: OAuth callbacks and download links carry codes and signatures.
 			observability: {

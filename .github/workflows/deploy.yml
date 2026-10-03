@@ -49,9 +49,30 @@ jobs:
         working-directory: apps/api
         run: node scripts/migrate.mjs --remote "${{ steps.preflight.outputs.database_id }}"
 
+      # Worker secrets come from this GitHub environment's secrets on every deploy (a new Worker
+      # cannot be created without them). Unset ones get a placeholder so the deploy still works;
+      # the feature behind them stays off until the real value is set. The file is deleted after.
       - name: Deploy API Worker
         working-directory: apps/api
-        run: cf deploy --mode "$MODE" --message "${{ github.sha }}"
+        env:
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          DOWNLOAD_SIGNING_KEY: ${{ secrets.DOWNLOAD_SIGNING_KEY }}
+          CF_OAUTH_CLIENT_ID: ${{ secrets.CF_OAUTH_CLIENT_ID }}
+          CF_OAUTH_CLIENT_SECRET: ${{ secrets.CF_OAUTH_CLIENT_SECRET }}
+          CF_TOKEN_ENCRYPTION_KEY: ${{ secrets.CF_TOKEN_ENCRYPTION_KEY }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          file="$RUNNER_TEMP/worker-secrets.json"
+          trap 'rm -f "$file"' EXIT
+          node scripts/secrets-file.mjs > "$file"
+          chmod 600 "$file"
+          cf deploy --mode "$MODE" --message "${{ github.sha }}" --secrets-file "$file"
 
       - name: Build and deploy web Worker
         working-directory: apps/web

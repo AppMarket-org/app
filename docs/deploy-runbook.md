@@ -48,22 +48,29 @@ The API also verifies Access's JWT on those routes (`src/auth/access.ts`).
 
 ### 4. Worker secrets
 
-Set once per environment, from a terminal (values are read without echo and never stored in files):
+Worker secrets live in the GitHub environment (`staging`, `production`) and are uploaded with every
+deploy (`scripts/secrets-file.mjs` → `cf deploy --secrets-file`). Change one by updating the GitHub
+secret and redeploying. Don't set them with `cf`/`wrangler`: the next deploy would overwrite them.
 
 ```sh
-cd apps/api
-for name in BETTER_AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET \
-  TURNSTILE_SECRET_KEY DOWNLOAD_SIGNING_KEY CF_OAUTH_CLIENT_ID CF_OAUTH_CLIENT_SECRET CF_TOKEN_ENCRYPTION_KEY \
-  R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
-  printf '%s: ' "$name"; read -rs V; echo
-  cf workers secrets update "$name" --worker appmarket-api-<staging|> --text "$V"; unset V
-done
+R=AppMarket-org/app; E=staging
+# Random keys, different per environment (never printed):
+for n in BETTER_AUTH_SECRET DOWNLOAD_SIGNING_KEY CF_TOKEN_ENCRYPTION_KEY; do openssl rand -base64 32 | tr -d '\n' | gh secret set $n --env $E --repo $R; done
+# Values from providers (prompts without echo):
+gh secret set GOOGLE_CLIENT_ID --env $E --repo $R
+gh secret set GOOGLE_CLIENT_SECRET --env $E --repo $R
+gh secret set OAUTH_GITHUB_CLIENT_ID --env $E --repo $R      # GitHub reserves the GITHUB_ prefix
+gh secret set OAUTH_GITHUB_CLIENT_SECRET --env $E --repo $R
+gh secret set TURNSTILE_SECRET_KEY --env $E --repo $R
+gh secret set CF_OAUTH_CLIENT_ID --env $E --repo $R
+gh secret set CF_OAUTH_CLIENT_SECRET --env $E --repo $R
+gh secret set R2_ACCESS_KEY_ID --env $E --repo $R
+gh secret set R2_SECRET_ACCESS_KEY --env $E --repo $R
 ```
 
-`BETTER_AUTH_SECRET`, `DOWNLOAD_SIGNING_KEY` and `CF_TOKEN_ENCRYPTION_KEY` are random
-(`openssl rand -base64 32`) and must differ between staging and production. The Worker has to exist
-before secrets can be set: the first deploy creates it, and endpoints that need a missing secret fail
-until it is set.
+The three random keys are required; the deploy refuses to run without them. Any other secret that is
+not set yet is deployed as `not-configured`, so its feature (that sign-in provider, Cloudflare
+connect, deploy builds) stays off until the real value is set and you redeploy.
 
 ### 5. GitHub
 
