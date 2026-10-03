@@ -43,7 +43,7 @@
           @if (d.error) {
             <pre><code>{{ d.error }}</code></pre>
           }
-          <a mat-stroked-button [routerLink]="['/apps', d.repoSlug]" [queryParams]="{ deploy: 1 }">Try again</a>
+          <a mat-stroked-button [routerLink]="'/' + d.repoFullName" [queryParams]="{ deploy: 1 }">Try again</a>
         }
       </mat-card-content>
     </mat-card>

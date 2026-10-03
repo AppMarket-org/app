@@ -12,13 +12,13 @@ describe('NewRepo', () => {
 
   it('creates the draft and opens its dashboard page', async () => {
     const cmp = TestBed.createComponent(NewRepo).componentInstance as unknown as { create(i: RepoInput): Promise<void> };
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const done = cmp.create(input);
     const req = TestBed.inject(HttpTestingController).expectOne('/api/repos');
     expect(req.request.body).toEqual(input);
-    req.flush({ slug: 'my-app' });
+    req.flush({ slug: 'my-app', fullName: 'dev/my-app' });
     await done;
-    expect(navigate).toHaveBeenCalledWith(['/dashboard/repos', 'my-app']);
+    expect(navigate).toHaveBeenCalledWith('/dashboard/repos/dev/my-app');
   });
 
   it('passes server field errors to the form', async () => {

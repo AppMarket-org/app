@@ -64,7 +64,7 @@ export async function finishDeployment(id: string, status: "succeeded" | "failed
 
 interface DeploymentRow {
 	id: string;
-	slug: string;
+	full_name: string;
 	name: string;
 	version_tag: string;
 	account_id: string;
@@ -76,12 +76,12 @@ interface DeploymentRow {
 	updated_at: string;
 }
 
-const SELECT = `SELECT d.id, l.slug, l.name, d.version_tag, d.account_id, d.worker_name, d.status, d.url, d.error, d.created_at, d.updated_at
-	FROM deployments d JOIN repos l ON l.id = d.repo_id`;
+const SELECT = `SELECT d.id, o.handle || '/' || l.slug AS full_name, l.name, d.version_tag, d.account_id, d.worker_name, d.status, d.url, d.error, d.created_at, d.updated_at
+	FROM deployments d JOIN repos l ON l.id = d.repo_id JOIN owners o ON o.id = l.owner_id`;
 
 const toDeployment = (r: DeploymentRow): Deployment => ({
 	id: r.id,
-	repoSlug: r.slug,
+	repoFullName: r.full_name,
 	repoName: r.name,
 	versionTag: r.version_tag,
 	accountId: r.account_id,

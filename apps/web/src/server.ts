@@ -7,8 +7,13 @@ const angularApp = new AngularAppEngine({
 
 const API_PATHS = /^\/(api\/|sitemap\.xml$|sitemaps\/)/;
 
-/** Public catalog pages cached at the edge for anonymous visitors (#45). */
-const CACHEABLE = /^\/($|apps\/[^/]+$|category\/[^/]+$|search$)/;
+/**
+ * Public catalog pages cached at the edge for anonymous visitors (#45): home, categories, search,
+ * and owner and repo pages (/:owner, /:owner/:repo, #102). Site paths are reserved handles.
+ */
+const CACHEABLE = /^\/($|category\/[^/]+$|search$|(?!(?:dashboard|settings|admin|login|legal|api|apps|sitemaps)(?:\/|$))[^/.]+(?:\/[^/.]+)?$)/;
+/** Links from before #102: /apps/:slug. */
+const LEGACY_APP = /^\/apps\/([^/]+)$/;
 const CACHE_SECONDS = 300;
 
 /**
@@ -25,6 +30,15 @@ export default {
 		const { pathname } = new URL(request.url);
 		if (API_PATHS.test(pathname)) {
 			return env.API.fetch(request);
+		}
+		// Old /apps/:slug links move permanently to /:owner/:slug.
+		const legacy = LEGACY_APP.exec(pathname);
+		if (legacy) {
+			const found = await env.API.fetch(new Request(new URL(`/api/legacy/apps/${legacy[1]}`, request.url)));
+			if (found.ok) {
+				const { fullName } = (await found.json()) as { fullName: string };
+				return Response.redirect(new URL(`/${fullName}${new URL(request.url).search}`, request.url).toString(), 301);
+			}
 		}
 		// SSR data requests reach the API over the service binding (see app/api/server-api.ts).
 		const context = { apiFetch: (apiRequest: Request) => env.API.fetch(apiRequest) };

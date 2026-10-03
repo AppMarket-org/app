@@ -46,8 +46,8 @@ export class RepoPage {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
-  protected async report(slug: string, name: string): Promise<void> {
-    const sent = await firstValueFrom(this.dialog.open<ReportDialog, { slug: string; name: string }, boolean>(ReportDialog, { data: { slug, name }, width: '36rem' }).afterClosed());
+  protected async report(path: string, name: string): Promise<void> {
+    const sent = await firstValueFrom(this.dialog.open<ReportDialog, { path: string; name: string }, boolean>(ReportDialog, { data: { path, name }, width: '36rem' }).afterClosed());
     if (sent) this.snackBar.open('Thanks. An admin will review your report.', 'OK', { duration: 5000 });
   }
 
@@ -59,15 +59,15 @@ export class RepoPage {
     const data = route.data['details'] as RepoDetails | null;
     const seo = inject(Seo);
     if (!data) {
-      seo.set({ title: 'App not found', description: 'This app does not exist or is not published.', path: `/apps/${route.paramMap.get('slug') ?? ''}`, noindex: true });
+      seo.set({ title: 'App not found', description: 'This app does not exist or is not published.', path: `/${route.paramMap.get('owner') ?? ''}/${route.paramMap.get('slug') ?? ''}`, noindex: true });
       return;
     }
     const app = data.repo;
     seo.set({
       title: app.name,
       description: app.summary,
-      path: `/apps/${app.slug}`,
-      heading: [{ label: app.owner.name }, { label: app.name }],
+      path: `/${app.fullName}`,
+      heading: [{ label: app.owner.handle, link: `/${app.owner.handle}` }, { label: app.slug }],
       image: data.screenshots[0] ? `https://appmarket.org${data.screenshots[0].url}` : undefined,
       noindex: app.state !== 'published',
       jsonLd: {

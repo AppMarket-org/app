@@ -4,7 +4,7 @@ import { Meta, Title } from '@angular/platform-browser';
 export interface PageSeo {
   title: string;
   description: string;
-  /** Path only, for example `/apps/my-app`. */
+  /** Path only, for example `/acme/my-app`. */
   path: string;
   image?: string;
   noindex?: boolean;

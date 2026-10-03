@@ -8,8 +8,8 @@ import { type Observable, map } from 'rxjs';
 export class DeploymentsApi {
   private readonly http = inject(HttpClient);
 
-  start(slug: string, request: DeploymentRequest): Observable<Deployment> {
-    return this.http.post<Deployment>(`/api/repos/${slug}/deployments`, request);
+  start(path: string, request: DeploymentRequest): Observable<Deployment> {
+    return this.http.post<Deployment>(`/api/repos/${path}/deployments`, request);
   }
 
   get(id: string): Observable<Deployment> {

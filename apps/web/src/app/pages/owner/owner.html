@@ -1,0 +1,33 @@
+@if (page(); as p) {
+  <header class="head">
+    <mat-icon class="avatar" aria-hidden="true">{{ p.owner.kind === 'org' ? 'corporate_fare' : 'person' }}</mat-icon>
+    <div>
+      <h1>{{ p.owner.name }}</h1>
+      <p class="handle">
+        {{ p.owner.handle }}
+        @if (p.owner.kind === 'org') {
+          <mat-chip-set aria-label="Account type"><mat-chip>Organization</mat-chip></mat-chip-set>
+        }
+      </p>
+    </div>
+  </header>
+
+  <section aria-labelledby="repos-heading">
+    <h2 id="repos-heading">Apps</h2>
+    @if (p.repos.length) {
+      <div class="cards">
+        @for (r of p.repos; track r.id) {
+          <app-repo-card [repo]="r" />
+        }
+      </div>
+    } @else {
+      <p class="empty">No public apps yet.</p>
+    }
+  </section>
+} @else {
+  <section>
+    <h1>Not found</h1>
+    <p>There is no user or organization with that name.</p>
+    <a mat-button routerLink="/search">Browse apps</a>
+  </section>
+}

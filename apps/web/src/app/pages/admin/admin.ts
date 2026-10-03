@@ -67,10 +67,10 @@ export class Admin {
     void this.reload();
   }
 
-  protected async loadReadme(slug: string): Promise<void> {
-    if (slug in this.readmes()) return;
-    const markdown = await firstValueFrom(this.api.readme(slug)).catch(() => null);
-    this.readmes.update((all) => ({ ...all, [slug]: markdown }));
+  protected async loadReadme(path: string): Promise<void> {
+    if (path in this.readmes()) return;
+    const markdown = await firstValueFrom(this.api.readme(path)).catch(() => null);
+    this.readmes.update((all) => ({ ...all, [path]: markdown }));
   }
 
   protected async approve(repo: Repo): Promise<void> {
@@ -107,7 +107,7 @@ export class Admin {
   }
 
   protected async takeDownReported(report: RepoReport): Promise<void> {
-    const repo = (this.published() ?? []).find((l) => l.slug === report.repo.slug);
+    const repo = (this.published() ?? []).find((l) => l.fullName === report.repo.fullName);
     if (!repo) {
       this.snackBar.open('Only published apps can be taken down from here.', 'OK', { duration: 5000 });
       return;
@@ -127,7 +127,7 @@ export class Admin {
 
   private async decide(repo: Repo, request: TransitionRequest, done: string): Promise<boolean> {
     return this.run(async () => {
-      await firstValueFrom(this.api.transition(repo.slug, request));
+      await firstValueFrom(this.api.transition(repo.fullName, request));
       this.snackBar.open(done, undefined, { duration: 3000 });
     });
   }

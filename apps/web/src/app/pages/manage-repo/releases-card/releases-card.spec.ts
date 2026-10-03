@@ -12,11 +12,11 @@ interface Internals {
 async function setup() {
   TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
   const fixture = TestBed.createComponent(ReleasesCard);
-  fixture.componentRef.setInput('slug', 'app');
+  fixture.componentRef.setInput('path', 'dev/app');
   fixture.componentRef.setInput('suggestedTag', 'v1.0.0');
   fixture.detectChanges();
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne('/api/repos/app/releases').flush({ items: [] });
+  http.expectOne('/api/repos/dev/app/releases').flush({ items: [] });
   return { fixture, http, cmp: fixture.componentInstance as unknown as Internals };
 }
 
@@ -26,14 +26,14 @@ describe('ReleasesCard', () => {
     cmp.form.patchValue({ platform: 'windows' });
     cmp.file.set(new File(['abc'], 'setup.zip'));
     const done = cmp.upload();
-    await vi.waitFor(() => http.expectOne((r) => r.url === '/api/repos/app/releases' && r.method === 'POST'), { timeout: 2000 }).then((req) => {
+    await vi.waitFor(() => http.expectOne((r) => r.url === '/api/repos/dev/app/releases' && r.method === 'POST'), { timeout: 2000 }).then((req) => {
       expect(req.request.params.get('tag')).toBe('v1.0.0');
       expect(req.request.params.get('platform')).toBe('windows');
       expect(req.request.params.get('filename')).toBe('setup.zip');
       expect(req.request.params.get('sha256')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
       req.flush({ id: 'r1' });
     });
-    await vi.waitFor(() => http.expectOne('/api/repos/app/releases').flush({ items: [] }));
+    await vi.waitFor(() => http.expectOne('/api/repos/dev/app/releases').flush({ items: [] }));
     await done;
   });
 

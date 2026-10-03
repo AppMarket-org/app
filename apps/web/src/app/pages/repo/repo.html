@@ -4,11 +4,11 @@
       <div class="title">
         <h1>{{ d.repo.name }}</h1>
         @if (d.repo.state === 'published') {
-          <app-cowbell-button [slug]="d.repo.slug" [name]="d.repo.name" [initialCount]="d.repo.cowbells" />
+          <app-cowbell-button [path]="d.repo.fullName" [name]="d.repo.name" [initialCount]="d.repo.cowbells" />
         }
       </div>
       <p class="summary">{{ d.repo.summary }}</p>
-      <p class="by">by {{ d.repo.owner.name }}</p>
+      <p class="by">by <a mat-button class="owner" [routerLink]="'/' + d.repo.owner.handle">{{ d.repo.owner.name }}</a></p>
       <div class="meta">
         <app-runtime-badge [runtime]="d.repo.runtime" />
         <mat-chip-set aria-label="Details">
@@ -62,11 +62,11 @@
           }
           <mat-divider />
         }
-        <app-get-code [slug]="d.repo.slug" />
+        <app-get-code [path]="d.repo.fullName" />
         @if (d.repo.state === 'published') {
-          <app-repo-map [slug]="d.repo.slug" />
+          <app-repo-map [path]="d.repo.fullName" />
         }
-        <button mat-button type="button" class="report" (click)="report(d.repo.slug, d.repo.name)"><mat-icon>flag</mat-icon>Report this app</button>
+        <button mat-button type="button" class="report" (click)="report(d.repo.fullName, d.repo.name)"><mat-icon>flag</mat-icon>Report this app</button>
         <mat-divider />
         <section aria-labelledby="versions-heading">
           <h2 id="versions-heading">Versions</h2>

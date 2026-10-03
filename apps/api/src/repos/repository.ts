@@ -13,7 +13,7 @@ import type {
 	TransitionActor,
 	TransitionRequest,
 } from "@appmarket/shared";
-import { slugify } from "@appmarket/shared";
+import { slugify, type OwnerKind } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 import { transitionUpdate } from "./transition-sql.ts";
 
@@ -34,6 +34,8 @@ interface RepoRow {
 	state: RepoState;
 	owner_id: string;
 	owner_name: string;
+	owner_handle: string;
+	owner_kind: OwnerKind;
 	git_repo: string | null;
 	submitted_tag: string | null;
 	submitted_commit: string | null;
@@ -46,7 +48,9 @@ interface RepoRow {
 	updated_at: string;
 }
 
-const SELECT = `SELECT l.*, u.name AS owner_name FROM repos l JOIN "user" u ON u.id = l.owner_id`;
+// The owner is a user or an organization (#102); users show their profile name.
+const SELECT = `SELECT l.*, o.handle AS owner_handle, o.kind AS owner_kind, COALESCE(o.name, u.name, o.handle) AS owner_name
+	FROM repos l JOIN owners o ON o.id = l.owner_id LEFT JOIN "user" u ON u.id = o.user_id`;
 
 function toRepo(row: RepoRow): Repo {
 	return {
@@ -61,7 +65,8 @@ function toRepo(row: RepoRow): Repo {
 		license: row.license,
 		priceCents: row.price_cents,
 		state: row.state,
-		owner: { id: row.owner_id, name: row.owner_name },
+		owner: { id: row.owner_id, handle: row.owner_handle, kind: row.owner_kind, name: row.owner_name },
+		fullName: `${row.owner_handle}/${row.slug}`,
 		gitRepo: row.git_repo,
 		submittedTag: row.submitted_tag,
 		submittedCommit: row.submitted_commit,
@@ -94,8 +99,15 @@ export class RepoStore {
 		};
 	}
 
-	async findBySlug(slug: string): Promise<Repo | null> {
-		const row = await this.db.prepare(`${SELECT} WHERE l.slug = ?`).bind(slug).first<RepoRow>();
+	/** A repo by its path, `owner/slug` (owner handles compare case-insensitively). */
+	async findByPath(owner: string, slug: string): Promise<Repo | null> {
+		const row = await this.db.prepare(`${SELECT} WHERE o.handle = ? AND l.slug = ?`).bind(owner, slug).first<RepoRow>();
+		return row ? toRepo(row) : null;
+	}
+
+	/** Old /apps/:slug links (before #102): the published repo that had that slug. */
+	async findLegacy(slug: string): Promise<Repo | null> {
+		const row = await this.db.prepare(`${SELECT} WHERE l.slug = ? AND l.state = 'published' ORDER BY l.created_at LIMIT 1`).bind(slug).first<RepoRow>();
 		return row ? toRepo(row) : null;
 	}
 
@@ -112,28 +124,39 @@ export class RepoStore {
 		return ids.flatMap((id) => byId.get(id) ?? []);
 	}
 
-	async listByOwner(ownerId: string): Promise<Repo[]> {
+	/** Repos under any of these owners (a user and their organizations), newest change first. */
+	async listByOwners(ownerIds: string[]): Promise<Repo[]> {
 		const { results } = await this.db
-			.prepare(`${SELECT} WHERE l.owner_id = ? AND l.state != 'removed' ORDER BY l.updated_at DESC`)
+			.prepare(`${SELECT} WHERE l.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND l.state != 'removed' ORDER BY l.updated_at DESC`)
+			.bind(...ownerIds)
+			.all<RepoRow>();
+		return results.map(toRepo);
+	}
+
+	/** An owner's public repos (owner pages). */
+	async listPublicByOwner(ownerId: string): Promise<Repo[]> {
+		const { results } = await this.db
+			.prepare(`${SELECT} WHERE l.owner_id = ? AND l.state = 'published' ORDER BY l.cowbell_count DESC, l.updated_at DESC LIMIT 200`)
 			.bind(ownerId)
 			.all<RepoRow>();
 		return results.map(toRepo);
 	}
 
 	/** A new repo id and a slug not yet used, derived from the name. */
-	async reserve(name: string): Promise<{ id: string; slug: string }> {
-		return { id: crypto.randomUUID(), slug: await this.uniqueSlug(slugify(name)) };
+	/** Names are unique per owner: alice/todo and acme/todo can both exist. */
+	async reserve(ownerId: string, name: string): Promise<{ id: string; slug: string }> {
+		return { id: crypto.randomUUID(), slug: await this.uniqueSlug(ownerId, slugify(name)) };
 	}
 
 	/** Inserts a draft. Fails on a slug or repo name collision (UNIQUE constraints). */
-	async insert(ids: { id: string; slug: string }, ownerId: string, input: RepoInput, gitRepo: string): Promise<Repo> {
+	async insert(ids: { id: string; slug: string }, ownerId: string, createdBy: string, input: RepoInput, gitRepo: string): Promise<Repo> {
 		await this.db
 			.prepare(
-				"INSERT INTO repos (id, owner_id, slug, name, summary, description, category, runtime, platforms, license, git_repo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				"INSERT INTO repos (id, owner_id, created_by, slug, name, summary, description, category, runtime, platforms, license, git_repo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
-			.bind(ids.id, ownerId, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo)
+			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo)
 			.run();
-		return (await this.findBySlug(ids.slug))!;
+		return (await this.findById(ids.id))!;
 	}
 
 	/** Updates editable fields. The slug stays fixed so published URLs never break. */
@@ -156,8 +179,9 @@ export class RepoStore {
 	}
 
 	/** Repos an owner has that are not removed (R19 quota). */
-	async countActiveByOwner(ownerId: string): Promise<number> {
-		const row = await this.db.prepare("SELECT COUNT(*) AS n FROM repos WHERE owner_id = ? AND state != 'removed'").bind(ownerId).first<{ n: number }>();
+	/** R19 quota: repos a user created that are not removed (in any namespace). */
+	async countActiveByCreator(userId: string): Promise<number> {
+		const row = await this.db.prepare("SELECT COUNT(*) AS n FROM repos WHERE created_by = ? AND state != 'removed'").bind(userId).first<{ n: number }>();
 		return row?.n ?? 0;
 	}
 
@@ -247,10 +271,10 @@ export class RepoStore {
 		return results.map((r) => ({ tag: r.tag, commit: r.commit_hash, releaseNotes: r.release_notes, publishedAt: r.published_at }));
 	}
 
-	private async uniqueSlug(base: string): Promise<string> {
+	private async uniqueSlug(ownerId: string, base: string): Promise<string> {
 		const { results } = await this.db
-			.prepare("SELECT slug FROM repos WHERE slug = ? OR slug LIKE ?")
-			.bind(base, `${base}-%`)
+			.prepare("SELECT slug FROM repos WHERE owner_id = ? AND (slug = ? OR slug LIKE ?)")
+			.bind(ownerId, base, `${base}-%`)
 			.all<{ slug: string }>();
 		const taken = new Set(results.map((r) => r.slug));
 		if (!taken.has(base)) return base;

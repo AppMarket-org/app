@@ -6,6 +6,18 @@
     <mat-progress-bar mode="indeterminate" aria-label="Creating your repo" />
   }
   <mat-card-content>
+    @if (auth.orgs().length) {
+      <mat-form-field appearance="outline" class="owner" subscriptSizing="dynamic">
+        <mat-label>Owner</mat-label>
+        <mat-select [ngModel]="owner()" (ngModelChange)="owner.set($event)" name="owner">
+          <mat-option value="">{{ auth.owner()?.handle ?? 'You' }} (you)</mat-option>
+          @for (m of auth.orgs(); track m.org.id) {
+            <mat-option [value]="m.org.handle">{{ m.org.handle }} ({{ m.org.name }})</mat-option>
+          }
+        </mat-select>
+        <mat-hint>It will live at appmarket.org/{{ ownerHandle() }}/…</mat-hint>
+      </mat-form-field>
+    }
     <app-repo-form submitLabel="Create draft" [saving]="saving()" [errorMessage]="errorMessage()" [fieldErrors]="fieldErrors()" (saved)="create($event)" />
   </mat-card-content>
 </mat-card>

@@ -1,0 +1,62 @@
+<h1>Settings</h1>
+
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Username</mat-card-title>
+    <mat-card-subtitle>Your repos live at appmarket.org/{{ owner()?.handle ?? '…' }}/…</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (owner()) {
+      <form class="row" (ngSubmit)="saveHandle()" novalidate>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Username</mat-label>
+          <input matInput [formControl]="handle" autocomplete="username" spellcheck="false" maxlength="39" />
+          <mat-hint>Lowercase letters, numbers and hyphens. Changing it changes your repo links.</mat-hint>
+          @if (handle.hasError('reserved')) {
+            <mat-error>That name is reserved.</mat-error>
+          } @else {
+            <mat-error>Use lowercase letters, numbers and single hyphens (up to 39).</mat-error>
+          }
+        </mat-form-field>
+        <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
+      </form>
+      @if (error(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+    } @else {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+    }
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Organizations</mat-card-title>
+    <mat-card-subtitle>Share repos with a team under one name, like appmarket.org/acme/…</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @switch (orgs()) {
+      @case (undefined) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading organizations" />
+      }
+      @default {
+        @if (orgs()!.length) {
+          <mat-nav-list aria-label="Your organizations">
+            @for (m of orgs(); track m.org.id) {
+              <a mat-list-item [routerLink]="['/settings/orgs', m.org.handle]">
+                <mat-icon matListItemIcon aria-hidden="true">corporate_fare</mat-icon>
+                <span matListItemTitle>{{ m.org.name }}</span>
+                <span matListItemLine>{{ m.org.handle }} · {{ m.role === 'owner' ? 'Owner' : 'Member' }}</span>
+              </a>
+            }
+          </mat-nav-list>
+        } @else {
+          <p class="empty">You are not in any organization.</p>
+        }
+      }
+    }
+  </mat-card-content>
+  <mat-card-actions>
+    <a mat-stroked-button routerLink="/settings/orgs/new"><mat-icon>add</mat-icon>New organization</a>
+  </mat-card-actions>
+</mat-card>

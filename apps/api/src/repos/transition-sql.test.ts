@@ -12,7 +12,8 @@ function freshDb() {
 	for (const file of readdirSync(MIGRATIONS).sort()) db.exec(readFileSync(join(MIGRATIONS, file), "utf8"));
 	db.prepare(`INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt, role) VALUES ('u1', 'Dev', 'd@x.test', 1, 0, 0, 'developer')`).run();
 	db.prepare(`INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt, role) VALUES ('a1', 'Admin', 'a@x.test', 1, 0, 0, 'admin')`).run();
-	db.prepare(`INSERT INTO repos (id, owner_id, slug, name, summary, category) VALUES ('l1', 'u1', 'app', 'App', 'Summary text', 'ai')`).run();
+	db.prepare(`INSERT INTO owners (id, handle, kind, user_id) VALUES ('u1', 'dev', 'user', 'u1')`).run();
+	db.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category) VALUES ('l1', 'u1', 'u1', 'app', 'App', 'Summary text', 'ai')`).run();
 	return db;
 }
 

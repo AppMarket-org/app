@@ -33,12 +33,18 @@
     text-overflow: ellipsis;
   }
 
+  a {
+    --mat-button-text-horizontal-padding: 0.25rem;
+    min-width: 0;
+    font: inherit;
+  }
+
   .current {
     font-weight: 600;
   }
 
   .separator {
-    margin: 0 0.5rem;
+    margin: 0 0.25rem;
     color: var(--mat-sys-on-surface-variant);
   }
 }
@@ -65,4 +71,9 @@ footer {
 
 .account {
   font: var(--mat-sys-label-large);
+}
+
+.me {
+  margin-left: 0.5rem;
+  color: var(--mat-sys-on-surface-variant);
 }

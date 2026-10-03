@@ -1,3 +1,4 @@
+import type { OwnerKind } from "./owners";
 import type { ContractIssue, DeployManifest } from "./manifest";
 
 // Repo lifecycle (PRD R12). A published version pins to a Git tag in the app's Artifacts repo.
@@ -68,7 +69,10 @@ export interface Repo {
 	license: string | null;
 	priceCents: number;
 	state: RepoState;
-	owner: { id: string; name: string };
+	/** The user or organization the repo lives under: appmarket.org/<owner.handle>/<slug>. */
+	owner: { id: string; handle: string; kind: OwnerKind; name: string };
+	/** `owner/slug`, the repo's path on the site and in the API. */
+	fullName: string;
 	gitRepo: string | null;
 	/** Tag awaiting review while submitted, and the commit it pointed to at submission. */
 	submittedTag: string | null;

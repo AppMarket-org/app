@@ -43,7 +43,7 @@ export class DeployAction {
     if (a.reason === 'runtime') return `One-click deploy is not available for ${RUNTIMES[l.runtime].name} apps yet. Get the code below and deploy it with Wrangler.`;
     return DEPLOY_UNAVAILABLE[a.reason];
   });
-  protected readonly returnPath = computed(() => `/apps/${this.repo().slug}?deploy=1`);
+  protected readonly returnPath = computed(() => `/${this.repo().fullName}?deploy=1`);
 
   async ngOnInit(): Promise<void> {
     if (!this.isBrowser || this.route.snapshot.queryParamMap.get('deploy') !== '1' || !this.deployable()) return;
@@ -53,7 +53,7 @@ export class DeployAction {
 
   protected async open(): Promise<void> {
     const l = this.repo();
-    const data: DeployDialogData = { slug: l.slug, name: l.name, version: l.publishedTag ?? '', secrets: l.manifest?.secrets ?? [] };
+    const data: DeployDialogData = { path: l.fullName, slug: l.slug, name: l.name, version: l.publishedTag ?? '', secrets: l.manifest?.secrets ?? [] };
     const deployment = await firstValueFrom(this.dialog.open<DeployDialog, DeployDialogData, Deployment>(DeployDialog, { data, width: '32rem', maxWidth: '95vw' }).afterClosed());
     if (deployment) await this.router.navigate(['/dashboard/deployments', deployment.id]);
   }

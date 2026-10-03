@@ -1,0 +1,30 @@
+h1 {
+  font: var(--mat-sys-headline-medium);
+  margin: 0 0 0.5rem;
+}
+
+.intro {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 1rem;
+}
+
+mat-card {
+  max-width: 35rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}

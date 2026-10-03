@@ -14,13 +14,13 @@ import { logEvent } from "../observability/log.ts";
 type Ctx = { Variables: AuthVariables };
 
 /** PRD D6: start a deploy of a repo's published version. Mounted under /api/repos. */
-export const repoDeployRoutes = new Hono<Ctx>().post("/:slug/deployments", requireRole(), async (c) => {
+export const repoDeployRoutes = new Hono<Ctx>().post("/:owner/:slug/deployments", requireRole(), async (c) => {
 	const request = deploymentRequestSchema.safeParse(await c.req.json().catch(() => null));
 	if (!request.success) return c.json({ error: "invalid", issues: request.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
 	const { accountId, workerName, secrets } = request.data;
 	const userId = c.get("session")!.user.id;
 
-	const repo = await new RepoStore(env.DB).findBySlug(c.req.param("slug"));
+	const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
 	if (!repo || repo.state !== "published" || !repo.gitRepo || !repo.publishedTag || !repo.publishedCommit) return c.json({ error: "not_found" }, 404);
 	// D4: the same rule the repo page uses to show the Deploy action.
 	const availability = deployAvailability(repo);

@@ -13,6 +13,9 @@ import { CloudflareApi } from '../../api/cloudflare';
 import { DeploymentsApi } from '../../api/deployments';
 
 export interface DeployDialogData {
+  /** The repo's path, `owner/slug`. */
+  path: string;
+  /** Default Worker name. */
   slug: string;
   name: string;
   version: string;
@@ -47,7 +50,7 @@ export class DeployDialog {
 
   /** undefined while loading, null when the buyer has to connect (or reconnect) first. */
   protected readonly accounts = signal<CloudflareAccount[] | null | undefined>(undefined);
-  protected readonly connectUrl = this.cloudflare.connectUrl(`/apps/${this.data.slug}?deploy=1`);
+  protected readonly connectUrl = this.cloudflare.connectUrl(`/${this.data.path}?deploy=1`);
   protected readonly sending = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -76,7 +79,7 @@ export class DeployDialog {
     this.error.set(null);
     const { accountId, workerName, secrets } = this.form.getRawValue();
     try {
-      const deployment = await firstValueFrom(this.deployments.start(this.data.slug, { accountId, workerName, secrets }));
+      const deployment = await firstValueFrom(this.deployments.start(this.data.path, { accountId, workerName, secrets }));
       this.form.controls.secrets.reset();
       this.ref.close(deployment);
     } catch (e) {

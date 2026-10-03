@@ -8,7 +8,7 @@ interface ReportRow {
 	created_at: string;
 	resolved_at: string | null;
 	resolution: string | null;
-	slug: string;
+	full_name: string;
 	name: string;
 	state: string;
 }
@@ -29,13 +29,13 @@ export class Reports {
 	async list(status: "open" | "resolved"): Promise<RepoReport[]> {
 		const { results } = await this.db
 			.prepare(
-				`SELECT r.*, l.slug, l.name, l.state FROM repo_reports r JOIN repos l ON l.id = r.repo_id
+				`SELECT r.*, o.handle || '/' || l.slug AS full_name, l.name, l.state FROM repo_reports r JOIN repos l ON l.id = r.repo_id JOIN owners o ON o.id = l.owner_id
 				 WHERE r.resolved_at IS ${status === "open" ? "" : "NOT "}NULL ORDER BY r.created_at ${status === "open" ? "ASC" : "DESC"} LIMIT 200`,
 			)
 			.all<ReportRow>();
 		return results.map((r) => ({
 			id: r.id,
-			repo: { slug: r.slug, name: r.name, state: r.state },
+			repo: { fullName: r.full_name, name: r.name, state: r.state },
 			reason: r.reason,
 			details: r.details,
 			contact: r.contact,

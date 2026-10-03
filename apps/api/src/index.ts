@@ -12,6 +12,7 @@ import { downloadRoutes, repoReleaseRoutes, releaseLinkRoutes } from "./releases
 import { clientIp, rateLimit } from "./rate-limit.ts";
 import { sitemap, sitemapPage } from "./routes/seo.ts";
 import { onError } from "./observability/errors.ts";
+import { legacyRoutes, meRoutes, orgRoutes, ownerRoutes } from "./owners/routes.ts";
 
 // appmarket.org API. The Angular web Worker forwards /api/* and /sitemap.xml here via a service binding.
 const api = new Hono<{ Variables: AuthVariables }>();
@@ -35,6 +36,10 @@ api.route("/repos", reportRoutes);
 api.route("/repos", repoDeployRoutes);
 api.route("/repos", repoCowbellRoutes);
 api.route("/cowbells", cowbellRoutes);
+api.route("/owners", ownerRoutes);
+api.route("/me", meRoutes);
+api.route("/orgs", orgRoutes);
+api.route("/legacy", legacyRoutes);
 api.route("/deployments", deploymentRoutes);
 api.route("/releases", releaseLinkRoutes);
 api.route("/downloads", downloadRoutes);

@@ -9,7 +9,8 @@ export const WORKER_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 export interface Deployment {
 	id: string;
-	repoSlug: string;
+	/** `owner/slug` of the deployed repo (#102). */
+	repoFullName: string;
 	repoName: string;
 	versionTag: string;
 	accountId: string;

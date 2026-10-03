@@ -14,10 +14,10 @@ const perUserOrIp = (c: Context<Ctx>) => c.get("session")?.user.id ?? `ip:${clie
 
 /** PRD R18: anyone can report a visible repo (Turnstile + rate limit). Mounted under /api/repos. */
 export const reportRoutes = new Hono<Ctx>().post(
-	"/:slug/reports",
+	"/:owner/:slug/reports",
 	rateLimit<Ctx>(() => env.RL_REPORT, perUserOrIp, env.RATE_LIMIT_CONFIG.REPORT.period),
 	async (c) => {
-		const repo = await new RepoStore(env.DB).findBySlug(c.req.param("slug"));
+		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
 		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		if (!(await verifyTurnstile(env.TURNSTILE_SECRET_KEY, c.req.header("x-captcha-response"), c.req.header("cf-connecting-ip")))) {
 			return c.json({ error: "captcha_failed" }, 403);

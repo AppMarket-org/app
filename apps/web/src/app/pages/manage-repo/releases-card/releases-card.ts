@@ -33,7 +33,8 @@ const ERRORS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReleasesCard {
-  readonly slug = input.required<string>();
+  /** The repo's path, `owner/slug`. */
+  readonly path = input.required<string>();
   readonly suggestedTag = input<string | null>(null);
 
   private readonly api = inject(Developer);
@@ -78,7 +79,7 @@ export class ReleasesCard {
       const { tag, platform } = this.form.getRawValue();
       this.progress.set(0);
       await lastValueFrom(
-        this.api.uploadRelease(this.slug(), file, { tag: tag.trim(), platform, sha256 }).pipe(
+        this.api.uploadRelease(this.path(), file, { tag: tag.trim(), platform, sha256 }).pipe(
           tap((event) => {
             if (event.type === HttpEventType.UploadProgress && event.total) this.progress.set(Math.round((100 * event.loaded) / event.total));
           }),
@@ -97,7 +98,7 @@ export class ReleasesCard {
 
   protected async remove(release: Release): Promise<void> {
     try {
-      await firstValueFrom(this.api.deleteRelease(this.slug(), release.id));
+      await firstValueFrom(this.api.deleteRelease(this.path(), release.id));
       this.releases.update((list) => list.filter((r) => r.id !== release.id));
     } catch {
       this.snackBar.open('Could not delete the file.', 'OK', { duration: 5000 });
@@ -106,7 +107,7 @@ export class ReleasesCard {
 
   private async load(): Promise<void> {
     try {
-      this.releases.set(await firstValueFrom(this.api.releases(this.slug())));
+      this.releases.set(await firstValueFrom(this.api.releases(this.path())));
     } catch {
       this.releases.set([]);
     }

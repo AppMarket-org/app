@@ -62,7 +62,7 @@
           <span class="updated">Updated {{ item.updatedAt | date: 'mediumDate' }}</span>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-button [routerLink]="['/dashboard/repos', item.slug]" [attr.aria-label]="'Manage ' + item.name">Manage</a>
+          <a mat-button [routerLink]="'/dashboard/repos/' + item.fullName" [attr.aria-label]="'Manage ' + item.name">Manage</a>
         </mat-card-actions>
       </mat-card>
     } @empty {

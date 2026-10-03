@@ -17,7 +17,8 @@ export interface RepoDetails {
 export const repoResolver: ResolveFn<RepoDetails | null> = (route) => {
   const response = inject(RESPONSE_INIT, { optional: true });
   const catalog = inject(Catalog);
-  const slug = encodeURIComponent(route.paramMap.get('slug') ?? '');
+  // #102: repos live at /:owner/:slug; the API addresses them the same way.
+  const slug = `${encodeURIComponent(route.paramMap.get('owner') ?? '')}/${encodeURIComponent(route.paramMap.get('slug') ?? '')}`;
   return inject(HttpClient)
     .get<Repo>(`/api/repos/${slug}`)
     .pipe(
