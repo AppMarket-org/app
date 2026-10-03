@@ -71,8 +71,16 @@ export interface Checkpoint extends Omit<CheckpointRecord, "prompts" | "assistan
 	usage?: CheckpointRecord["usage"];
 }
 
+export interface CheckpointSummary {
+	total: number;
+	/** Commits per harness ("none" = manual). */
+	harnesses: Partial<Record<Harness, number>>;
+}
+
 export interface CheckpointPage {
 	items: Checkpoint[];
+	/** On the first page only: counts over every checkpoint the viewer may see. */
+	summary?: CheckpointSummary;
 	/** Pass as `before` to get the next (older) page; null at the end. */
 	next: string | null;
 }

@@ -20,6 +20,7 @@ import { ReportDialog } from '../../components/report-dialog/report-dialog';
 import { GetCode } from '../../components/get-code/get-code';
 import { Markdown } from '../../components/markdown/markdown';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
+import { builtWith, summaryLine } from '../../components/checkpoint-details/timeline';
 import { Seo } from '../../seo/seo';
 import { firstValueFrom } from 'rxjs';
 import type { RepoDetails } from './repo-resolver';
@@ -52,6 +53,8 @@ export class RepoPage {
   }
 
   protected readonly platformName = (p: keyof typeof PLATFORM_NAMES) => PLATFORM_NAMES[p];
+  protected readonly builtWith = builtWith;
+  protected readonly summaryLine = summaryLine;
   protected readonly categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
 
   constructor() {

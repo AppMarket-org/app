@@ -1,9 +1,10 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { RESPONSE_INIT, inject } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
-import type { Repo, RepoVersion, Release, Screenshot } from '@appmarket/shared';
+import type { CheckpointSummary, Repo, RepoVersion, Release, Screenshot } from '@appmarket/shared';
 import { catchError, forkJoin, map, of, switchMap, throwError } from 'rxjs';
 import { Catalog } from '../../api/catalog';
+import { CheckpointsApi } from '../../api/checkpoints';
 
 export interface RepoDetails {
   repo: Repo;
@@ -11,12 +12,15 @@ export interface RepoDetails {
   versions: RepoVersion[];
   readme: string | null;
   releases: Release[];
+  /** Published checkpoints (#117), for the build history link. */
+  history: CheckpointSummary | null;
 }
 
 /** Loads the repo and its details before render (SSR waits); a missing repo becomes an HTTP 404. */
 export const repoResolver: ResolveFn<RepoDetails | null> = (route) => {
   const response = inject(RESPONSE_INIT, { optional: true });
   const catalog = inject(Catalog);
+  const checkpoints = inject(CheckpointsApi);
   // #102: repos live at /:owner/:slug; the API addresses them the same way.
   const slug = `${encodeURIComponent(route.paramMap.get('owner') ?? '')}/${encodeURIComponent(route.paramMap.get('slug') ?? '')}`;
   return inject(HttpClient)
@@ -29,6 +33,10 @@ export const repoResolver: ResolveFn<RepoDetails | null> = (route) => {
           // No README (404) is normal; show nothing.
           readme: catalog.readme(slug).pipe(catchError(() => of(null))),
           releases: catalog.releases(slug).pipe(catchError(() => of([]))),
+          history: checkpoints.list(slug, { view: 'public', limit: 1 }).pipe(
+            map((page) => page.summary ?? null),
+            catchError(() => of(null)),
+          ),
         }).pipe(map((details) => ({ repo, ...details }))),
       ),
       catchError((error: unknown) => {

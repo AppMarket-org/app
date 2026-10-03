@@ -1,4 +1,4 @@
-import type { Checkpoint, CheckpointPage, CheckpointRecord, CheckpointState, CheckpointVisibility } from "@appmarket/shared";
+import type { Checkpoint, CheckpointPage, CheckpointRecord, CheckpointState, CheckpointSummary, CheckpointVisibility, Harness } from "@appmarket/shared";
 
 interface Row {
 	repo_id: string;
@@ -11,7 +11,7 @@ interface Row {
 	received_at: string;
 }
 
-/** Who is reading: owners see everything; others see prompt details only on non-private checkpoints. */
+/** Who is reading: owners see everything; everyone else only checkpoints the owner published (listing or public). */
 export type CheckpointViewer = "owner" | "public";
 
 export type PutResult = { status: 201 | 200; checkpoint: Checkpoint } | { status: 409; checkpoint: Checkpoint };
@@ -37,11 +37,9 @@ async function hashOf(record: CheckpointRecord): Promise<string> {
 function toCheckpoint(row: Row, repoPath: string, viewer: CheckpointViewer): Checkpoint {
 	const record = JSON.parse(row.record) as CheckpointRecord;
 	const base: Checkpoint = { ...record, repo: repoPath, state: row.state, visibility: row.visibility, device: row.device, received_at: row.received_at };
-	// PRD "Visibility": commit metadata is visible wherever the commit is; prompts, assistant text,
-	// tools and usage follow the checkpoint's visibility.
-	if (viewer === "owner" || row.visibility !== "private") return base;
-	const { prompts: _p, assistant_summary: _a, tools: _t, usage: _u, ...metadata } = base;
-	return metadata;
+	if (viewer === "owner") return base;
+	// #117: others never see private checkpoints (callers filter them out), the author's email or the device name.
+	return { ...base, author: { name: base.author.name, email: "" }, device: null };
 }
 
 /** Checkpoints PRD (#111): one record per (repo, commit), idempotent. */
@@ -74,7 +72,7 @@ export class CheckpointStore {
 
 	async get(repo: { id: string; path: string }, sha: string, viewer: CheckpointViewer): Promise<Checkpoint | null> {
 		const row = await this.row(repo.id, sha);
-		return row ? toCheckpoint(row, repo.path, viewer) : null;
+		return row && (viewer === "owner" || row.visibility !== "private") ? toCheckpoint(row, repo.path, viewer) : null;
 	}
 
 	/** Newest first; `before` is the previous page's last received_at. */
@@ -84,7 +82,7 @@ export class CheckpointStore {
 		filter: { before?: string; branch?: string; session?: string; limit?: number } = {},
 	): Promise<CheckpointPage> {
 		const limit = Math.min(Math.max(filter.limit ?? 50, 1), 100);
-		const where = ["repo_id = ?"];
+		const where = viewer === "owner" ? ["repo_id = ?"] : ["repo_id = ?", "visibility != 'private'"];
 		const params: unknown[] = [repo.id];
 		if (filter.before) (where.push("received_at < ?"), params.push(filter.before));
 		if (filter.branch) (where.push("branch = ?"), params.push(filter.branch));
@@ -94,7 +92,19 @@ export class CheckpointStore {
 			.bind(...params, limit + 1)
 			.all<Row>();
 		const page = results.slice(0, limit);
-		return { items: page.map((r) => toCheckpoint(r, repo.path, viewer)), next: results.length > limit ? page.at(-1)!.received_at : null };
+		return {
+			items: page.map((r) => toCheckpoint(r, repo.path, viewer)),
+			next: results.length > limit ? page.at(-1)!.received_at : null,
+			...(filter.before ? {} : { summary: await this.summary(repo.id, viewer) }),
+		};
+	}
+
+	async summary(repoId: string, viewer: CheckpointViewer): Promise<CheckpointSummary> {
+		const { results } = await this.db
+			.prepare(`SELECT harness, COUNT(*) AS n FROM checkpoints WHERE repo_id = ?${viewer === "owner" ? "" : " AND visibility != 'private'"} GROUP BY harness`)
+			.bind(repoId)
+			.all<{ harness: Harness; n: number }>();
+		return { total: results.reduce((t, r) => t + r.n, 0), harnesses: Object.fromEntries(results.map((r) => [r.harness, r.n])) };
 	}
 
 	async setVisibility(repoId: string, sha: string, visibility: CheckpointVisibility): Promise<boolean> {

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { Checkpoint } from '@appmarket/shared';
 import { CheckpointsPage } from './checkpoints';
-import { effortLine, groupBySession } from './timeline';
+import { effortLine, groupBySession } from '../../components/checkpoint-details/timeline';
 
 function checkpoint(n: number, extra: Partial<Checkpoint> = {}): Checkpoint {
   return {
@@ -57,7 +57,7 @@ describe('CheckpointsPage', () => {
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/repos/dev/app').flush({ name: 'App', fullName: 'dev/app', checkpointVisibility: 'private' });
-    http.expectOne((r) => r.url === '/api/repos/dev/app/checkpoints').flush({ items: [checkpoint(2), checkpoint(1, { state: 'attached' })], next: null });
+    http.expectOne((r) => r.url === '/api/repos/dev/app/checkpoints').flush({ items: [checkpoint(2), checkpoint(1, { state: 'attached' })], next: null, summary: { total: 2, harnesses: { 'claude-code': 2 } } });
     const el = fixture.nativeElement as HTMLElement;
     await vi.waitFor(() => {
       fixture.detectChanges();
@@ -70,7 +70,7 @@ describe('CheckpointsPage', () => {
   it('shows the session, states and prompt previews', async () => {
     const { el } = await setup();
     expect(el.textContent).toContain('Claude Code · claude-opus-5-5');
-    expect(el.textContent).toContain('2 commits, 2 by an agent, 0 manual');
+    expect(el.textContent).toContain('2 commits, 2 by Claude Code.');
     expect(el.textContent).toContain('Prompt 2');
     expect(el.textContent).toContain('pending');
     expect(el.textContent).toContain('attached');

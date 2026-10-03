@@ -1,0 +1,54 @@
+@let c = checkpoint();
+<div class="meta">
+  @if (effortLine(c); as line) {
+    <span><mat-icon inline>bolt</mat-icon>{{ line }}</span>
+  }
+  @if (effortLabel(c.effort.level); as effort) {
+    <span><mat-icon inline>psychology</mat-icon>{{ effort }}{{ c.effort.raw && c.effort.raw !== c.effort.level ? ' (' + c.effort.raw + ')' : '' }}</span>
+  }
+  <span><mat-icon inline>schedule</mat-icon>{{ c.created_at | date: 'medium' }}</span>
+  @if (c.branch) {
+    <span><mat-icon inline>alt_route</mat-icon>{{ c.branch }}</span>
+  }
+  @if (c.device) {
+    <span><mat-icon inline>laptop</mat-icon>{{ c.device }}</span>
+  }
+  @if (c.redactions) {
+    <span><mat-icon inline>visibility_off</mat-icon>{{ c.redactions }} redacted</span>
+  }
+  @if (c.source === 'agent-reported') {
+    <span><mat-icon inline>info</mat-icon>Reported by the agent</span>
+  }
+</div>
+
+@if (c.prompts?.length) {
+  <h3>Prompts</h3>
+  @for (p of c.prompts; track $index) {
+    <blockquote>{{ p.text }}</blockquote>
+  }
+}
+@if (c.assistant_summary) {
+  <h3>Agent's last message</h3>
+  <p class="summary">{{ c.assistant_summary }}</p>
+}
+@if (c.tools?.length) {
+  <h3>Tools ({{ c.tools!.length }})</h3>
+  <mat-list dense>
+    @for (t of c.tools; track $index) {
+      <mat-list-item>
+        <mat-icon matListItemIcon>{{ t.outcome === 'error' ? 'error_outline' : 'check' }}</mat-icon>
+        <span matListItemTitle>{{ t.name }}</span>
+        <span matListItemLine><code>{{ t.args_summary }}</code></span>
+      </mat-list-item>
+    }
+  </mat-list>
+}
+<h3>Files ({{ c.files.length }}{{ c.truncated ? '+' : '' }})</h3>
+<mat-list dense>
+  @for (f of c.files; track f.path) {
+    <mat-list-item>
+      <span matListItemTitle><code>{{ f.path }}</code></span>
+      <span matListItemMeta class="diff"><span class="added">+{{ f.added }}</span> <span class="removed">−{{ f.removed }}</span></span>
+    </mat-list-item>
+  }
+</mat-list>

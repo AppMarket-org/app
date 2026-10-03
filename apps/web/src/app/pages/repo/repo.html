@@ -68,6 +68,14 @@
         }
         <button mat-button type="button" class="report" (click)="report(d.repo.fullName, d.repo.name)"><mat-icon>flag</mat-icon>Report this app</button>
         <mat-divider />
+        @if (d.history?.total) {
+          <section aria-labelledby="history-heading">
+            <h2 id="history-heading">How it was built</h2>
+            <p class="history">{{ builtWith(d.history!) || summaryLine(d.history!) }}</p>
+            <a mat-stroked-button [routerLink]="'/' + d.repo.fullName + '/history'"><mat-icon>history_edu</mat-icon>Build history</a>
+          </section>
+          <mat-divider />
+        }
         <section aria-labelledby="versions-heading">
           <h2 id="versions-heading">Versions</h2>
           <mat-list>

@@ -30,6 +30,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'dashboard', renderMode: RenderMode.Client },
   { path: 'admin', renderMode: RenderMode.Client },
   // Owner and repo pages (#102): rendered per request for SEO.
+  { path: ':owner/:slug/history', renderMode: RenderMode.Server },
   { path: ':owner/:slug', renderMode: RenderMode.Server },
   { path: ':owner', renderMode: RenderMode.Server },
   { path: '**', renderMode: RenderMode.Server, status: 404 },

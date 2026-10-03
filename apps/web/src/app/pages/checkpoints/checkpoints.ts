@@ -8,20 +8,20 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { CHECKPOINT_VISIBILITIES, effortLevelLabel, type Checkpoint, type CheckpointVisibility, type Repo } from '@appmarket/shared';
+import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointSummary, type CheckpointVisibility, type Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { CheckpointsApi } from '../../api/checkpoints';
 import { Developer } from '../../api/developer';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
 import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/note-dialog';
 import { Seo } from '../../seo/seo';
-import { HARNESS_LABELS, VISIBILITY_LABELS, effortLine, groupBySession, type SessionGroup } from './timeline';
+import { CheckpointDetails } from '../../components/checkpoint-details/checkpoint-details';
+import { HARNESS_LABELS, VISIBILITY_LABELS, groupBySession, summaryLine, type SessionGroup } from '../../components/checkpoint-details/timeline';
 
 const REFRESH_MS = 10_000;
 const PAGE = 50;
@@ -32,13 +32,13 @@ const PAGE = 50;
   imports: [
     DatePipe,
     RouterLink,
+    CheckpointDetails,
     MatButtonModule,
     MatButtonToggleModule,
     MatCardModule,
     MatChipsModule,
     MatExpansionModule,
     MatIconModule,
-    MatListModule,
     MatMenuModule,
     MatProgressBarModule,
     MatTooltipModule,
@@ -63,8 +63,6 @@ export class CheckpointsPage {
   protected readonly harnesses = HARNESS_LABELS;
   protected readonly visibilities = VISIBILITY_LABELS;
   protected readonly visibilityOptions = CHECKPOINT_VISIBILITIES;
-  protected readonly effortLine = effortLine;
-  protected readonly effortLabel = effortLevelLabel;
   protected readonly short = (sha: string) => sha.slice(0, 7);
 
   protected readonly repo = signal<Repo | null>(null);
@@ -73,10 +71,10 @@ export class CheckpointsPage {
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
   protected readonly groups = computed<SessionGroup[]>(() => groupBySession(this.items()));
+  private readonly counts = signal<CheckpointSummary | null>(null);
   protected readonly summary = computed(() => {
-    const items = this.items();
-    const agent = items.filter((c) => c.harness !== 'none').length;
-    return `${items.length} commit${items.length === 1 ? '' : 's'}${this.next() ? '+' : ''}, ${agent} by an agent, ${items.length - agent} manual`;
+    const counts = this.counts();
+    return counts ? `${summaryLine(counts)}.` : '';
   });
   protected readonly notesCommand = 'git log --notes=appmarket';
 
@@ -100,6 +98,7 @@ export class CheckpointsPage {
       this.repo.set(repo);
       this.items.set(page.items);
       this.next.set(page.next);
+      this.counts.set(page.summary ?? null);
       this.loadError.set(false);
     } catch {
       this.loadError.set(true);
@@ -114,6 +113,7 @@ export class CheckpointsPage {
       const page = await firstValueFrom(this.api.list(this.path(), { limit: Math.min(Math.max(this.items().length, PAGE), 100) }));
       this.items.set(page.items);
       this.next.set(page.next);
+      this.counts.set(page.summary ?? null);
     } catch {
       // Offline or signed out: keep what is shown; the next tick retries.
     }
