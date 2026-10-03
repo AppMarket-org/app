@@ -26,7 +26,6 @@ export const ENVIRONMENTS = {
 	staging: {
 		workerName: "appmarket-api-staging",
 		artifactsNamespace: "staging",
-		// IDs are filled in when the remote databases are created (R22, #24).
 		database: { name: "appmarket-staging", id: "7bbb371d-dc0a-4b67-92ed-74dd2e5c4363" },
 		publicOrigin: "https://staging.appmarket.org",
 		rateLimitBase: 1200,
@@ -42,7 +41,7 @@ export const ENVIRONMENTS = {
 	production: {
 		workerName: "appmarket-api",
 		artifactsNamespace: "prod",
-		database: { name: "appmarket-prod", id: undefined },
+		database: { name: "appmarket-prod", id: "4c4a9a0e-de78-497b-a7ef-11efab9f62f3" },
 		publicOrigin: "https://appmarket.org",
 		rateLimitBase: 1300,
 		mediaBucket: "appmarket-media-prod",
@@ -52,7 +51,7 @@ export const ENVIRONMENTS = {
 		buildsBucket: "appmarket-builds-prod",
 		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
 		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
-		access: { teamDomain: "", aud: "" },
+		access: { teamDomain: "cportsche1.cloudflareaccess.com", aud: "89058f739ae9e219a89f42fd868b501fb80d6a62a8b4dff41aff407fdb771d8b" },
 	},
 } as const;
 
