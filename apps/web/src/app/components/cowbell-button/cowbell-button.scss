@@ -1,0 +1,21 @@
+// Brand cowbell yellow (design/brand/cowbell.svg).
+$cowbell: #f9c12b;
+
+.cowbell {
+  mat-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .count {
+    margin-left: 0.5rem;
+    padding-left: 0.5rem;
+    border-left: 0.0625rem solid var(--mat-sys-outline-variant);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.on mat-icon {
+    color: $cowbell;
+  }
+}

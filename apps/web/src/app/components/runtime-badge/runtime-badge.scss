@@ -1,5 +1,17 @@
 :host {
   display: inline-block;
+  max-width: 100%;
+}
+
+// Narrow cards: let the label wrap inside the chip instead of overflowing the card.
+mat-chip {
+  max-width: 100%;
+  height: auto;
+  min-height: 2rem;
+}
+
+:host ::ng-deep .mdc-evolution-chip__text-label {
+  white-space: normal;
 }
 
 mat-chip {

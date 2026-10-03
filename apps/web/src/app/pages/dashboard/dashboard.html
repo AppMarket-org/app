@@ -78,3 +78,16 @@
   }
 }
 </section>
+
+<section aria-labelledby="cowbells-heading">
+  <h2 id="cowbells-heading"><mat-icon svgIcon="cowbell" class="cowbell" aria-hidden="true" />Your cowbells</h2>
+  @if (cowbelled()?.length) {
+    <div class="cards">
+      @for (r of cowbelled(); track r.id) {
+        <app-repo-card [repo]="r" />
+      }
+    </div>
+  } @else {
+    <p class="explain">Ring the cowbell on any app to keep it here, like a star on GitHub.</p>
+  }
+</section>

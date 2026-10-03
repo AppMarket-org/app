@@ -81,6 +81,8 @@ export interface Repo {
 	/** D3: what deploying the published version creates. */
 	manifest: DeployManifest | null;
 	createdAt: string;
+	/** Cowbells (appmarket's stars) from signed-in users. */
+	cowbells: number;
 	updatedAt: string;
 }
 
@@ -137,3 +139,13 @@ export interface Screenshot {
 	contentType: string;
 	position: number;
 }
+
+/** Whether the signed-in user rang a repo's cowbell, and the repo's total. */
+export interface CowbellStatus {
+	cowbelled: boolean;
+	count: number;
+}
+
+/** Catalog sort orders: newest first, or most cowbells first. */
+export const REPO_SORTS = ["newest", "cowbells"] as const;
+export type RepoSort = (typeof REPO_SORTS)[number];

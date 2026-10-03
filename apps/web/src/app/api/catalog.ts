@@ -1,12 +1,13 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { CategorySlug, DownloadLink, RepoPage, RepoVersion, Release, GitToken, Runtime, Screenshot } from '@appmarket/shared';
+import type { CategorySlug, DownloadLink, RepoPage, RepoSort, RepoVersion, Release, GitToken, Runtime, Screenshot } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 export interface CatalogQuery {
   q?: string;
   category?: CategorySlug;
   runtime?: Runtime;
+  sort?: RepoSort;
   page?: number;
   pageSize?: number;
 }

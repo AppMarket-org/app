@@ -28,6 +28,14 @@
     </select>
   </mat-form-field>
 
+  <mat-form-field appearance="outline">
+    <mat-label>Sort</mat-label>
+    <select matNativeControl name="sort">
+      <option value="">Newest</option>
+      <option value="cowbells" [selected]="sort() === 'cowbells'">Most cowbells</option>
+    </select>
+  </mat-form-field>
+
   <button mat-flat-button type="submit">Search</button>
 </form>
 

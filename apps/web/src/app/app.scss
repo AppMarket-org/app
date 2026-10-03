@@ -6,6 +6,13 @@
 
 .brand {
   font: var(--mat-sys-title-large);
+
+  .logo {
+    height: 2.25rem;
+    width: auto;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
 }
 
 .spacer {

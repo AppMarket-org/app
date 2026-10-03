@@ -32,6 +32,7 @@ export const searchResolver: ResolveFn<RepoPage> = (route) => {
     q: q.get('q')?.slice(0, 100) || undefined,
     category: isCategory(q.get('category')) ? (q.get('category') as CategorySlug) : undefined,
     runtime: isRuntime(q.get('runtime')) ? (q.get('runtime') as Runtime) : undefined,
+    sort: q.get('sort') === 'cowbells' ? 'cowbells' : undefined,
     page: pageOf(q.get('page')),
     pageSize: PAGE_SIZE,
   }), response);

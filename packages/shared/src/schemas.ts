@@ -1,7 +1,7 @@
 // Zod validation schemas. Server-side only: import from "@appmarket/shared/schemas".
 // Kept out of the main entry so the browser bundle does not include zod.
 import { z } from "zod";
-import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
+import { CATEGORIES, REPO_SORTS, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
@@ -52,6 +52,7 @@ export const repoSearchSchema = z.object({
 	q: z.string().trim().max(100).optional(),
 	category: z.enum(categorySlugs).optional(),
 	runtime: runtimeSchema.optional(),
+	sort: z.enum(REPO_SORTS).default("newest"),
 	page: z.coerce.number().int().min(1).default(1),
 	pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });

@@ -4,6 +4,7 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { serverApiInterceptor } from './api/server-api';
 import { routes } from './app.routes';
+import { provideBrandIcons } from './brand/icons';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -13,5 +14,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     // Server responses to GET requests are transferred to the browser, so hydration does not refetch.
     provideClientHydration(withEventReplay()),
+    provideBrandIcons(),
   ],
 };

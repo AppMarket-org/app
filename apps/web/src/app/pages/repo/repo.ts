@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
+import { CowbellButton } from '../../components/cowbell-button/cowbell-button';
 import { DeployAction } from '../../components/deploy-action/deploy-action';
 import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
 import { DomainGuide } from '../../components/domain-guide/domain-guide';
@@ -33,7 +34,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-repo',
-  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, DeployAction, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
+  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, CowbellButton, DeployAction, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
   templateUrl: './repo.html',
   styleUrl: './repo.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
