@@ -93,7 +93,7 @@ export class ManageListing {
   });
 
   constructor() {
-    inject(Seo).set({ title: 'Manage app', description: 'Manage your app.', path: '/dashboard', noindex: true });
+    inject(Seo).set({ title: 'Manage repo', description: 'Manage your repo.', path: '/dashboard', noindex: true });
   }
 
   ngOnInit(): void {
@@ -215,7 +215,7 @@ export class ManageListing {
       const confirmed = await firstValueFrom(
         this.dialog
           .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, {
-            data: { title: 'Remove app?', message: 'It leaves the catalog for good, and every token for its repository is revoked. This cannot be undone.', confirm: 'Remove' },
+            data: { title: 'Delete repo?', message: 'It leaves the marketplace for good, and every token for it is revoked. This cannot be undone.', confirm: 'Delete' },
           })
           .afterClosed(),
       );

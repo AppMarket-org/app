@@ -28,7 +28,7 @@ export class CreateListing {
   protected readonly fieldErrors = signal<Record<string, string>>({});
 
   constructor() {
-    inject(Seo).set({ title: 'Publish an app', description: 'Publish an app on appmarket.org.', path: '/dashboard/new', noindex: true });
+    inject(Seo).set({ title: 'New repo', description: 'Create a repo for your app on appmarket.org.', path: '/dashboard/new', noindex: true });
   }
 
   protected async create(input: ListingInput): Promise<void> {

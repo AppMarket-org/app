@@ -54,7 +54,7 @@
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Git tag</mat-label>
               <input matInput formControlName="tag" placeholder="v1.0.0" autocomplete="off" />
-              <mat-hint>Push the tag first. Its commit is what gets reviewed and published.</mat-hint>
+              <mat-hint>Push the tag first. Its commit is what gets reviewed and made public.</mat-hint>
               <mat-error>Use letters, digits, ".", "_", "-" or "/".</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
@@ -110,10 +110,10 @@
             <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('draft')">Withdraw from review</button>
           }
           @if (can('unpublished')) {
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('unpublished')">Unpublish</button>
+            <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('unpublished')">Hide from marketplace</button>
           }
           @if (can('removed')) {
-            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="change('removed')">Remove app</button>
+            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="change('removed')">Delete repo</button>
           }
         </mat-card-content>
       </mat-card>
