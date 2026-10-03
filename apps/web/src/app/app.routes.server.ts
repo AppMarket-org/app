@@ -16,6 +16,7 @@ export const serverRoutes: ServerRoute[] = [
   // Signed-in app: single-page app, not indexed.
   { path: 'login', renderMode: RenderMode.Client },
   { path: 'dashboard/new', renderMode: RenderMode.Client },
+  { path: 'device', renderMode: RenderMode.Client },
   { path: 'settings/orgs/new', renderMode: RenderMode.Client },
   { path: 'settings/orgs/:handle', renderMode: RenderMode.Client },
   { path: 'settings', renderMode: RenderMode.Client },

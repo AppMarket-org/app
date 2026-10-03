@@ -60,3 +60,31 @@
     <a mat-stroked-button routerLink="/settings/orgs/new"><mat-icon>add</mat-icon>New organization</a>
   </mat-card-actions>
 </mat-card>
+
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Signed-in devices</mat-card-title>
+    <mat-card-subtitle>Browsers, CLIs and agents using your account. Connect a CLI at appmarket.org/device.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @switch (sessions()) {
+      @case (undefined) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading devices" />
+      }
+      @default {
+        <mat-list aria-label="Signed-in devices">
+          @for (s of sessions(); track s.id) {
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">{{ s.current ? 'computer' : 'devices' }}</mat-icon>
+              <span matListItemTitle>{{ device(s.userAgent) }}{{ s.current ? ' · this browser' : '' }}</span>
+              <span matListItemLine>Signed in {{ s.createdAt | date: 'medium' }} · expires {{ s.expiresAt | date: 'mediumDate' }}</span>
+              @if (!s.current) {
+                <button matListItemMeta mat-button type="button" class="danger" (click)="signOut(s)">Sign out</button>
+              }
+            </mat-list-item>
+          }
+        </mat-list>
+      }
+    }
+  </mat-card-content>
+</mat-card>

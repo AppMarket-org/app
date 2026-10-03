@@ -1,0 +1,49 @@
+<mat-card appearance="outlined">
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Working" />
+  }
+  <mat-card-header>
+    <mat-icon mat-card-avatar aria-hidden="true">terminal</mat-icon>
+    <mat-card-title>Connect a device</mat-card-title>
+    <mat-card-subtitle>Signed in as {{ auth.owner()?.handle ?? auth.user()?.name }}</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @switch (step()) {
+      @case ('enter') {
+        <p>Enter the code your CLI or agent shows.</p>
+        <form (ngSubmit)="check()" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput class="code" [formControl]="code" autocomplete="one-time-code" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX" />
+          </mat-form-field>
+          <button mat-flat-button type="submit" [disabled]="busy()">Continue</button>
+        </form>
+      }
+      @case ('confirm') {
+        <p><strong>{{ client() }}</strong> wants to sign in to appmarket.org as you.</p>
+        <p class="code-display" aria-label="Code">{{ normalized().slice(0, 4) }}-{{ normalized().slice(4) }}</p>
+        <p class="warn">Approve only if this code matches the one on your screen and you started this sign-in. The device can then create and manage your repos and start deploys until you sign it out in Settings.</p>
+      }
+      @case ('approved') {
+        <p class="done" role="status"><mat-icon aria-hidden="true">check_circle</mat-icon> {{ client() }} is signed in. You can close this page.</p>
+      }
+      @case ('denied') {
+        <p role="status">Sign-in denied. Nothing was shared with the device.</p>
+      }
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    @if (step() === 'confirm') {
+      <button mat-button type="button" [disabled]="busy()" (click)="decide(false)">Deny</button>
+      <button mat-flat-button type="button" [disabled]="busy()" (click)="decide(true)">Approve</button>
+    } @else if (step() !== 'enter') {
+      <a mat-button routerLink="/settings">Manage devices</a>
+      <button mat-button type="button" (click)="reset()">Connect another</button>
+    }
+  </mat-card-actions>
+</mat-card>

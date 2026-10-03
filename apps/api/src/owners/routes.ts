@@ -1,3 +1,4 @@
+import type { SessionInfo } from "@appmarket/shared";
 import { handleSchema, orgCreateSchema, orgMemberSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -35,6 +36,24 @@ export const meRoutes = new Hono<Ctx>()
 		if (!(await store.rename(self.id, body.data))) return c.json({ error: "taken" }, 409);
 		logEvent("handle.changed", { user: user.id, from: self.handle, to: body.data });
 		return c.json(await store.byId(self.id));
+	});
+
+/** #104: the user's sessions (browsers and device logins), without tokens; sign one out. */
+export const sessionRoutes = new Hono<Ctx>()
+	.use(requireRole())
+	.get("/", async (c) => {
+		const session = c.get("session")!;
+		const { results } = await env.DB.prepare(`SELECT id, userAgent, createdAt, expiresAt FROM "session" WHERE userId = ? AND expiresAt > ? ORDER BY createdAt DESC`)
+			.bind(session.user.id, Date.now())
+			.all<{ id: string; userAgent: string | null; createdAt: number | string; expiresAt: number | string }>();
+		const iso = (v: number | string) => new Date(typeof v === "number" ? v : Number.isNaN(Number(v)) ? v : Number(v)).toISOString();
+		return c.json({
+			items: results.map((r): SessionInfo => ({ id: r.id, userAgent: r.userAgent || null, createdAt: iso(r.createdAt), expiresAt: iso(r.expiresAt), current: r.id === session.session.id })),
+		});
+	})
+	.delete("/:id", async (c) => {
+		const result = await env.DB.prepare(`DELETE FROM "session" WHERE id = ? AND userId = ?`).bind(c.req.param("id"), c.get("session")!.user.id).run();
+		return result.meta.changes ? c.json({ revoked: true }) : c.json({ error: "not_found" }, 404);
 	});
 
 /** Organizations: create, rename, members. Mounted under /api/orgs. */

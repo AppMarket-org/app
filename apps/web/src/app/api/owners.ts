@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, Repo } from '@appmarket/shared';
-import type { Observable } from 'rxjs';
+import type { OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, Repo, SessionInfo } from '@appmarket/shared';
+import { type Observable, map } from 'rxjs';
 
 /** #102: users and organizations (handles, owner pages, members). */
 @Injectable({ providedIn: 'root' })
@@ -39,5 +39,14 @@ export class OwnersApi {
 
   removeMember(handle: string, member: string): Observable<{ members: OrgMember[] }> {
     return this.http.delete<{ members: OrgMember[] }>(`/api/orgs/${handle}/members/${member}`);
+  }
+
+  /** #104: browsers and device logins signed in to this account. */
+  sessions(): Observable<SessionInfo[]> {
+    return this.http.get<{ items: SessionInfo[] }>('/api/me/sessions').pipe(map((r) => r.items));
+  }
+
+  revokeSession(id: string): Observable<unknown> {
+    return this.http.delete(`/api/me/sessions/${id}`);
   }
 }
