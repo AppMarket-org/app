@@ -13,6 +13,8 @@ export interface NoteDialogData {
   /** When true the note cannot be empty. */
   required: boolean;
   danger?: boolean;
+  /** Default 500. */
+  maxLength?: number;
 }
 
 /** Confirmation with a note (moderation decisions). Closes with the note, '' for none, or undefined on cancel. */
@@ -26,7 +28,8 @@ export interface NoteDialogData {
 export class NoteDialog {
   protected readonly data = inject<NoteDialogData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<NoteDialog, string>>(MatDialogRef);
-  protected readonly note = new FormControl('', { nonNullable: true, validators: this.data.required ? [Validators.required, Validators.maxLength(500)] : [Validators.maxLength(500)] });
+  protected readonly maxLength = this.data.maxLength ?? 500;
+  protected readonly note = new FormControl('', { nonNullable: true, validators: this.data.required ? [Validators.required, Validators.maxLength(this.maxLength)] : [Validators.maxLength(this.maxLength)] });
 
   protected confirm(): void {
     this.note.markAsTouched();

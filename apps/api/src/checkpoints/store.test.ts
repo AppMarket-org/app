@@ -79,6 +79,8 @@ describe("CheckpointStore", () => {
 		expect(second.next).toBeNull();
 		expect(await store.addPrompt("r1", sha(1), "Also handle empty lists")).toBe(true);
 		expect((await store.get(repo, sha(1), "owner"))?.prompts?.map((p) => p.text)).toEqual(["Add a todo list", "Also handle empty lists"]);
+		expect(await store.setSessionVisibility("r1", "s1", "public")).toBe(3);
+		expect((await store.get(repo, sha(1), "public"))?.visibility).toBe("public");
 		await store.attach("r1", [sha(1)]);
 		expect((await store.get(repo, sha(1), "owner"))?.state).toBe("attached");
 		expect(await store.delete("r1", sha(1))).toBe(true);

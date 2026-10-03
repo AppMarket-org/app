@@ -1,0 +1,163 @@
+<header class="head">
+  <div>
+    <a mat-button [routerLink]="['/dashboard/repos', owner(), slug()]"><mat-icon>arrow_back</mat-icon>{{ repo()?.name ?? path() }}</a>
+    <h1>Checkpoints</h1>
+    <p class="lead">The prompts, harness and effort behind each commit. {{ items().length ? summary() : '' }}</p>
+  </div>
+  <div class="actions">
+    <button mat-stroked-button type="button" (click)="copy(notesCommand)" matTooltip="Shows the checkpoint under each commit in your terminal">
+      <mat-icon>content_copy</mat-icon>{{ notesCommand }}
+    </button>
+    <button mat-icon-button type="button" (click)="refresh()" aria-label="Refresh"><mat-icon>refresh</mat-icon></button>
+  </div>
+</header>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading checkpoints" />
+}
+
+@if (loadError()) {
+  <mat-card appearance="outlined">
+    <mat-card-content>Could not load the checkpoints for {{ path() }}. It may not exist, or it is not yours.</mat-card-content>
+  </mat-card>
+} @else if (repo(); as r) {
+  <mat-card appearance="outlined" class="settings">
+    <mat-card-header>
+      <mat-card-title>New checkpoints</mat-card-title>
+      <mat-card-subtitle>{{ visibilities[r.checkpointVisibility].help }}. Commit details (harness, model, files) are visible wherever the commit is.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-button-toggle-group [value]="r.checkpointVisibility" (change)="setDefault($event.value)" aria-label="Visibility of new checkpoints" hideSingleSelectionIndicator>
+        @for (v of visibilityOptions; track v) {
+          <mat-button-toggle [value]="v" [attr.aria-label]="visibilities[v].label"><mat-icon>{{ visibilities[v].icon }}</mat-icon><span class="label"> {{ visibilities[v].label }}</span></mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+    </mat-card-content>
+  </mat-card>
+
+  @for (g of groups(); track g.items[0]!.commit) {
+    <mat-card appearance="outlined" class="session">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>{{ g.harness === 'none' ? 'person' : 'smart_toy' }}</mat-icon>
+        <mat-card-title>{{ harnesses[g.harness] }}{{ g.items[0]!.model ? ' · ' + g.items[0]!.model : '' }}</mat-card-title>
+        <mat-card-subtitle>
+          {{ g.items.length }} commit{{ g.items.length === 1 ? '' : 's' }}
+          @if (g.session) { · session {{ g.session.slice(0, 8) }} }
+          · {{ g.items.at(-1)!.created_at | date: 'medium' }}
+        </mat-card-subtitle>
+        @if (g.session) {
+          <button mat-icon-button type="button" class="menu" [matMenuTriggerFor]="sessionMenu" aria-label="Session visibility"><mat-icon>more_vert</mat-icon></button>
+          <mat-menu #sessionMenu="matMenu">
+            @for (v of visibilityOptions; track v) {
+              <button mat-menu-item type="button" (click)="setSessionVisibility(g, v)"><mat-icon>{{ visibilities[v].icon }}</mat-icon>Whole session: {{ visibilities[v].label }}</button>
+            }
+          </mat-menu>
+        }
+      </mat-card-header>
+      <mat-card-content>
+        <mat-accordion multi displayMode="flat">
+          @for (c of g.items; track c.commit) {
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <code>{{ short(c.commit) }}</code>
+                  <span class="preview">{{ c.prompts?.length ? truncated(c.prompts![c.prompts!.length - 1]!.text, 90) : (c.harness === 'none' ? 'Manual commit' : 'No prompt captured') }}</span>
+                </mat-panel-title>
+                <mat-panel-description>
+                  <mat-chip-set aria-label="Checkpoint state">
+                    <mat-chip [class]="c.state" [matTooltip]="c.state === 'pending' ? 'This commit is not on appmarket.org yet. Push it to attach the checkpoint.' : c.state === 'missing' ? 'Pushed without a checkpoint' : 'Attached to the pushed commit'">{{ c.state }}</mat-chip>
+                    <mat-chip class="vis" [matTooltip]="visibilities[c.visibility].help"><mat-icon matChipAvatar>{{ visibilities[c.visibility].icon }}</mat-icon>{{ visibilities[c.visibility].label }}</mat-chip>
+                  </mat-chip-set>
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <div class="meta">
+                @if (effortLine(c); as line) {
+                  <span><mat-icon inline>bolt</mat-icon>{{ line }}</span>
+                }
+                @if (effortLabel(c.effort.level); as effort) {
+                  <span><mat-icon inline>psychology</mat-icon>{{ effort }}{{ c.effort.raw && c.effort.raw !== c.effort.level ? ' (' + c.effort.raw + ')' : '' }}</span>
+                }
+                <span><mat-icon inline>schedule</mat-icon>{{ c.created_at | date: 'medium' }}</span>
+                @if (c.branch) {
+                  <span><mat-icon inline>alt_route</mat-icon>{{ c.branch }}</span>
+                }
+                @if (c.device) {
+                  <span><mat-icon inline>laptop</mat-icon>{{ c.device }}</span>
+                }
+                @if (c.redactions) {
+                  <span><mat-icon inline>visibility_off</mat-icon>{{ c.redactions }} redacted</span>
+                }
+                @if (c.source === 'agent-reported') {
+                  <span><mat-icon inline>info</mat-icon>Reported by the agent</span>
+                }
+              </div>
+
+              @if (c.prompts?.length) {
+                <h3>Prompts</h3>
+                @for (p of c.prompts; track $index) {
+                  <blockquote>{{ p.text }}</blockquote>
+                }
+              }
+              @if (c.assistant_summary) {
+                <h3>Agent's last message</h3>
+                <p class="summary">{{ c.assistant_summary }}</p>
+              }
+              @if (c.tools?.length) {
+                <h3>Tools ({{ c.tools!.length }})</h3>
+                <mat-list dense>
+                  @for (t of c.tools; track $index) {
+                    <mat-list-item>
+                      <mat-icon matListItemIcon>{{ t.outcome === 'error' ? 'error_outline' : 'check' }}</mat-icon>
+                      <span matListItemTitle>{{ t.name }}</span>
+                      <span matListItemLine><code>{{ t.args_summary }}</code></span>
+                    </mat-list-item>
+                  }
+                </mat-list>
+              }
+              <h3>Files ({{ c.files.length }}{{ c.truncated ? '+' : '' }})</h3>
+              <mat-list dense>
+                @for (f of c.files; track f.path) {
+                  <mat-list-item>
+                    <span matListItemTitle><code>{{ f.path }}</code></span>
+                    <span matListItemMeta class="diff"><span class="added">+{{ f.added }}</span> <span class="removed">−{{ f.removed }}</span></span>
+                  </mat-list-item>
+                }
+              </mat-list>
+
+              <mat-action-row>
+                <button mat-button type="button" [matMenuTriggerFor]="visMenu"><mat-icon>{{ visibilities[c.visibility].icon }}</mat-icon>{{ visibilities[c.visibility].label }}</button>
+                <mat-menu #visMenu="matMenu">
+                  @for (v of visibilityOptions; track v) {
+                    <button mat-menu-item type="button" [disabled]="v === c.visibility" (click)="setVisibility(c, v)"><mat-icon>{{ visibilities[v].icon }}</mat-icon>{{ visibilities[v].label }}</button>
+                  }
+                </mat-menu>
+                <button mat-button type="button" (click)="addPrompt(c)"><mat-icon>add_comment</mat-icon>Add prompt</button>
+                <button mat-button type="button" class="danger" (click)="remove(c)"><mat-icon>delete</mat-icon>Delete</button>
+              </mat-action-row>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+      </mat-card-content>
+    </mat-card>
+  } @empty {
+    @if (!loading()) {
+      <mat-card appearance="outlined" class="empty">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>history_edu</mat-icon>
+          <mat-card-title>No checkpoints yet</mat-card-title>
+          <mat-card-subtitle>Record the prompt behind every commit with the appmarket CLI:</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <pre><code>npx &#64;appmarket/cli login
+appmarket adapter install claude-code
+appmarket init {{ path() }}</code></pre>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+
+  @if (next()) {
+    <div class="more"><button mat-stroked-button type="button" (click)="more()">Older checkpoints</button></div>
+  }
+}

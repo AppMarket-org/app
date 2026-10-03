@@ -81,10 +81,10 @@ interface TranscriptLine {
 }
 
 /**
- * Reads the transcript from `offset` up to `until` and turns it into settings, usage and
+ * Reads the transcript from `offset`, keeping lines between `since` and `until`, and turns it into settings, usage and
  * assistant events. Each API message is counted once (the transcript repeats it per content block).
  */
-export function transcriptEvents(path: string, offset: number, until: string): BufferEvent[] {
+export function transcriptEvents(path: string, offset: number, until: string, since = ""): BufferEvent[] {
 	let text: string;
 	try {
 		const size = statSync(path).size;
@@ -109,7 +109,7 @@ export function transcriptEvents(path: string, offset: number, until: string): B
 		} catch {
 			continue;
 		}
-		if (line.type !== "assistant" || !line.timestamp || line.timestamp > until) continue;
+		if (line.type !== "assistant" || !line.timestamp || line.timestamp > until || line.timestamp < since) continue;
 		last = line;
 		const textBlock = line.message?.content?.filter((c) => c.type === "text" && c.text).at(-1)?.text;
 		if (textBlock && !line.isSidechain) lastText = textBlock;

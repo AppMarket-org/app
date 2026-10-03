@@ -3,8 +3,8 @@
   <p>{{ data.message }}</p>
   <mat-form-field appearance="outline" class="note">
     <mat-label>{{ data.label }}</mat-label>
-    <textarea matInput [formControl]="note" rows="4" maxlength="500"></textarea>
-    <mat-error>{{ data.required ? 'A note is required.' : 'At most 500 characters.' }}</mat-error>
+    <textarea matInput [formControl]="note" rows="4" [maxlength]="maxLength"></textarea>
+    <mat-error>{{ data.required ? 'A note is required.' : 'At most ' + maxLength + ' characters.' }}</mat-error>
   </mat-form-field>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

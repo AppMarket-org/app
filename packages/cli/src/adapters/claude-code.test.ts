@@ -63,6 +63,8 @@ describe("transcriptEvents", () => {
 		expect(events.find((e) => e.type === "settings")).toMatchObject({ model: "claude-opus-5-5", effort: "high", harness_version: "2.1.287" });
 		// The subagent's text is not the session's summary.
 		expect(events.find((e) => e.type === "assistant")?.text).toBe("reply m1");
+		// A session that ended before this window (only its SessionEnd is in it) contributes nothing.
+		expect(transcriptEvents(path, 0, "2026-10-03T12:00:00.000Z", "2026-10-03T11:30:00.000Z")).toEqual([]);
 	});
 });
 

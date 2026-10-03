@@ -102,6 +102,15 @@ export class CheckpointStore {
 		return result.meta.changes > 0;
 	}
 
+	async setSessionVisibility(repoId: string, session: string, visibility: CheckpointVisibility): Promise<number> {
+		const result = await this.db.prepare("UPDATE checkpoints SET visibility = ? WHERE repo_id = ? AND session_id = ?").bind(visibility, repoId, session).run();
+		return result.meta.changes;
+	}
+
+	async setRepoDefault(repoId: string, visibility: CheckpointVisibility): Promise<void> {
+		await this.db.prepare("UPDATE repos SET checkpoint_visibility = ? WHERE id = ?").bind(visibility, repoId).run();
+	}
+
 	/** `appmarket record --prompt … --for <sha>`: a prompt added after the commit. */
 	async addPrompt(repoId: string, sha: string, text: string): Promise<boolean> {
 		const row = await this.row(repoId, sha);

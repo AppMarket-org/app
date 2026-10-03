@@ -10,6 +10,10 @@ export type Harness = (typeof HARNESSES)[number];
 export const EFFORT_LEVELS = ["low", "medium", "high", "max", "unknown"] as const;
 export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
+export function effortLevelLabel(level: EffortLevel): string {
+	return { low: "Low effort", medium: "Medium effort", high: "High effort", max: "Max effort", unknown: "" }[level];
+}
+
 export const CHECKPOINT_VISIBILITIES = ["private", "listing", "public"] as const;
 export type CheckpointVisibility = (typeof CHECKPOINT_VISIBILITIES)[number];
 

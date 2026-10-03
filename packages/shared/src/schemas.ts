@@ -175,5 +175,9 @@ export const checkpointRecordSchema = z.object({
 export const checkpointPatchSchema = z
 	.object({ visibility: z.enum(CHECKPOINT_VISIBILITIES).optional(), add_prompt: z.string().trim().min(1).max(100_000).optional() })
 	.refine((p) => p.visibility || p.add_prompt, "Nothing to change");
+/** Repo default for new checkpoints, or one visibility for every checkpoint of a session. */
+export const checkpointVisibilitySchema = z.object({ visibility: z.enum(CHECKPOINT_VISIBILITIES) });
+export const sessionVisibilitySchema = z.object({ session: z.string().min(1).max(128), visibility: z.enum(CHECKPOINT_VISIBILITIES) });
+
 export type CheckpointUpload = z.infer<typeof checkpointRecordSchema>;
 export type CheckpointPatch = z.infer<typeof checkpointPatchSchema>;

@@ -1,0 +1,150 @@
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  h1 {
+    font: var(--mat-sys-headline-medium);
+    margin: 0.25rem 0 0.25rem;
+  }
+
+  .lead {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+mat-card {
+  margin-bottom: 1rem;
+}
+
+.settings mat-card-content {
+  padding-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.session mat-card-header {
+  position: relative;
+
+  .menu {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+
+  .preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+mat-panel-description {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+mat-chip.pending {
+  --mat-chip-elevated-container-color: var(--mat-sys-tertiary-container);
+  --mat-chip-label-text-color: var(--mat-sys-on-tertiary-container);
+}
+
+mat-chip.attached {
+  --mat-chip-elevated-container-color: var(--mat-sys-primary-container);
+  --mat-chip-label-text-color: var(--mat-sys-on-primary-container);
+}
+
+mat-chip.missing {
+  --mat-chip-elevated-container-color: var(--mat-sys-error-container);
+  --mat-chip-label-text-color: var(--mat-sys-on-error-container);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    margin-right: 0.25rem;
+    vertical-align: middle;
+  }
+}
+
+h3 {
+  font: var(--mat-sys-title-small);
+  margin: 1rem 0 0.25rem;
+}
+
+blockquote {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 0.25rem solid var(--mat-sys-primary);
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 0 var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.summary {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.diff {
+  font: var(--mat-sys-label-medium);
+
+  .added {
+    color: var(--mat-sys-primary);
+  }
+
+  .removed {
+    color: var(--mat-sys-error);
+  }
+}
+
+.danger {
+  color: var(--mat-sys-error);
+}
+
+.empty pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-small);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+// Phones: visibility as icons (default) or inside the panel (per checkpoint), so the prompt preview keeps its room.
+@media (max-width: 37.5rem) {
+  .settings .label,
+  mat-chip.vis {
+    display: none;
+  }
+
+  mat-panel-title {
+    gap: 0.5rem;
+  }
+}
