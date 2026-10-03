@@ -1,4 +1,4 @@
-import type { Checkpoint, CheckpointVisibility, Harness } from '@appmarket/shared';
+import type { Checkpoint, CheckpointSummary, CheckpointVisibility, Harness } from '@appmarket/shared';
 
 export const HARNESS_LABELS: Record<Harness, string> = {
   'claude-code': 'Claude Code',
@@ -50,4 +50,20 @@ export function effortLine(c: Checkpoint): string {
   if (tokens) parts.push(`${compact(tokens)} tokens`);
   if (m.retries) parts.push(`${m.retries} retr${m.retries === 1 ? 'y' : 'ies'}`);
   return parts.join(', ');
+}
+
+/** "38 commits, 31 by Claude Code, 7 manual" (PRD build history summary). */
+export function summaryLine(summary: CheckpointSummary): string {
+  const parts = [`${summary.total} commit${summary.total === 1 ? '' : 's'}`];
+  const entries = Object.entries(summary.harnesses) as [Harness, number][];
+  for (const [harness, n] of entries.filter(([h]) => h !== 'none').sort((a, b) => b[1] - a[1])) parts.push(`${n} by ${HARNESS_LABELS[harness]}`);
+  if (summary.harnesses.none) parts.push(`${summary.harnesses.none} manual`);
+  return parts.join(', ');
+}
+
+/** "Built with Claude Code and Codex": the agent harnesses, most used first. */
+export function builtWith(summary: CheckpointSummary): string {
+  const names = (Object.entries(summary.harnesses) as [Harness, number][]).filter(([h]) => h !== 'none').sort((a, b) => b[1] - a[1]).map(([h]) => HARNESS_LABELS[h]);
+  if (!names.length) return '';
+  return `Built with ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`}`;
 }

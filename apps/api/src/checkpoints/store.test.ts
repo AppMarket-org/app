@@ -57,14 +57,21 @@ describe("CheckpointStore", () => {
 		expect(forced.checkpoint.prompts?.[0]?.text).toBe("Something else");
 	});
 
-	it("hides prompt details of private checkpoints from non-owners, keeping commit metadata", async () => {
+	it("never shows private checkpoints to non-owners, and hides the author's email", async () => {
 		await store.put(repo, record(1), meta);
-		const pub = await store.get(repo, sha(1), "public");
-		expect(pub).toMatchObject({ commit: sha(1), harness: "claude-code", model: "claude-opus-5-5", files: [{ path: "src/todo.ts" }] });
-		expect(pub).not.toHaveProperty("prompts");
-		expect(pub).not.toHaveProperty("tools");
+		await store.put(repo, { ...record(2), harness: "none" }, meta);
+		expect(await store.get(repo, sha(1), "public")).toBeNull();
+		expect((await store.list(repo, "public")).items).toEqual([]);
+		expect((await store.list(repo, "public")).summary).toEqual({ total: 0, harnesses: {} });
 		await store.setVisibility("r1", sha(1), "listing");
-		expect((await store.get(repo, sha(1), "public"))?.prompts?.[0]?.text).toBe("Add a todo list");
+		const pub = await store.get(repo, sha(1), "public");
+		expect(pub?.prompts?.[0]?.text).toBe("Add a todo list");
+		expect(pub?.author).toEqual({ name: "Dev", email: "" });
+		expect(pub?.device).toBeNull();
+		expect((await store.list(repo, "public")).summary).toEqual({ total: 1, harnesses: { "claude-code": 1 } });
+		expect((await store.list(repo, "owner")).summary).toEqual({ total: 2, harnesses: { "claude-code": 1, none: 1 } });
+		await store.setVisibility("r1", sha(1), "private");
+		expect((await store.list(repo, "public")).items).toEqual([]);
 	});
 
 	it("pages newest first and adds late prompts", async () => {

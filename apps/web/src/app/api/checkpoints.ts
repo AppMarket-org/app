@@ -8,8 +8,10 @@ import type { Observable } from 'rxjs';
 export class CheckpointsApi {
   private readonly http = inject(HttpClient);
 
-  list(path: string, query: { before?: string; limit?: number } = {}): Observable<CheckpointPage> {
+  /** `view: 'public'` asks for what anyone sees, even when the owner is signed in (build history). */
+  list(path: string, query: { before?: string; limit?: number; view?: 'public' } = {}): Observable<CheckpointPage> {
     const params: Record<string, string> = {};
+    if (query.view) params['view'] = query.view;
     if (query.before) params['before'] = query.before;
     if (query.limit) params['limit'] = String(query.limit);
     return this.http.get<CheckpointPage>(`/api/repos/${path}/checkpoints`, { params });

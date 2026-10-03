@@ -1,0 +1,55 @@
+@if (data; as d) {
+  <article>
+    <header class="head">
+      <a mat-button [routerLink]="'/' + d.repo.fullName"><mat-icon>arrow_back</mat-icon>{{ d.repo.name }}</a>
+      <h1>Build history</h1>
+      @if (items().length) {
+        <p class="lead">
+          @if (builtWith) {
+            <strong>{{ builtWith }}.</strong>
+          }
+          {{ summary }}. The prompts and agents behind the commits the developer chose to publish; secrets are redacted on the developer's machine.
+        </p>
+      }
+    </header>
+
+    @for (g of groups(); track g.items[0]!.commit) {
+      <mat-card appearance="outlined" class="session">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>{{ g.harness === 'none' ? 'person' : 'smart_toy' }}</mat-icon>
+          <mat-card-title>{{ harnesses[g.harness] }}{{ g.items[0]!.model ? ' · ' + g.items[0]!.model : '' }}</mat-card-title>
+          <mat-card-subtitle>{{ g.items.length }} commit{{ g.items.length === 1 ? '' : 's' }} · {{ g.items.at(-1)!.created_at | date: 'mediumDate' }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-accordion multi displayMode="flat">
+            @for (c of g.items; track c.commit) {
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <code>{{ short(c.commit) }}</code>
+                    <span class="preview">{{ preview(c) }}</span>
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <app-checkpoint-details [checkpoint]="c" />
+              </mat-expansion-panel>
+            }
+          </mat-accordion>
+        </mat-card-content>
+      </mat-card>
+    } @empty {
+      <mat-card appearance="outlined">
+        <mat-card-content>The developer has not published a build history for this app yet.</mat-card-content>
+      </mat-card>
+    }
+
+    @if (next()) {
+      <div class="more"><button mat-stroked-button type="button" (click)="more()">Older commits</button></div>
+    }
+  </article>
+} @else {
+  <section>
+    <h1>App not found</h1>
+    <p>This app does not exist or is not published.</p>
+    <a mat-button routerLink="/search">Browse apps</a>
+  </section>
+}

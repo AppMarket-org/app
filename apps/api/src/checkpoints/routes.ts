@@ -86,7 +86,9 @@ export const checkpointRoutes = new Hono<Ctx>()
 		const repo = await repoFor(c);
 		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		const q = c.req.query();
-		const page = await checkpoints().list({ id: repo.id, path: repo.fullName }, viewerOf(c, repo), { before: q.before, branch: q.branch, session: q.session, limit: q.limit ? Number(q.limit) : undefined });
+		// view=public: what anyone sees (the server-rendered build history, even for the owner).
+		const viewer = q.view === "public" ? "public" : viewerOf(c, repo);
+		const page = await checkpoints().list({ id: repo.id, path: repo.fullName }, viewer, { before: q.before, branch: q.branch, session: q.session, limit: q.limit ? Number(q.limit) : undefined });
 		return c.json({ ...page, items: await reconcile(repo, page.items) });
 	})
 	// #116: the repo's default for new checkpoints, and one visibility for a whole session.
