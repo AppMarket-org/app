@@ -1,4 +1,4 @@
 export const environment = {
-  // TODO(#6): replace with the appmarket.org Turnstile site key (public) before the first deploy (#24).
-  turnstileSiteKey: '1x00000000000000000000AA',
+  // Turnstile site key for staging.appmarket.org and appmarket.org (public; the secret is a Worker secret).
+  turnstileSiteKey: '0x4AAAAAAFMbXb6Xe004vNXN',
 };

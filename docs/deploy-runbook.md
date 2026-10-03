@@ -1,8 +1,8 @@
 # Deploying appmarket.org (R22)
 
 Deploys run from GitHub Actions (`.github/workflows/deploy.yml`), manually, one environment at a time:
-**Actions → Deploy → Run workflow → staging | production**. Each run waits for approval on its
-GitHub environment, then checks, migrates D1, deploys the API Worker (`cf deploy --mode <env>`),
+**Actions → Deploy → Run workflow → staging | production**. Each run uses its GitHub environment's
+secrets, then checks, migrates D1, deploys the API Worker (`cf deploy --mode <env>`),
 deploys the web Worker (Wrangler) and smoke-tests `/api/health`.
 
 Staging first. Production only after staging has been checked and the owner approves.
@@ -69,8 +69,9 @@ until it is set.
 
 Settings → Environments → create `staging` and `production`:
 
-- **Required reviewers**: the owner (this is the approval gate for every deploy).
 - **Deployment branches**: `main` only.
+- Required reviewers need a paid GitHub plan for private repos (the org is on Free), so the approval
+  gate is that only the owner starts a deploy (or explicitly approves one started for them).
 - Secret `CLOUDFLARE_API_TOKEN`: an API token for this account with Workers Scripts Edit, Workers
   Routes Edit, D1 Edit, Workers R2 Storage Edit, Containers Edit, Artifacts Edit, Zone → Workers
   Routes Edit and DNS Edit for `appmarket.org` (custom domains).

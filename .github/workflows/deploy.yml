@@ -1,6 +1,6 @@
-# PRD R22: deploy appmarket.org. Manual only; each run waits for approval on its GitHub
-# environment (staging, production), whose secrets hold the Cloudflare API token. Runbook:
-# docs/deploy-runbook.md.
+# PRD R22: deploy appmarket.org. Manual only, started by the owner (required reviewers need a paid
+# GitHub plan on private repos); each run uses its GitHub environment (staging, production), whose
+# secrets hold the Cloudflare API token. Runbook: docs/deploy-runbook.md.
 name: Deploy
 
 on:
