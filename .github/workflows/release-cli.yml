@@ -1,0 +1,38 @@
+name: Release CLI
+
+# Publishes the `appmarket` npm package when a tag cli-v<version> is pushed. Uses npm trusted
+# publishing (OIDC): no npm token is stored, and every release carries a provenance attestation
+# linking it to this workflow run. One-time setup on npmjs.com: package `appmarket` → Settings →
+# Trusted publisher → GitHub Actions, repository AppMarket-org/app, workflow release-cli.yml.
+
+on:
+  push:
+    tags: ["cli-v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Trusted publishing needs npm 11.5.1 or later.
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - name: Tag matches the package version
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          [ "$GITHUB_REF_NAME" = "cli-v$version" ] || { echo "Tag $GITHUB_REF_NAME does not match version $version"; exit 1; }
+          grep -q "VERSION = \"$version\"" packages/cli/src/config.ts || { echo "src/config.ts VERSION is not $version"; exit 1; }
+      - run: pnpm --filter appmarket typecheck
+      - run: pnpm --filter appmarket test
+      # pnpm pack resolves workspace: versions in the manifest; npm publishes the tarball with provenance.
+      - run: pnpm --filter appmarket exec pnpm pack --pack-destination "$RUNNER_TEMP"
+      - run: npm install -g npm@latest && npm publish "$RUNNER_TEMP"/appmarket-*.tgz --provenance --access public

@@ -99,3 +99,9 @@ newer version (a one-line notice; it never updates itself). `APPMARKET_NO_UPDATE
 
 The hook never blocks or fails a commit: if the CLI is missing, signed out or offline, `git commit`
 behaves exactly as before. Errors go to `~/.appmarket/cli.log`.
+
+## Releasing
+
+Bump `version` in `package.json` and `VERSION` in `src/config.ts`, merge, then push a tag
+`cli-v<version>`. The Release CLI workflow publishes to npm with provenance (trusted publishing,
+no stored token).
