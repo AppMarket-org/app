@@ -9,7 +9,8 @@ const EVENTS = ["SessionStart", "UserPromptSubmit", "PostToolUse", "PostToolUseF
 type HookEntry = { matcher?: string; hooks: { type: string; command: string; timeout?: number }[] };
 type Settings = { hooks?: Record<string, HookEntry[]> } & Record<string, unknown>;
 
-const ours = (entry: HookEntry) => entry.hooks.some((h) => h.command.includes("appmarket hook claude-code"));
+// The plugin's hooks carry --plugin and live in the plugin, not in settings.json.
+const ours = (entry: HookEntry) => entry.hooks.some((h) => h.command.includes("appmarket hook claude-code") && !h.command.includes("--plugin"));
 
 export function settingsPath(): string {
 	return process.env.CLAUDE_SETTINGS ?? join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), "settings.json");

@@ -2,16 +2,20 @@ import { append, bufferKey } from "../buffer.ts";
 import { COMMIT_COMMAND, eventsFor, type HookInput } from "../adapters/claude-code.ts";
 import { gitOr, repoRoot } from "../git.ts";
 import { log } from "../log.ts";
+import { readFileSync } from "node:fs";
 import { checkpoint } from "./checkpoint.ts";
+import { settingsPath } from "./adapter.ts";
 
 /**
  * `appmarket hook claude-code`: Claude Code runs this for each hook event with JSON on stdin (#112).
  * Records only sessions working in an initialised repo, prints nothing (UserPromptSubmit output
  * would be added to the conversation) and always exits 0.
  */
-export function hook(harness: string, stdin: string): number {
+export function hook(harness: string, stdin: string, opts: { plugin?: boolean } = {}): number {
 	try {
 		if (harness !== "claude-code") return 0;
+		// Plugin and `adapter install` both present: the settings hooks record, the plugin's stay quiet.
+		if (opts.plugin && settingsHooksInstalled()) return 0;
 		const input = JSON.parse(stdin) as HookInput;
 		const root = input.cwd ? repoRoot(input.cwd) : null;
 		if (!root) return 0;
@@ -29,4 +33,12 @@ export function hook(harness: string, stdin: string): number {
 		log("hook claude-code failed", error);
 	}
 	return 0;
+}
+
+function settingsHooksInstalled(): boolean {
+	try {
+		return readFileSync(settingsPath(), "utf8").includes("appmarket hook claude-code");
+	} catch {
+		return false;
+	}
 }

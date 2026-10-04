@@ -1,0 +1,11 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "appmarket",
+  "version": "0.1.0",
+  "description": "Checkpoints for appmarket.org: the prompt, model, effort and tools behind every commit Claude Code makes. Needs the appmarket CLI (npx @appmarket/cli login).",
+  "author": { "name": "appmarket.org", "url": "https://appmarket.org" },
+  "homepage": "https://appmarket.org",
+  "repository": "https://github.com/AppMarket-org/claude-plugin",
+  "license": "MIT",
+  "keywords": ["appmarket", "checkpoints", "provenance", "git"]
+}
