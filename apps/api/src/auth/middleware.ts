@@ -2,6 +2,7 @@ import type { Role } from "@appmarket/shared";
 import { createMiddleware } from "hono/factory";
 import { env } from "cloudflare:workers";
 import { OwnerStore } from "../owners/store.ts";
+import { touchSession } from "./last-used.ts";
 import { auth, type Session } from "./auth.ts";
 import { deviceMayCall, deviceMayCallAuth } from "./scopes.ts";
 
@@ -26,6 +27,8 @@ export const sessionMiddleware = createMiddleware<{ Variables: AuthVariables }>(
 		return c.json({ error: "insufficient_scope" }, 403);
 	}
 	c.set("session", { ...session, orgIds: await new OwnerStore(env.DB).orgIdsOf(session.user.id), deviceScopes });
+	// #133: last used and network, for Settings → Signed-in devices.
+	c.executionCtx.waitUntil(touchSession(session.session.id, c.req.header("cf-connecting-ip") ?? c.req.header("x-real-ip")).catch(() => undefined));
 	await next();
 });
 

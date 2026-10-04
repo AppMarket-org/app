@@ -136,10 +136,10 @@ export const sessionRoutes = new Hono<Ctx>()
 	.get("/", async (c) => {
 		const session = c.get("session")!;
 		const { results } = await env.DB.prepare(
-			`SELECT id, userAgent, createdAt, expiresAt, clientId, scopes, deviceName FROM "session" WHERE userId = ? AND expiresAt > ? ORDER BY createdAt DESC`,
+			`SELECT id, userAgent, createdAt, expiresAt, clientId, scopes, deviceName, lastUsedAt, lastIpPrefix FROM "session" WHERE userId = ? AND expiresAt > ? ORDER BY COALESCE(lastUsedAt, createdAt) DESC`,
 		)
 			.bind(session.user.id, Date.now())
-			.all<{ id: string; userAgent: string | null; createdAt: number | string; expiresAt: number | string; clientId: string | null; scopes: string | null; deviceName: string | null }>();
+			.all<{ id: string; userAgent: string | null; createdAt: number | string; expiresAt: number | string; clientId: string | null; scopes: string | null; deviceName: string | null; lastUsedAt: string | null; lastIpPrefix: string | null }>();
 		const iso = (v: number | string) => new Date(typeof v === "number" ? v : Number.isNaN(Number(v)) ? v : Number(v)).toISOString();
 		return c.json({
 			items: results.map((r): SessionInfo => ({
@@ -149,8 +149,17 @@ export const sessionRoutes = new Hono<Ctx>()
 				expiresAt: iso(r.expiresAt),
 				current: r.id === session.session.id,
 				device: r.scopes == null ? null : { clientId: r.clientId ?? "", name: r.deviceName ?? "Device", scopes: r.scopes.split(" ").filter(Boolean) },
+				lastUsedAt: r.lastUsedAt,
+				ipPrefix: r.lastIpPrefix,
 			})),
 		});
+	})
+	// #133: rename a device login.
+	.patch("/:id", async (c) => {
+		const name = String(((await c.req.json().catch(() => ({}))) as { name?: unknown }).name ?? "").trim().slice(0, 64);
+		if (!name) return c.json({ error: "invalid", issues: [{ path: "name", message: "Give the device a name." }] }, 400);
+		const result = await env.DB.prepare(`UPDATE "session" SET deviceName = ? WHERE id = ? AND userId = ? AND scopes IS NOT NULL`).bind(name, c.req.param("id"), c.get("session")!.user.id).run();
+		return result.meta.changes ? c.json({ name }) : c.json({ error: "not_found" }, 404);
 	})
 	.delete("/:id", async (c) => {
 		const result = await env.DB.prepare(`DELETE FROM "session" WHERE id = ? AND userId = ?`).bind(c.req.param("id"), c.get("session")!.user.id).run();
