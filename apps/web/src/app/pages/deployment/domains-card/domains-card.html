@@ -1,0 +1,75 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Custom domains</mat-card-title>
+    <mat-card-subtitle>Serve the app from your own domain. Cloudflare creates the DNS record and the certificate in your account.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Working" />
+    }
+    @if (loadError(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    }
+    @if (domains(); as list) {
+      @if (list.length) {
+        <mat-list role="list" aria-label="Custom domains">
+          @for (d of list; track d.id) {
+            <mat-list-item role="listitem">
+              <mat-icon matListItemIcon aria-hidden="true">language</mat-icon>
+              <span matListItemTitle class="host">{{ d.hostname }}</span>
+              <span matListItemMeta class="meta">
+                <mat-chip-set aria-label="Status">
+                  <mat-chip [highlighted]="active()[d.id]">{{ active()[d.id] ? 'Active' : 'Issuing certificate…' }}</mat-chip>
+                </mat-chip-set>
+                @if (active()[d.id]) {
+                  <a mat-button [href]="'https://' + d.hostname" target="_blank" rel="noopener">Open</a>
+                }
+                <button mat-button type="button" [disabled]="busy()" (click)="detach(d)">Detach</button>
+              </span>
+            </mat-list-item>
+          }
+        </mat-list>
+      }
+
+      <div class="form">
+        @if (zones(); as zs) {
+          @if (zs.length) {
+            <div class="row">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="name">
+                <mat-label>Subdomain (empty for the apex)</mat-label>
+                <input matInput [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" placeholder="app" autocomplete="off" spellcheck="false" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="zone">
+                <mat-label>Domain</mat-label>
+                <mat-select [ngModel]="zoneId()" (ngModelChange)="zoneId.set($event)" name="zone">
+                  @for (z of zs; track z.id) {
+                    <mat-option [value]="z.id">{{ z.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          } @else {
+            <p class="hint">This Cloudflare account has no active domains yet.</p>
+          }
+        } @else {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Hostname</mat-label>
+            <input matInput [ngModel]="name()" (ngModelChange)="name.set($event)" name="hostname" placeholder="app.example.com" autocomplete="off" spellcheck="false" />
+            <mat-hint>A domain (or subdomain of a domain) that is active in your Cloudflare account.</mat-hint>
+          </mat-form-field>
+        }
+        @if (error(); as e) {
+          <p class="error" role="alert">{{ e }}</p>
+        }
+        <button mat-flat-button type="button" [disabled]="busy() || !valid()" (click)="attach()">Attach {{ valid() ? hostname() : 'domain' }}</button>
+      </div>
+
+      <mat-expansion-panel class="guide">
+        <mat-expansion-panel-header><mat-panel-title>My domain is not on Cloudflare yet</mat-panel-title></mat-expansion-panel-header>
+        <p>1. In the Cloudflare dashboard, choose <strong>Add a domain</strong> and enter it (the Free plan is enough).</p>
+        <p>2. At your registrar, replace the nameservers with the two Cloudflare shows.</p>
+        <p>3. Wait until Cloudflare reports the domain as <strong>Active</strong> (minutes to a few hours), then come back here and attach it.</p>
+      </mat-expansion-panel>
+    }
+  </mat-card-content>
+</mat-card>
