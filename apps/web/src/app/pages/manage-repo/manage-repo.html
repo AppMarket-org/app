@@ -23,6 +23,15 @@
   }
 
   <div class="grid">
+    @if (l.importedFrom; as src) {
+      <mat-card appearance="outlined" class="wide">
+        <mat-card-header>
+          <mat-icon mat-card-avatar aria-hidden="true">cloud_download</mat-icon>
+          <mat-card-title>Imported from GitHub</mat-card-title>
+          <mat-card-subtitle class="wrap">{{ src }} · a one-time copy; push here to update it.</mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+    }
     @if (l.forkedFrom; as f) {
       <mat-card appearance="outlined" class="wide">
         <mat-card-header>

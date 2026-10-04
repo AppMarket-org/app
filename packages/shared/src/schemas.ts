@@ -42,6 +42,20 @@ export const repoInputSchema = z.object({
 	...repoFields,
 	/** Handle of the user or org to create it under; defaults to the signed-in user. */
 	owner: z.string().trim().toLowerCase().max(39).optional(),
+	/** #30: start from a public GitHub repository instead of an empty one. */
+	importUrl: z
+		.string()
+		.trim()
+		.regex(/^https:\/\/github\.com\/[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}?(\.git)?\/?$/, "Use a public GitHub address like https://github.com/owner/repo.")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
+	importBranch: z
+		.string()
+		.trim()
+		.max(255)
+		.regex(/^[A-Za-z0-9._\/-]+$/, "Use a branch name like main.")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 	description: repoFields.description.default(""),
 	runtime: repoFields.runtime.default("workers-js"),
 	platforms: repoFields.platforms.default(["workers"]),

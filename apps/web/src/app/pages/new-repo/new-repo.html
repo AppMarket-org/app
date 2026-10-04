@@ -18,6 +18,20 @@
         <mat-hint>It will live at appmarket.org/{{ ownerHandle() }}/…</mat-hint>
       </mat-form-field>
     }
+    <!-- #30: optionally start from a public GitHub repository. -->
+    <div class="import">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="url">
+        <mat-label>Import from GitHub (optional)</mat-label>
+        <input matInput type="url" inputmode="url" placeholder="https://github.com/owner/repo" [ngModel]="importUrl()" (ngModelChange)="importUrl.set($event)" name="importUrl" />
+        <mat-hint>Public repositories only. Leave empty to start with an empty repo.</mat-hint>
+      </mat-form-field>
+      @if (importUrl()) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="branch">
+          <mat-label>Branch</mat-label>
+          <input matInput placeholder="default branch" [ngModel]="importBranch()" (ngModelChange)="importBranch.set($event)" name="importBranch" />
+        </mat-form-field>
+      }
+    </div>
     <app-repo-form submitLabel="Create draft" [saving]="saving()" [errorMessage]="errorMessage()" [fieldErrors]="fieldErrors()" (saved)="create($event)" />
   </mat-card-content>
 </mat-card>

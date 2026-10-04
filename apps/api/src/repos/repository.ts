@@ -39,6 +39,7 @@ interface RepoRow {
 	owner_avatar_id: string | null;
 	published_languages: string | null;
 	forked_from_path: string | null;
+	imported_from: string | null;
 	forked_tag: string | null;
 	forked_commit: string | null;
 	owner_image: string | null;
@@ -83,6 +84,7 @@ function toRepo(row: RepoRow): Repo {
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
+		importedFrom: row.imported_from,
 		forkedFrom: row.forked_from_path ? { fullName: row.forked_from_path, tag: row.forked_tag, commit: row.forked_commit } : null,
 		languages: row.published_languages ? (JSON.parse(row.published_languages) as Record<string, number>) : null,
 		createdAt: row.created_at,
@@ -193,6 +195,11 @@ export class RepoStore {
 			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo)
 			.run();
 		return (await this.findById(ids.id))!;
+	}
+
+	/** #30 */
+	async setImportedFrom(id: string, source: string): Promise<void> {
+		await this.db.prepare("UPDATE repos SET imported_from = ? WHERE id = ?").bind(source, id).run();
 	}
 
 	/** #26: marks a new repo as a fork of `source` at its published version. */
