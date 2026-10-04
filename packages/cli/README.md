@@ -72,6 +72,13 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 `--api <url>` or `APPMARKET_API` points at another server (staging, local dev). `APPMARKET_HOME`
 moves `~/.appmarket`.
 
+## Rebase and amend
+
+`init` also installs a `post-rewrite` hook: after `git rebase` or `git commit --amend`, each new
+commit gets the original checkpoint with `rewritten_from` set (an amend also adds prompts recorded
+since), and the old commit's checkpoint stays as history. Repos set up with an earlier version: run
+`appmarket init` again.
+
 ## Safety
 
 The hook never blocks or fails a commit: if the CLI is missing, signed out or offline, `git commit`

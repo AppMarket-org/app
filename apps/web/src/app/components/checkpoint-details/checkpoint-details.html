@@ -16,6 +16,9 @@
   @if (c.redactions) {
     <span><mat-icon inline>visibility_off</mat-icon>{{ c.redactions }} redacted</span>
   }
+  @if (c.rewritten_from) {
+    <span><mat-icon inline>history</mat-icon>Rewritten from <code>{{ c.rewritten_from.slice(0, 7) }}</code></span>
+  }
   @if (c.source === 'agent-reported') {
     <span><mat-icon inline>info</mat-icon>Reported by the agent</span>
   }

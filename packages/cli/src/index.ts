@@ -10,6 +10,7 @@ import { checkpoint } from "./commands/checkpoint.ts";
 import { adapter } from "./commands/adapter.ts";
 import { hook } from "./commands/hook.ts";
 import { mcp } from "./commands/mcp.ts";
+import { rewritten } from "./commands/rewritten.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
 
@@ -69,7 +70,7 @@ async function main(argv: string[]): Promise<number> {
 	if (values.version) return (console.log(VERSION), 0);
 	if (!command || values.help) return (console.log(HELP), 0);
 	// C8: queued uploads go out at the start of every interactive command.
-	if (!["checkpoint", "record", "sync", "hook", "mcp"].includes(command)) await flush().catch(() => undefined);
+	if (!["checkpoint", "record", "sync", "hook", "mcp", "rewritten"].includes(command)) await flush().catch(() => undefined);
 	switch (command) {
 		case "login":
 			return login(api, { noBrowser: !!values["no-browser"], deviceName: values["device-name"] as string | undefined, noKeychain: !!values["no-keychain"] });
@@ -91,6 +92,8 @@ async function main(argv: string[]): Promise<number> {
 			return hook(rest[0] ?? "", await readStdin(), { plugin: !!values.plugin });
 		case "mcp":
 			return mcp();
+		case "rewritten":
+			return rewritten(rest[0] ?? "", await readStdin());
 		case "adapter":
 			return adapter(rest[0], rest[1]);
 		case "sync": {

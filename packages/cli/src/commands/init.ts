@@ -40,17 +40,31 @@ async function resolveRepo(api: string, token: string, root: string, explicit?: 
 	throw new Error("No remote of this checkout points at one of your appmarket.org repos. Run `appmarket init <owner>/<repo>`.");
 }
 
-function installHook(root: string): string {
-	const hooksDir = resolve(root, git(["rev-parse", "--git-path", "hooks"], { cwd: root }));
-	mkdirSync(hooksDir, { recursive: true });
-	const hook = join(hooksDir, "post-commit");
+/** #125: copies checkpoints to rewritten commits; stdin ("old new" pairs) goes to the chained hook and to the CLI. */
+const REWRITE_HOOK = `#!/bin/sh
+${MARK} (installed by \`appmarket init\`)
+input=$(cat)
+[ -x "$(dirname "$0")/post-rewrite.local" ] && printf '%s\\n' "$input" | "$(dirname "$0")/post-rewrite.local" "$@"
+command -v appmarket >/dev/null 2>&1 && printf '%s\\n' "$input" | appmarket rewritten "$1" >/dev/null 2>&1
+exit 0
+`;
+
+function writeHook(hooksDir: string, name: string, body: string): string {
+	const hook = join(hooksDir, name);
 	if (existsSync(hook) && !readFileSync(hook, "utf8").includes(MARK)) {
-		// Keep the existing hook: ours runs it first as post-commit.local.
-		renameSync(hook, join(hooksDir, "post-commit.local"));
+		// Keep the existing hook: ours runs it first as <name>.local.
+		renameSync(hook, join(hooksDir, `${name}.local`));
 	}
-	writeFileSync(hook, HOOK);
+	writeFileSync(hook, body);
 	chmodSync(hook, 0o755);
 	return hook;
+}
+
+export function installHook(root: string): string {
+	const hooksDir = resolve(root, git(["rev-parse", "--git-path", "hooks"], { cwd: root }));
+	mkdirSync(hooksDir, { recursive: true });
+	writeHook(hooksDir, "post-rewrite", REWRITE_HOOK);
+	return writeHook(hooksDir, "post-commit", HOOK);
 }
 
 function addConfig(root: string, key: string, value: string): void {
