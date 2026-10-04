@@ -23,6 +23,7 @@ import {
 import { purgeRepoPage } from "../routes/seo.ts";
 import { canEdit, canView, isOwner } from "./access.ts";
 import { CONTRACT_FILES, buildRepoMap, checkTemplate, wranglerMain } from "@appmarket/template-contract";
+import { storeLanguages } from "./languages.ts";
 import { type RepoCheckSummary, RepoStore } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
 import { Screenshots } from "./screenshots.ts";
@@ -149,6 +150,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		// G4: generate the repo map for the newly published version (stored beside it, not committed).
 		if (request.data.to === "published" && repo.gitRepo && repo.submittedCommit) {
 			c.executionCtx.waitUntil(storeRepoMap(repo, repo.submittedCommit).catch((e) => logEvent("repo_map.failed", { repo: repo.fullName, error: e }, "error")));
+			// #170: language breakdown of the published version.
+			c.executionCtx.waitUntil(storeLanguages(repo.id, repo.gitRepo, repo.submittedCommit).catch((e) => logEvent("languages.failed", { repo: repo.fullName, error: e }, "error")));
 		}
 		// PRD R19: archiving a removed repo revokes every active token; no new ones are issued (token policy).
 		if (request.data.to === "removed" && repo.gitRepo) {

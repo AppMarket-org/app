@@ -6,6 +6,7 @@ import { type AuthVariables, deviceAuthGate, requireRole, sessionMiddleware } fr
 import { adminRepoRoutes, repoRoutes, mediaRoutes } from "./repos/routes.ts";
 import { checkpointRoutes } from "./checkpoints/routes.ts";
 import { scanContributions } from "./contributions/scan.ts";
+import { backfillLanguages } from "./repos/languages.ts";
 import { logEvent } from "./observability/log.ts";
 import { avatarMediaRoutes } from "./owners/avatars.ts";
 import { cloudflareRoutes } from "./cloudflare/routes.ts";
@@ -71,6 +72,7 @@ export default {
 	fetch: app.fetch,
 	// #143: every minute, contributions from new commits and events.
 	async scheduled(_controller: ScheduledController, _env: unknown, ctx: ExecutionContext): Promise<void> {
+		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(scanContributions().catch((error: unknown) => logEvent("contributions.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 	},
 } satisfies ExportedHandler;

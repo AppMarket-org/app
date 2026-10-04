@@ -1,0 +1,47 @@
+h2 {
+  font: var(--mat-sys-title-medium);
+  margin: 0 0 0.75rem;
+}
+
+.bar {
+  display: flex;
+  gap: 0.125rem;
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-highest);
+
+  .segment {
+    min-width: 0.1875rem;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin-top: 0.75rem;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+
+  strong {
+    color: var(--mat-sys-on-surface);
+    font-weight: 600;
+  }
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+}
+
+.other {
+  background-color: var(--mat-sys-outline);
+}

@@ -68,6 +68,10 @@
         }
         <button mat-button type="button" class="report" (click)="report(d.repo.fullName, d.repo.name)"><mat-icon>flag</mat-icon>Report this app</button>
         <mat-divider />
+        @if (d.repo.languages) {
+          <app-language-bar [languages]="d.repo.languages" />
+          <mat-divider />
+        }
         @if (d.history?.total) {
           <section aria-labelledby="history-heading">
             <h2 id="history-heading">How it was built</h2>

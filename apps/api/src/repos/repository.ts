@@ -37,6 +37,7 @@ interface RepoRow {
 	owner_handle: string;
 	owner_kind: OwnerKind;
 	owner_avatar_id: string | null;
+	published_languages: string | null;
 	owner_image: string | null;
 	git_repo: string | null;
 	submitted_tag: string | null;
@@ -79,6 +80,7 @@ function toRepo(row: RepoRow): Repo {
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
+		languages: row.published_languages ? (JSON.parse(row.published_languages) as Record<string, number>) : null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
