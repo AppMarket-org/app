@@ -21,6 +21,25 @@
     <mat-card-content>Could not load the checkpoints for {{ path() }}. It may not exist, or it is not yours.</mat-card-content>
   </mat-card>
 } @else if (repo(); as r) {
+  @if (access().length) {
+    <mat-card appearance="outlined" class="notice">
+      <mat-card-header>
+        <mat-icon mat-card-avatar aria-hidden="true">visibility</mat-icon>
+        <mat-card-title>A moderator viewed private checkpoints</mat-card-title>
+        <mat-card-subtitle>While handling reports about this repo. Moderators see private checkpoints only for an open report, and every view is listed here.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list dense aria-label="Moderator access">
+          @for (a of access(); track a.viewedAt) {
+            <mat-list-item>
+              <span matListItemTitle>{{ a.viewedAt | date: 'medium' }}</span>
+              <span matListItemLine>Report: {{ a.reason }} · {{ a.privateCount }} private checkpoint{{ a.privateCount === 1 ? '' : 's' }} shown</span>
+            </mat-list-item>
+          }
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+  }
   @if (serverRedactions()) {
     <mat-card appearance="outlined" class="notice" role="status">
       <mat-card-header>

@@ -1,6 +1,6 @@
 import { redactSecrets } from "@appmarket/shared";
 import { redactRecord } from "./redact.ts";
-import type { Checkpoint, CheckpointPage, CheckpointRecord, CheckpointState, CheckpointSummary, CheckpointVisibility, Harness } from "@appmarket/shared";
+import type { Checkpoint, CheckpointAccess, CheckpointPage, CheckpointRecord, CheckpointState, CheckpointSummary, CheckpointVisibility, Harness } from "@appmarket/shared";
 
 interface Row {
 	repo_id: string;
@@ -315,6 +315,19 @@ export class CheckpointStore {
 		}
 		const result = await this.db.prepare("DELETE FROM checkpoints WHERE repo_id IN (SELECT id FROM repos WHERE state = 'removed')").run();
 		return result.meta.changes;
+	}
+
+	/** #135 */
+	async logAccess(repoId: string, adminId: string, reportId: string, privateCount: number): Promise<void> {
+		await this.db.prepare("INSERT INTO checkpoint_access_log (repo_id, admin_id, report_id, private_count) VALUES (?, ?, ?, ?)").bind(repoId, adminId, reportId, privateCount).run();
+	}
+
+	async accessLog(repoId: string): Promise<CheckpointAccess[]> {
+		const { results } = await this.db
+			.prepare(`SELECT l.viewed_at, l.private_count, r.reason FROM checkpoint_access_log l JOIN repo_reports r ON r.id = l.report_id WHERE l.repo_id = ? ORDER BY l.viewed_at DESC LIMIT 100`)
+			.bind(repoId)
+			.all<{ viewed_at: string; private_count: number; reason: string }>();
+		return results.map((r) => ({ viewedAt: r.viewed_at, reason: r.reason, privateCount: r.private_count }));
 	}
 
 	async delete(repoId: string, sha: string): Promise<boolean> {

@@ -1,0 +1,37 @@
+<header class="head">
+  <a mat-button routerLink="/admin"><mat-icon>arrow_back</mat-icon>Reports</a>
+  <h1>Checkpoints of {{ owner() }}/{{ slug() }}</h1>
+  <p class="notice" role="note"><mat-icon aria-hidden="true">visibility</mat-icon>Private checkpoints are shown for this report only. Each view is logged and shown to the developer.</p>
+</header>
+
+@if (loading() && !items().length) {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading checkpoints" />
+}
+@if (error(); as message) {
+  <mat-card appearance="outlined"><mat-card-content>{{ message }}</mat-card-content></mat-card>
+}
+
+<mat-accordion multi>
+  @for (c of items(); track c.commit) {
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title><code>{{ short(c.commit) }}</code>&nbsp;{{ harnesses[c.harness] }}{{ c.model ? ' · ' + c.model : '' }}</mat-panel-title>
+        <mat-panel-description>
+          <mat-chip-set aria-label="Checkpoint labels">
+            <mat-chip>{{ visibilities[c.visibility].label }}</mat-chip>
+            <mat-chip>{{ c.source === 'agent-reported' ? 'Agent-reported' : 'Harness' }}</mat-chip>
+          </mat-chip-set>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <app-checkpoint-details [checkpoint]="c" />
+    </mat-expansion-panel>
+  } @empty {
+    @if (!loading() && !error()) {
+      <p>No checkpoints.</p>
+    }
+  }
+</mat-accordion>
+
+@if (next()) {
+  <button mat-stroked-button type="button" class="more" (click)="load(next())">Older checkpoints</button>
+}

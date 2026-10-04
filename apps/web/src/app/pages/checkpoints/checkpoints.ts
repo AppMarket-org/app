@@ -8,12 +8,13 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointSummary, type CheckpointVisibility, type Repo } from '@appmarket/shared';
+import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointAccess, type CheckpointSummary, type CheckpointVisibility, type Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { CheckpointsApi } from '../../api/checkpoints';
 import { Developer } from '../../api/developer';
@@ -39,6 +40,7 @@ const PAGE = 50;
     MatChipsModule,
     MatExpansionModule,
     MatIconModule,
+    MatListModule,
     MatMenuModule,
     MatProgressBarModule,
     MatTooltipModule,
@@ -77,6 +79,8 @@ export class CheckpointsPage {
     return counts ? `${summaryLine(counts)}.` : '';
   });
   protected readonly notesCommand = 'git log --notes=appmarket';
+  /** #135: moderator access to private checkpoints, while handling reports. */
+  protected readonly access = signal<CheckpointAccess[]>([]);
   /** #128: secrets appmarket.org redacted because the uploading CLI missed them. */
   protected readonly serverRedactions = computed(() => this.items().reduce((n, c) => n + (c.server_redactions ?? 0), 0));
 
@@ -98,6 +102,7 @@ export class CheckpointsPage {
     try {
       const [repo, page] = await Promise.all([firstValueFrom(this.developer.repo(this.path())), firstValueFrom(this.api.list(this.path(), { limit: PAGE }))]);
       this.repo.set(repo);
+      this.access.set((await firstValueFrom(this.api.accessLog(this.path())).catch(() => ({ items: [] }))).items);
       this.items.set(page.items);
       this.next.set(page.next);
       this.counts.set(page.summary ?? null);
