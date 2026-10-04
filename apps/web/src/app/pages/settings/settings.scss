@@ -17,7 +17,7 @@ mat-card {
 
   mat-form-field {
     flex: 1;
-    min-width: 15rem;
+    min-width: min(15rem, 100%);
   }
 
   button {

@@ -20,6 +20,21 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+    max-width: 100%;
+
+    // The command button truncates rather than widening the page in narrow windows.
+    .mdc-button {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .cmd {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 }
 

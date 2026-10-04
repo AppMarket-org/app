@@ -13,10 +13,13 @@
     }
   </nav>
   <span class="spacer"></span>
-  <a mat-button routerLink="/search">Search</a>
+  <!-- Narrow windows (and side panels) get icon buttons so the header never overflows. -->
+  <a mat-button class="wide" routerLink="/search">Search</a>
+  <a mat-icon-button class="narrow" routerLink="/search" aria-label="Search" matTooltip="Search"><mat-icon>search</mat-icon></a>
 
   @if (auth.user(); as user) {
-    <a mat-button routerLink="/dashboard">Dashboard</a>
+    <a mat-button class="wide" routerLink="/dashboard">Dashboard</a>
+    <a mat-icon-button class="narrow" routerLink="/dashboard" aria-label="Dashboard" matTooltip="Dashboard"><mat-icon>space_dashboard</mat-icon></a>
     <button mat-icon-button type="button" [matMenuTriggerFor]="account" aria-label="Account menu">
       <app-avatar [name]="auth.owner()?.name ?? user.name" [src]="auth.owner()?.avatarUrl ?? user.image" [size]="2" [decorative]="true" />
     </button>
@@ -29,7 +32,7 @@
       <button mat-menu-item type="button" (click)="signOut()">Sign out</button>
     </mat-menu>
   } @else if (auth.user() === null) {
-    <a mat-flat-button routerLink="/login">Sign in</a>
+    <a mat-flat-button class="sign-in" routerLink="/login">Sign in</a>
   }
 </mat-toolbar>
 
