@@ -10,6 +10,9 @@ export interface OwnerPage {
   repos: Repo[];
   orgs?: Owner[];
   people?: Owner[];
+  /** #142: pinned repos, or (pinnedFallback) the most-cowbelled public ones. */
+  pinned: Repo[];
+  pinnedFallback: boolean;
 }
 
 /** #102: users and organizations (handles, owner pages, members). */
@@ -25,6 +28,15 @@ export class OwnersApi {
   /** #139: the profile of the signed-in user, or of an organization (owners only). */
   profile(org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
     return this.http.get<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile');
+  }
+
+  /** #142: current pins and what may be pinned, for the signed-in user or an organization (owners). */
+  pins(org?: string): Observable<{ pinned: Repo[]; candidates: Repo[] }> {
+    return this.http.get<{ pinned: Repo[]; candidates: Repo[] }>(org ? `/api/orgs/${org}/pins` : '/api/me/pins');
+  }
+
+  savePins(repos: string[], org?: string): Observable<{ pinned: Repo[] }> {
+    return this.http.put<{ pinned: Repo[] }>(org ? `/api/orgs/${org}/pins` : '/api/me/pins', { repos });
   }
 
   /** #140: upload (already cropped) or remove the picture of the signed-in user, or of an organization. */

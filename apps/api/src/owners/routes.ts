@@ -1,4 +1,4 @@
-import type { SessionInfo } from "@appmarket/shared";
+import { MAX_PINS, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
 import { handleSchema, orgCreateSchema, orgMemberSchema, profileUpdateSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -18,13 +18,17 @@ export const ownerRoutes = new Hono<Ctx>().get("/:handle", async (c) => {
 	const owner = await owners().byHandle(c.req.param("handle"));
 	if (!owner) return c.json({ error: "not_found" }, 404);
 	const store = owners();
-	const [profile, repos, related] = await Promise.all([
+	const repoStore = new RepoStore(env.DB);
+	const [profile, repos, pins, related] = await Promise.all([
 		store.profile(owner.id),
-		new RepoStore(env.DB).listPublicByOwner(owner.id),
+		repoStore.listPublicByOwner(owner.id),
+		repoStore.pinned(owner.id),
 		// #141: a user's public organizations, or an organization's public members.
 		owner.kind === "user" ? store.publicOrgsOf(owner.id) : store.publicMembers(owner.id),
 	]);
-	return c.json({ owner, profile, repos, ...(owner.kind === "user" ? { orgs: related } : { people: related }) });
+	// #142: without pins, the most-cowbelled public repos stand in.
+	const pinned = pins.length ? { pinned: pins, pinnedFallback: false } : { pinned: repos.slice(0, MAX_PINS), pinnedFallback: true };
+	return c.json({ owner, profile, repos, ...pinned, ...(owner.kind === "user" ? { orgs: related } : { people: related }) });
 });
 
 /** The signed-in user's handle and organizations. Mounted under /api/me. */
@@ -57,6 +61,15 @@ export const meRoutes = new Hono<Ctx>()
 		const self = await store.forUser(c.get("session")!.user);
 		await store.updateProfile(self.id, body.data);
 		return c.json({ owner: await store.byId(self.id), profile: await store.profile(self.id) });
+	})
+	// #142: pins.
+	.get("/pins", async (c) => {
+		const self = await owners().forUser(c.get("session")!.user);
+		return c.json(await pinState(self, c.get("session")!.orgIds));
+	})
+	.put("/pins", async (c) => {
+		const self = await owners().forUser(c.get("session")!.user);
+		return savePins(c, self, c.get("session")!.orgIds);
 	})
 	// #140: profile picture.
 	.put("/avatar", async (c) => replaceAvatar(c, (await owners().forUser(c.get("session")!.user)).id))
@@ -152,6 +165,17 @@ export const orgRoutes = new Hono<Ctx>()
 		await store.updateProfile(org.id, body.data);
 		return c.json({ owner: await store.byId(org.id), profile: await store.profile(org.id) });
 	})
+	// #142: organization pins, owners only.
+	.get("/:handle/pins", async (c) => {
+		const org = await orgFor(c);
+		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
+		return c.json(await pinState(org, []));
+	})
+	.put("/:handle/pins", async (c) => {
+		const org = await orgFor(c);
+		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
+		return savePins(c, org, []);
+	})
 	// #140: organization logo, owners only.
 	.put("/:handle/avatar", async (c) => {
 		const org = await orgFor(c);
@@ -208,6 +232,28 @@ export const orgRoutes = new Hono<Ctx>()
 		// Someone who just left is no longer a member: no roster for them.
 		return c.json({ members: leaving ? [] : await store.members(org.id) });
 	});
+
+/** #142: what an owner may pin: its own public repos, and for a user also their organizations'. */
+async function pinState(owner: Owner, orgIds: string[]): Promise<{ pinned: Repo[]; candidates: Repo[] }> {
+	const repos = new RepoStore(env.DB);
+	const [pinned, candidates] = await Promise.all([repos.pinned(owner.id), repos.listPublicByOwners([owner.id, ...(owner.kind === "user" ? orgIds : [])])]);
+	return { pinned, candidates };
+}
+
+async function savePins(c: Context<Ctx>, owner: Owner, orgIds: string[]): Promise<Response> {
+	const raw = ((await c.req.json().catch(() => ({}))) as { repos?: unknown }).repos;
+	if (!Array.isArray(raw) || raw.some((r) => typeof r !== "string") || new Set(raw).size !== raw.length) {
+		return c.json({ error: "invalid", issues: [{ path: "repos", message: "A list of distinct owner/repo paths." }] }, 400);
+	}
+	if (raw.length > MAX_PINS) return c.json({ error: "too_many", max: MAX_PINS }, 400);
+	const { candidates } = await pinState(owner, orgIds);
+	const byPath = new Map(candidates.map((r) => [r.fullName, r]));
+	const unknown = (raw as string[]).filter((p) => !byPath.has(p));
+	if (unknown.length) return c.json({ error: "not_pinnable", repos: unknown }, 400);
+	const repos = new RepoStore(env.DB);
+	await repos.setPins(owner.id, (raw as string[]).map((p) => byPath.get(p)!.id));
+	return c.json({ pinned: await repos.pinned(owner.id) });
+}
 
 async function orgFor(c: Context<Ctx>) {
 	const owner = await owners().byHandle(c.req.param("handle")!);

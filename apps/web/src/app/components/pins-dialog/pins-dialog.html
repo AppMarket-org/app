@@ -1,0 +1,48 @@
+<h2 mat-dialog-title>Customize your pins</h2>
+<mat-dialog-content>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading repos" />
+  } @else {
+    <p class="hint">Pin up to {{ max }} public apps. They appear first on the profile, in this order.</p>
+
+    @if (selected().length) {
+      <h3 id="order-heading">Order</h3>
+      <mat-list cdkDropList (cdkDropListDropped)="drop($event)" aria-labelledby="order-heading" class="order">
+        @for (repo of selected(); track repo.id; let last = $last, first = $first) {
+          <mat-list-item cdkDrag cdkDragLockAxis="y">
+            <mat-icon matListItemIcon cdkDragHandle class="handle" aria-hidden="true">drag_indicator</mat-icon>
+            <span matListItemTitle>{{ repo.name }}</span>
+            <span matListItemLine>{{ repo.fullName }}</span>
+            <span matListItemMeta class="moves">
+              <button mat-icon-button type="button" [disabled]="first" (click)="move(repo, -1)" [attr.aria-label]="'Move ' + repo.name + ' up'"><mat-icon>arrow_upward</mat-icon></button>
+              <button mat-icon-button type="button" [disabled]="last" (click)="move(repo, 1)" [attr.aria-label]="'Move ' + repo.name + ' down'"><mat-icon>arrow_downward</mat-icon></button>
+            </span>
+          </mat-list-item>
+        }
+      </mat-list>
+      <p class="sr-only" aria-live="polite">{{ status() }}</p>
+    }
+
+    <h3 id="choose-heading">Apps ({{ selected().length }} / {{ max }})</h3>
+    @if (candidates().length) {
+      <mat-list aria-labelledby="choose-heading" class="choose">
+        @for (repo of candidates(); track repo.id) {
+          <mat-list-item>
+            <mat-checkbox [checked]="isSelected(repo)" [disabled]="full() && !isSelected(repo)" (change)="toggle(repo, $event.checked)">
+              {{ repo.name }} <span class="path">{{ repo.fullName }}</span>
+            </mat-checkbox>
+          </mat-list-item>
+        }
+      </mat-list>
+    } @else {
+      <p class="hint">Nothing to pin yet: only published apps can be pinned.</p>
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancel</button>
+  <button mat-flat-button type="button" [disabled]="loading() || saving()" (click)="save()">Save pins</button>
+</mat-dialog-actions>

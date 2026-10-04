@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +9,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { RepoCard } from '../../components/repo-card/repo-card';
 import { Avatar } from '../../components/avatar/avatar';
+import { PinsDialog, type PinsDialogData } from '../../components/pins-dialog/pins-dialog';
+import { Auth } from '../../auth/auth';
+import type { Repo } from '@appmarket/shared';
+import { firstValueFrom } from 'rxjs';
 import { Seo } from '../../seo/seo';
 import type { OwnerPageData } from './owner-resolver';
 
@@ -22,6 +27,28 @@ import type { OwnerPageData } from './owner-resolver';
 export class OwnerPage {
   /** From ownerResolver; null when the handle does not exist. */
   readonly page = input<OwnerPageData>(null);
+
+  private readonly auth = inject(Auth);
+  private readonly dialog = inject(MatDialog);
+  /** #142: shown pins; replaced after "Customize your pins". */
+  protected readonly pinned = linkedSignal<Repo[]>(() => this.page()?.pinned ?? []);
+  protected readonly pinnedFallback = linkedSignal(() => this.page()?.pinnedFallback ?? false);
+  /** The user themself, or an owner of the organization. */
+  protected readonly canEdit = computed(() => {
+    const owner = this.page()?.owner;
+    if (!owner) return false;
+    if (owner.kind === 'user') return this.auth.owner()?.id === owner.id;
+    return this.auth.orgs().some((m) => m.org.id === owner.id && m.role === 'owner');
+  });
+
+  protected async customizePins(): Promise<void> {
+    const owner = this.page()!.owner;
+    const data: PinsDialogData = owner.kind === 'org' ? { org: owner.handle } : {};
+    const pinned = await firstValueFrom(this.dialog.open<PinsDialog, PinsDialogData, Repo[]>(PinsDialog, { data, width: '36rem', maxWidth: 'calc(100vw - 2rem)' }).afterClosed());
+    if (!pinned) return;
+    this.pinned.set(pinned.length ? pinned : this.page()!.repos.slice(0, 6));
+    this.pinnedFallback.set(!pinned.length);
+  }
 
   constructor() {
     const route = inject(ActivatedRoute).snapshot;
