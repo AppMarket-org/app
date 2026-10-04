@@ -10,9 +10,9 @@
   }
   @default {
     @let d = deployment()!;
-    <h1>Deploying {{ d.repoName }}</h1>
+    <h1>{{ d.previewBranch ? 'Preview of' : 'Deploying' }} {{ d.repoName }}</h1>
     <p class="sub">
-      {{ d.versionTag }} as <strong>{{ d.workerName }}</strong> · started {{ d.createdAt | date: 'medium' }}
+      {{ d.previewBranch ? 'Preview of branch ' + d.previewBranch : d.versionTag }} as <strong>{{ d.workerName }}</strong> · started {{ d.createdAt | date: 'medium' }}
     </p>
 
     <mat-card appearance="outlined">

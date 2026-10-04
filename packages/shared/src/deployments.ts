@@ -15,6 +15,8 @@ export interface Deployment {
 	versionTag: string;
 	accountId: string;
 	workerName: string;
+	/** #28: set for branch previews. */
+	previewBranch: string | null;
 	status: DeploymentStatus;
 	/** workers.dev URL once deployed. */
 	url: string | null;
@@ -65,4 +67,44 @@ export interface WorkerVersion {
 	source: string | null;
 	/** Share of traffic it serves now (0 when not deployed). */
 	percentage: number;
+}
+
+/** #28 (R8): branch previews, deployed into the developer's own Cloudflare account. */
+export interface PreviewSettings {
+	enabled: boolean;
+	accountId: string;
+	/** Name of the person whose Cloudflare connection deploys them. */
+	connectedBy: string;
+	/** True when that is the signed-in user (only they can change the account). */
+	mine: boolean;
+}
+
+export interface BranchPreview {
+	branch: string;
+	commit: string;
+	deploymentId: string;
+	status: DeploymentStatus;
+	url: string | null;
+	error: string | null;
+	updatedAt: string;
+}
+
+/** At most this many branches per repo get previews (newest pushes first). */
+export const MAX_PREVIEW_BRANCHES = 10;
+
+/**
+ * Worker name for a branch preview: `<slug>-pr-<branch>`, a valid Worker name (lowercase, digits
+ * and dashes, at most 63 characters), with a short hash when the branch had to be shortened or
+ * changed so two branches never share a Worker.
+ */
+export function previewWorkerName(slug: string, branch: string): string {
+	const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+	const b = clean(branch) || "branch";
+	let hash = 0;
+	for (const ch of branch) hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) >>> 0;
+	const exact = b === branch;
+	const base = `${clean(slug).slice(0, 30)}-pr-${b}`;
+	if (exact && base.length <= 63) return base;
+	const tag = hash.toString(36).slice(0, 6);
+	return `${base.slice(0, 63 - tag.length - 1).replace(/-+$/, "")}-${tag}`;
 }

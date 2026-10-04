@@ -1,0 +1,16 @@
+mat-slide-toggle {
+  display: block;
+  margin: 0.5rem 0 1rem;
+}
+
+.account {
+  width: min(24rem, 100%);
+}
+
+.branch {
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}

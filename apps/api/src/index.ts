@@ -15,6 +15,8 @@ import { cloudflareRoutes } from "./cloudflare/routes.ts";
 import { cowbellRoutes, repoCowbellRoutes } from "./cowbells/routes.ts";
 import { deploymentRoutes, repoDeployRoutes } from "./deploy/routes.ts";
 import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
+import { previewRoutes } from "./previews/routes.ts";
+import { scanPreviews } from "./previews/scan.ts";
 import { downloadRoutes, repoExportRoutes, repoReleaseRoutes, releaseLinkRoutes } from "./releases/routes.ts";
 import { clientIp } from "./rate-limit.ts";
 import { strictLimit } from "./strict-limit.ts";
@@ -57,6 +59,7 @@ api.route("/repos", repoDeployRoutes);
 api.route("/repos", repoCowbellRoutes);
 api.route("/repos", checkpointRoutes);
 api.route("/repos", repoExportRoutes);
+api.route("/repos", previewRoutes);
 api.route("/cowbells", cowbellRoutes);
 api.route("/owners", ownerRoutes);
 api.route("/me", meRoutes);
@@ -93,6 +96,8 @@ export default {
 		// #131: checkpoints of removed repos are deleted (well within the 24 h promise).
 		ctx.waitUntil(new CheckpointStore(env.DB).purgeRemovedRepos(deleteTranscript).then((n) => n && logEvent("checkpoints.purged", { count: n })).catch(() => undefined));
 		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
+		// #28: branch previews into developers' own Cloudflare accounts.
+		ctx.waitUntil(scanPreviews().catch((error: unknown) => logEvent("previews.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(scanContributions().catch((error: unknown) => logEvent("contributions.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 	},
 } satisfies ExportedHandler;

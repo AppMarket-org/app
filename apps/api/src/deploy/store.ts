@@ -17,15 +17,17 @@ export interface NewDeployment {
 	workerName: string;
 	deploy: DeployConfig;
 	secrets: Record<string, string>;
+	/** #28 */
+	previewBranch?: string;
 }
 
 export async function insertDeployment(d: NewDeployment): Promise<void> {
 	const sealed = Object.keys(d.secrets).length ? await encryptToken(env.CF_TOKEN_ENCRYPTION_KEY, JSON.stringify(d.secrets), secretsAad(d.id, d.userId)) : null;
 	await env.DB.prepare(
-		`INSERT INTO deployments (id, user_id, repo_id, version_tag, commit_sha, account_id, worker_name, deploy_config, secrets_enc)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO deployments (id, user_id, repo_id, version_tag, commit_sha, account_id, worker_name, deploy_config, secrets_enc, preview_branch)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
-		.bind(d.id, d.userId, d.repoId, d.versionTag, d.commitSha, d.accountId, d.workerName, JSON.stringify(d.deploy), sealed)
+		.bind(d.id, d.userId, d.repoId, d.versionTag, d.commitSha, d.accountId, d.workerName, JSON.stringify(d.deploy), sealed, d.previewBranch ?? null)
 		.run();
 }
 
@@ -69,6 +71,7 @@ interface DeploymentRow {
 	version_tag: string;
 	account_id: string;
 	worker_name: string;
+	preview_branch: string | null;
 	status: DeploymentStatus;
 	url: string | null;
 	error: string | null;
@@ -76,7 +79,7 @@ interface DeploymentRow {
 	updated_at: string;
 }
 
-const SELECT = `SELECT d.id, o.handle || '/' || l.slug AS full_name, l.name, d.version_tag, d.account_id, d.worker_name, d.status, d.url, d.error, d.created_at, d.updated_at
+const SELECT = `SELECT d.id, o.handle || '/' || l.slug AS full_name, l.name, d.version_tag, d.account_id, d.worker_name, d.preview_branch, d.status, d.url, d.error, d.created_at, d.updated_at
 	FROM deployments d JOIN repos l ON l.id = d.repo_id JOIN owners o ON o.id = l.owner_id`;
 
 const toDeployment = (r: DeploymentRow): Deployment => ({
@@ -86,6 +89,7 @@ const toDeployment = (r: DeploymentRow): Deployment => ({
 	versionTag: r.version_tag,
 	accountId: r.account_id,
 	workerName: r.worker_name,
+	previewBranch: r.preview_branch,
 	status: r.status,
 	url: r.url,
 	error: r.error,
