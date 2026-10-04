@@ -1,4 +1,4 @@
-import { DEPLOY_UNAVAILABLE, type Deployment, deployAvailability } from "@appmarket/shared";
+import { DEPLOY_UNAVAILABLE, type Deployment, deployAvailability, HOSTNAME } from "@appmarket/shared";
 import { deploymentRequestSchema } from "@appmarket/shared/schemas";
 import { buildDeployConfig, CONTRACT_FILES } from "@appmarket/template-contract";
 import { env } from "cloudflare:workers";
@@ -8,6 +8,7 @@ import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { readFiles } from "../artifacts/git.ts";
 import { accessToken, cloudflareAccounts } from "../cloudflare/oauth.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { attachDomain, detachDomain, domainErrorMessage, listDomains, listZones } from "./domains.ts";
 import { runtimeLogs } from "./runtime-logs.ts";
 import { deploymentFor, deploymentLogs, deploymentsFor, insertDeployment } from "./store.ts";
 import { CloudflareApiError, rollbackTo, workerVersions } from "./versions.ts";
@@ -92,6 +93,59 @@ export const deploymentRoutes = new Hono<Ctx>()
 			}
 			return cloudflareError(c, error);
 		}
+	})
+	// #39 (D9): custom domains on the deployed Worker.
+	.get("/:id/domains", async (c) => {
+		const target = await cloudflareTarget(c);
+		if (target instanceof Response) return target;
+		try {
+			const [zones, domains] = await Promise.all([listZones(fetch, target.token, target.deployment.accountId), listDomains(fetch, target.token, target.deployment.accountId, target.deployment.workerName)]);
+			return c.json({ zones, domains });
+		} catch (error) {
+			return cloudflareError(c, error);
+		}
+	})
+	.post("/:id/domains", async (c) => {
+		const body = (await c.req.json().catch(() => null)) as { hostname?: unknown; zoneId?: unknown } | null;
+		const hostname = typeof body?.hostname === "string" ? body.hostname.trim().toLowerCase().replace(/\.$/, "") : "";
+		if (hostname.includes("*")) return c.json({ error: "invalid", message: "Wildcard hostnames cannot be custom domains; attach each hostname." }, 400);
+		if (!HOSTNAME.test(hostname)) return c.json({ error: "invalid", message: "Enter a hostname such as app.example.com." }, 400);
+		const zoneId = typeof body?.zoneId === "string" && /^[0-9a-f]{32}$/.test(body.zoneId) ? body.zoneId : undefined;
+		const target = await cloudflareTarget(c);
+		if (target instanceof Response) return target;
+		try {
+			const domain = await attachDomain(fetch, target.token, target.deployment.accountId, target.deployment.workerName, hostname, zoneId);
+			logEvent("deploy.domain_attached", { deployment: target.deployment.id, hostname });
+			return c.json(domain, 201);
+		} catch (error) {
+			if (error instanceof CloudflareApiError && error.status >= 400 && error.status < 500 && error.status !== 401 && error.status !== 403) {
+				return c.json({ error: "domain_refused", message: domainErrorMessage(error, hostname) }, 422);
+			}
+			return cloudflareError(c, error);
+		}
+	})
+	.delete("/:id/domains/:domainId", async (c) => {
+		const target = await cloudflareTarget(c);
+		if (target instanceof Response) return target;
+		try {
+			// Only this Worker's domains: never detach something else in the buyer's account.
+			const mine = await listDomains(fetch, target.token, target.deployment.accountId, target.deployment.workerName);
+			if (!mine.some((d) => d.id === c.req.param("domainId"))) return c.json({ error: "not_found" }, 404);
+			await detachDomain(fetch, target.token, target.deployment.accountId, c.req.param("domainId"));
+			logEvent("deploy.domain_detached", { deployment: target.deployment.id });
+			return c.json({ ok: true });
+		} catch (error) {
+			return cloudflareError(c, error);
+		}
+	})
+	// The certificate is ready once the hostname answers over HTTPS.
+	.get("/:id/domains/:domainId/status", async (c) => {
+		const target = await cloudflareTarget(c);
+		if (target instanceof Response) return target;
+		const domain = (await listDomains(fetch, target.token, target.deployment.accountId, target.deployment.workerName).catch(() => [])).find((d) => d.id === c.req.param("domainId"));
+		if (!domain) return c.json({ error: "not_found" }, 404);
+		const active = await fetch(`https://${domain.hostname}/`, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(8000) }).then(() => true, () => false);
+		return c.json({ hostname: domain.hostname, active });
 	})
 	// #38 (D8): the Worker's version history in the buyer's account, and rollback to any version.
 	.get("/:id/versions", async (c) => {

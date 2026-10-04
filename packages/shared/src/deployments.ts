@@ -156,3 +156,13 @@ export function buildEjectGuide(p: { repo: string; version: string; commit: stri
 		"",
 	].join("\n");
 }
+
+/** #39 (D9): a custom domain attached to the deployed Worker in the buyer's account. */
+export interface WorkerDomain {
+	id: string;
+	hostname: string;
+	zoneName: string | null;
+}
+
+/** A hostname a buyer can attach: lowercase labels, no wildcard, at most 253 characters. */
+export const HOSTNAME = /^(?=.{1,253}$)(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/;
