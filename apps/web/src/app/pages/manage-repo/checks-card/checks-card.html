@@ -1,0 +1,36 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Checks</mat-card-title>
+    <mat-card-subtitle>Lint, typecheck, tests and a security scan run on every push and every submitted version. A version is published only when its checks pass.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (runs(); as list) {
+      <mat-accordion multi displayMode="flat">
+        @for (r of list.slice(0, 5); track r.id) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon [class]="r.status" aria-hidden="true">{{ icons[r.status] }}</mat-icon>
+                <code>{{ short(r.commit) }}</code>&nbsp;{{ r.trigger === 'submit' ? 'submitted version' : 'push' }}
+              </mat-panel-title>
+              <mat-panel-description>{{ r.status }} · {{ r.createdAt | date: 'short' }}</mat-panel-description>
+            </mat-expansion-panel-header>
+            @for (c of r.results ?? []; track c.name) {
+              <div class="check">
+                <mat-icon [class]="c.status" aria-hidden="true">{{ icons[c.status] }}</mat-icon>
+                <strong>{{ c.name }}</strong>&nbsp;{{ c.status }}
+              </div>
+              @if (c.output && c.status === 'failed') {
+                <pre><code>{{ c.output }}</code></pre>
+              }
+            } @empty {
+              <p class="hint">{{ r.status === 'running' || r.status === 'queued' ? 'Running…' : 'No results.' }}</p>
+            }
+          </mat-expansion-panel>
+        } @empty {
+          <p class="hint">No checks yet. They run after your next push.</p>
+        }
+      </mat-accordion>
+    }
+  </mat-card-content>
+</mat-card>

@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { pushedCommits } from "../artifacts/git.ts";
 import { logEvent } from "../observability/log.ts";
 import { ContributionStore } from "./store.ts";
+import { startChecks } from "../checks/start.ts";
 
 /** Repos the scan looks at per run (each costs one Artifacts info() call, plus a log when changed). */
 const BATCH = 50;
@@ -25,9 +26,11 @@ export async function scanContributions(): Promise<{ checked: number; scanned: n
 	const now = new Date().toISOString();
 	for (const repo of repos) {
 		try {
-			const { lastPushAt, commits: log } = await pushedCommits(repo.git_repo, 500);
+			const { lastPushAt, commits: log, defaultBranch } = await pushedCommits(repo.git_repo, 500);
 			if (lastPushAt && (!repo.contributions_scanned_at || lastPushAt > repo.contributions_scanned_at)) {
 				commits += await store.addCommits(repo.id, log);
+				// #27: checks on the newest commit of a repo that was pushed to (not on the first backfill scan).
+				if (repo.contributions_scanned_at && log[0]) await startChecks({ id: repo.id, gitRepo: repo.git_repo, fullName: repo.id }, log[0].hash, "push", `refs/heads/${defaultBranch}`).catch(() => null);
 				scanned++;
 				await env.DB.prepare("UPDATE repos SET contributions_scanned_at = ?, contributions_checked_at = ? WHERE id = ?").bind(lastPushAt, now, repo.id).run();
 			} else {

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +13,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
+import { ChecksCard } from '../manage-repo/checks-card/checks-card';
 import { REPORT_REASONS, type Repo, type RepoReport, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Admin as AdminApi } from '../../api/admin';
@@ -25,6 +27,7 @@ import { Seo } from '../../seo/seo';
 @Component({
   selector: 'app-admin',
   imports: [
+    ChecksCard,
     DatePipe,
     RouterLink,
     MatButtonModule,
@@ -142,8 +145,10 @@ export class Admin {
       await action();
       await this.reload();
       return true;
-    } catch {
-      this.snackBar.open('That did not work. Reload and try again.', 'OK', { duration: 6000 });
+    } catch (error) {
+      // #27: the API explains refusals such as failing checks; show that rather than a generic error.
+      const message = error instanceof HttpErrorResponse ? (error.error as { message?: string } | null)?.message : undefined;
+      this.snackBar.open(message ?? 'That did not work. Reload and try again.', 'OK', { duration: 6000 });
       return false;
     } finally {
       this.busy.set(false);

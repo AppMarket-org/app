@@ -98,5 +98,7 @@ export default {
 
 // D6: the deploy Workflow and its build Sandbox (Durable Object with a container).
 export { CiSandbox, DeployWorkflow } from "./deploy/workflow.ts";
+// #27: checks on push and on submission.
+export { ChecksWorkflow } from "./checks/workflow.ts";
 // #182: exact counters for sensitive actions.
 export { RateLimiter } from "./rate-limiter-do.ts";
