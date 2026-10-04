@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { RepoCard } from '../../components/repo-card/repo-card';
 import { Avatar } from '../../components/avatar/avatar';
@@ -13,7 +14,7 @@ import type { OwnerPageData } from './owner-resolver';
 /** #102, #139: appmarket.org/<handle>: a user's or organization's profile and public repos. */
 @Component({
   selector: 'app-owner',
-  imports: [Avatar, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, RepoCard, RouterLink],
+  imports: [Avatar, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,17 +33,31 @@ export class OwnerPage {
       return;
     }
     const { owner, profile, repos } = data;
+    const site = 'https://appmarket.org';
+    const url = `${site}/${owner.handle}`;
+    const image = owner.avatarUrl ? (owner.avatarUrl.startsWith('/') ? site + owner.avatarUrl : owner.avatarUrl) : undefined;
     seo.set({
       title: `${owner.name} (${owner.handle})`,
       description: profile?.bio ?? `${repos.length} app${repos.length === 1 ? '' : 's'} by ${owner.name} on appmarket.org.`,
       path: `/${owner.handle}`,
       heading: [{ label: owner.handle }],
+      image,
+      // #141: schema.org ProfilePage with the person or organization as its main entity.
       jsonLd: {
-        '@type': owner.kind === 'org' ? 'Organization' : 'Person',
-        name: owner.name,
-        url: `https://appmarket.org/${owner.handle}`,
-        ...(profile?.bio ? { description: profile.bio } : {}),
-        ...(profile?.website ? { sameAs: [profile.website] } : {}),
+        '@type': 'ProfilePage',
+        url,
+        ...(profile?.memberSince ? { dateCreated: profile.memberSince } : {}),
+        mainEntity: {
+          '@type': owner.kind === 'org' ? 'Organization' : 'Person',
+          name: owner.name,
+          alternateName: owner.handle,
+          url,
+          ...(image ? { image } : {}),
+          ...(profile?.bio ? { description: profile.bio } : {}),
+          ...(profile?.website ? { sameAs: [profile.website] } : {}),
+          ...(owner.kind === 'user' && profile?.location ? { homeLocation: { '@type': 'Place', name: profile.location } } : {}),
+          ...(owner.kind === 'org' && profile?.location ? { location: { '@type': 'Place', name: profile.location } } : {}),
+        },
       },
     });
   }

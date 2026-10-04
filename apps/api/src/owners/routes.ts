@@ -17,7 +17,14 @@ const invalid = (error: z.ZodError) => ({ error: "invalid", issues: error.issues
 export const ownerRoutes = new Hono<Ctx>().get("/:handle", async (c) => {
 	const owner = await owners().byHandle(c.req.param("handle"));
 	if (!owner) return c.json({ error: "not_found" }, 404);
-	return c.json({ owner, profile: await owners().profile(owner.id), repos: await new RepoStore(env.DB).listPublicByOwner(owner.id) });
+	const store = owners();
+	const [profile, repos, related] = await Promise.all([
+		store.profile(owner.id),
+		new RepoStore(env.DB).listPublicByOwner(owner.id),
+		// #141: a user's public organizations, or an organization's public members.
+		owner.kind === "user" ? store.publicOrgsOf(owner.id) : store.publicMembers(owner.id),
+	]);
+	return c.json({ owner, profile, repos, ...(owner.kind === "user" ? { orgs: related } : { people: related }) });
 });
 
 /** The signed-in user's handle and organizations. Mounted under /api/me. */
@@ -110,7 +117,8 @@ export const orgRoutes = new Hono<Ctx>()
 		const store = owners();
 		const role = await store.roleIn(org.id, c.get("session")!.user.id);
 		if (!role) return c.json({ error: "not_found" }, 404);
-		return c.json({ org, role, members: await store.members(org.id) });
+		const userId = c.get("session")!.user.id;
+		return c.json({ org, role, public: await store.membershipPublic(org.id, userId), members: await store.members(org.id) });
 	})
 	.patch("/:handle", async (c) => {
 		const org = await orgFor(c);
@@ -154,6 +162,15 @@ export const orgRoutes = new Hono<Ctx>()
 		const org = await orgFor(c);
 		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
 		return removeAvatar(c, org.id);
+	})
+	// #141: a member shows (or hides) their own membership.
+	.put("/:handle/membership", async (c) => {
+		const org = await orgFor(c);
+		if (!org) return c.json({ error: "not_found" }, 404);
+		const visible = ((await c.req.json().catch(() => ({}))) as { public?: unknown }).public;
+		if (typeof visible !== "boolean") return c.json({ error: "invalid", issues: [{ path: "public", message: "true or false" }] }, 400);
+		if (!(await owners().setMembershipPublic(org.id, c.get("session")!.user.id, visible))) return c.json({ error: "not_found" }, 404);
+		return c.json({ public: visible });
 	})
 	.put("/:handle/members", async (c) => {
 		const org = await orgFor(c);

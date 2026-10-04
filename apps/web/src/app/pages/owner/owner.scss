@@ -1,26 +1,83 @@
-.head {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+// #141: GitHub-style profile: identity on the left, content on the right; stacked on phones.
+.profile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
 
-  h1 {
-    font: var(--mat-sys-headline-medium);
-    margin: 0;
+  @media (min-width: 56rem) {
+    grid-template-columns: 18rem minmax(0, 1fr);
+    gap: 2rem;
   }
 }
 
-.handle {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0.25rem 0 0;
-  font: var(--mat-sys-title-medium);
-  color: var(--mat-sys-on-surface-variant);
+.identity {
+  min-width: 0;
+
+  .photo {
+    --avatar-size: 6rem !important;
+
+    @media (min-width: 56rem) {
+      --avatar-size: 16rem !important;
+    }
+  }
+
+  h1 {
+    display: flex;
+    flex-direction: column;
+    margin: 1rem 0 0.5rem;
+
+    .name {
+      font: var(--mat-sys-headline-small);
+      overflow-wrap: anywhere;
+    }
+
+    .handle {
+      font: var(--mat-sys-title-medium);
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  h2 {
+    font: var(--mat-sys-title-small);
+    margin: 1.25rem 0 0.5rem;
+  }
 }
 
-h2 {
-  font: var(--mat-sys-title-large);
+.bio {
+  margin: 0.75rem 0;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  padding: 0;
+  --mat-list-list-item-one-line-container-height: 2.25rem;
+  --mdc-list-list-item-one-line-container-height: 2.25rem;
+  --mat-list-list-item-label-text-color: var(--mat-sys-on-surface-variant);
+  --mat-list-list-item-leading-icon-start-space: 0;
+
+  .mat-mdc-list-item {
+    padding-left: 0;
+  }
+}
+
+.faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+
+  a {
+    --mat-icon-button-state-layer-size: 2.75rem;
+    padding: 0.25rem;
+  }
+}
+
+.content {
+  min-width: 0;
+
+  h2 {
+    font: var(--mat-sys-title-large);
+    margin-top: 0;
+  }
 }
 
 .cards {
@@ -31,24 +88,6 @@ h2 {
 
 .empty {
   color: var(--mat-sys-on-surface-variant);
-}
-
-.bio {
-  margin: 0.75rem 0 0.5rem;
-  max-width: 40rem;
-  overflow-wrap: anywhere;
-}
-
-.facts {
-  padding: 0;
-  max-width: 30rem;
-  --mat-list-list-item-one-line-container-height: 2.25rem;
-  --mdc-list-list-item-one-line-container-height: 2.25rem;
-  --mat-list-list-item-label-text-color: var(--mat-sys-on-surface-variant);
-
-  .mat-mdc-list-item {
-    padding-left: 0;
-  }
 }
 
 .sr-only {

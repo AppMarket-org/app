@@ -47,7 +47,7 @@ describe("OwnerStore", () => {
 		expect(await store.createOrg("u1", "jane", "Clash")).toBeNull();
 		const org = await store.createOrg("u1", "acme", "Acme Inc");
 		expect(org).toMatchObject({ handle: "acme", kind: "org", name: "Acme Inc" });
-		expect(await store.membershipsOf("u1")).toEqual([{ org, role: "owner" }]);
+		expect(await store.membershipsOf("u1")).toEqual([{ org, role: "owner", public: false }]);
 		expect(await store.orgIdsOf("u1")).toEqual([org!.id]);
 	});
 
@@ -71,6 +71,26 @@ describe("OwnerStore", () => {
 		await store.updateProfile(jane.id, { name: null, bio: null });
 		expect((await store.byId(jane.id))?.name).toBe("U1");
 		expect(await store.profile(jane.id)).toEqual({ website: "https://jane.example.test", memberSince: "1970-01-01T00:00:00.000Z" });
+	});
+});
+
+describe("public memberships (#141)", () => {
+	it("are private until the member shows them, on both profiles", async () => {
+		const db = testD1();
+		addUser(db.sqlite, "u1", "jane@example.test");
+		addUser(db.sqlite, "u2", "sam@example.test");
+		const store = new OwnerStore(db.d1);
+		await store.forUser({ id: "u1", email: "jane@example.test" });
+		await store.forUser({ id: "u2", email: "sam@example.test" });
+		const org = (await store.createOrg("u1", "acme", "Acme"))!;
+		await store.setMember(org.id, "u2", "member");
+		expect(await store.publicMembers(org.id)).toEqual([]);
+		expect(await store.publicOrgsOf("u2")).toEqual([]);
+		expect(await store.setMembershipPublic(org.id, "u2", true)).toBe(true);
+		expect((await store.publicMembers(org.id)).map((o) => o.handle)).toEqual(["sam"]);
+		expect((await store.publicOrgsOf("u2")).map((o) => o.handle)).toEqual(["acme"]);
+		expect((await store.membershipsOf("u2"))[0]).toMatchObject({ role: "member", public: true });
+		expect(await store.setMembershipPublic(org.id, "nobody", true)).toBe(false);
 	});
 });
 

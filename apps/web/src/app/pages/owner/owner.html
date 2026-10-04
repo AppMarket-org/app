@@ -1,18 +1,18 @@
 @if (page(); as p) {
-  <header class="head">
-    <app-avatar [name]="p.owner.name" [src]="p.owner.avatarUrl" [size]="6" [kind]="p.owner.kind" [decorative]="true" [eager]="true" />
-    <div>
-      <h1>{{ p.owner.name }}</h1>
-      <p class="handle">
-        {{ p.owner.handle }}
-        @if (p.owner.kind === 'org') {
-          <mat-chip-set aria-label="Account type"><mat-chip>Organization</mat-chip></mat-chip-set>
-        }
-      </p>
+  <div class="profile">
+    <aside class="identity" aria-label="Profile">
+      <app-avatar class="photo" [name]="p.owner.name" [src]="p.owner.avatarUrl" [size]="16" [kind]="p.owner.kind" [decorative]="true" [eager]="true" />
+      <h1>
+        <span class="name">{{ p.owner.name }}</span>
+        <span class="handle">{{ p.owner.handle }}</span>
+      </h1>
+      @if (p.owner.kind === 'org') {
+        <mat-chip-set aria-label="Account type"><mat-chip>Organization</mat-chip></mat-chip-set>
+      }
+      @if (p.profile?.bio; as bio) {
+        <p class="bio">{{ bio }}</p>
+      }
       @if (p.profile; as profile) {
-        @if (profile.bio) {
-          <p class="bio">{{ profile.bio }}</p>
-        }
         <mat-list class="facts" aria-label="Profile details">
           @if (profile.location) {
             <mat-list-item>
@@ -21,7 +21,7 @@
             </mat-list-item>
           }
           @if (profile.website) {
-            <a mat-list-item [href]="profile.website" rel="nofollow noopener ugc" target="_blank">
+            <a mat-list-item [href]="profile.website" rel="nofollow noopener ugc me" target="_blank">
               <mat-icon matListItemIcon aria-hidden="true">link</mat-icon>
               <span matListItemTitle>{{ profile.website.replace('https://', '') }}</span>
             </a>
@@ -32,21 +32,48 @@
           </mat-list-item>
         </mat-list>
       }
-    </div>
-  </header>
 
-  <section aria-labelledby="repos-heading">
-    <h2 id="repos-heading">Apps</h2>
-    @if (p.repos.length) {
-      <div class="cards">
-        @for (r of p.repos; track r.id) {
-          <app-repo-card [repo]="r" />
+      @if (p.orgs?.length) {
+        <section aria-labelledby="orgs-heading">
+          <h2 id="orgs-heading">Organizations</h2>
+          <div class="faces">
+            @for (o of p.orgs; track o.id) {
+              <a mat-icon-button [routerLink]="'/' + o.handle" [matTooltip]="o.name" [attr.aria-label]="o.name">
+                <app-avatar [name]="o.name" [src]="o.avatarUrl" [size]="2.25" kind="org" [decorative]="true" />
+              </a>
+            }
+          </div>
+        </section>
+      }
+      @if (p.people?.length) {
+        <section aria-labelledby="people-heading">
+          <h2 id="people-heading">People</h2>
+          <div class="faces">
+            @for (person of p.people; track person.id) {
+              <a mat-icon-button [routerLink]="'/' + person.handle" [matTooltip]="person.name" [attr.aria-label]="person.name">
+                <app-avatar [name]="person.name" [src]="person.avatarUrl" [size]="2.25" [decorative]="true" />
+              </a>
+            }
+          </div>
+        </section>
+      }
+    </aside>
+
+    <div class="content">
+      <section aria-labelledby="repos-heading">
+        <h2 id="repos-heading">Apps</h2>
+        @if (p.repos.length) {
+          <div class="cards">
+            @for (r of p.repos; track r.id) {
+              <app-repo-card [repo]="r" />
+            }
+          </div>
+        } @else {
+          <p class="empty">No public apps yet.</p>
         }
-      </div>
-    } @else {
-      <p class="empty">No public apps yet.</p>
-    }
-  </section>
+      </section>
+    </div>
+  </div>
 } @else {
   <section>
     <h1>Not found</h1>

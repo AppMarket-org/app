@@ -59,6 +59,8 @@ export const PROFILE_LIMITS = { name: 80, bio: 160, location: 80, website: 200 }
 export interface OrgMembership {
 	org: Owner;
 	role: OrgRole;
+	/** #141: shown on the organization's profile and the member's. */
+	public: boolean;
 }
 
 export interface OrgMember {

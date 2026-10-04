@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import type { OrgMember, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate } from '@appmarket/shared';
@@ -29,7 +30,7 @@ const ERRORS: Record<string, string> = {
 /** #102: an organization's members. Owners add, remove and promote; members can leave. */
 @Component({
   selector: 'app-org-settings',
-  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, Avatar, AvatarEditor, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, Avatar, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './org-settings.html',
   styleUrl: './org-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +49,7 @@ export class OrgSettings {
   protected readonly role = signal<OrgRole | null>(null);
   protected readonly members = signal<OrgMember[]>([]);
   protected readonly notFound = signal(false);
+  protected readonly publicMembership = signal(false);
   protected readonly profile = signal<OwnerProfile | null>(null);
   protected readonly profileSaving = signal(false);
   protected readonly profileFieldErrors = signal<Record<string, string>>({});
@@ -61,15 +63,27 @@ export class OrgSettings {
   async ngOnInit(): Promise<void> {
     this.seo.set({ title: 'Organization', description: 'Organization members.', path: `/settings/orgs/${this.handle()}`, noindex: true });
     try {
-      const { org, role, members } = await firstValueFrom(this.api.members(this.handle()));
+      const res = await firstValueFrom(this.api.members(this.handle()));
+      const { org, role, members } = res;
       this.org.set(org);
       this.role.set(role);
+      this.publicMembership.set(res.public);
       this.members.set(members);
       // #139: only owners edit the organization's profile.
       if (role === 'owner') this.profile.set((await firstValueFrom(this.api.profile(org.handle))).profile);
       this.seo.setHeading([{ label: org.handle, link: `/${org.handle}` }, { label: 'Members' }]);
     } catch {
       this.notFound.set(true);
+    }
+  }
+
+  protected async setPublic(visible: boolean): Promise<void> {
+    try {
+      await firstValueFrom(this.api.setMembershipPublic(this.handle(), visible));
+      this.publicMembership.set(visible);
+      this.snackBar.open(visible ? 'Shown on profiles' : 'Hidden from profiles', undefined, { duration: 2500 });
+    } catch {
+      this.snackBar.open('Could not change that. Try again.', 'OK', { duration: 4000 });
     }
   }
 
