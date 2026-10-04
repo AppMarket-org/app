@@ -1,5 +1,5 @@
 import type { SessionInfo } from "@appmarket/shared";
-import { handleSchema, orgCreateSchema, orgMemberSchema } from "@appmarket/shared/schemas";
+import { handleSchema, orgCreateSchema, orgMemberSchema, profileUpdateSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
@@ -16,7 +16,7 @@ const invalid = (error: z.ZodError) => ({ error: "invalid", issues: error.issues
 export const ownerRoutes = new Hono<Ctx>().get("/:handle", async (c) => {
 	const owner = await owners().byHandle(c.req.param("handle"));
 	if (!owner) return c.json({ error: "not_found" }, 404);
-	return c.json({ owner, repos: await new RepoStore(env.DB).listPublicByOwner(owner.id) });
+	return c.json({ owner, profile: await owners().profile(owner.id), repos: await new RepoStore(env.DB).listPublicByOwner(owner.id) });
 });
 
 /** The signed-in user's handle and organizations. Mounted under /api/me. */
@@ -35,6 +35,20 @@ export const meRoutes = new Hono<Ctx>()
 		if (!name) return c.json({ error: "invalid", issues: [{ path: "name", message: "Give the device a name." }] }, 400);
 		await env.DB.prepare(`UPDATE "session" SET deviceName = ? WHERE id = ?`).bind(name, session.session.id).run();
 		return c.json({ deviceName: name });
+	})
+	// #139: the signed-in user's profile.
+	.get("/profile", async (c) => {
+		const store = owners();
+		const self = await store.forUser(c.get("session")!.user);
+		return c.json({ owner: self, profile: await store.profile(self.id) });
+	})
+	.patch("/profile", async (c) => {
+		const body = profileUpdateSchema.safeParse(await c.req.json().catch(() => null));
+		if (!body.success) return c.json(invalid(body.error), 400);
+		const store = owners();
+		const self = await store.forUser(c.get("session")!.user);
+		await store.updateProfile(self.id, body.data);
+		return c.json({ owner: await store.byId(self.id), profile: await store.profile(self.id) });
 	})
 	.patch("/handle", async (c) => {
 		const body = handleSchema.safeParse(((await c.req.json().catch(() => ({}))) as { handle?: unknown }).handle);
@@ -108,6 +122,23 @@ export const orgRoutes = new Hono<Ctx>()
 			await env.DB.prepare("UPDATE owners SET name = ? WHERE id = ?").bind(raw.name.trim(), org.id).run();
 		}
 		return c.json(await store.byId(org.id));
+	})
+	// #139: organization profile, owners only (members get 404 like everyone else).
+	.get("/:handle/profile", async (c) => {
+		const org = await orgFor(c);
+		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
+		return c.json({ owner: org, profile: await owners().profile(org.id) });
+	})
+	.patch("/:handle/profile", async (c) => {
+		const org = await orgFor(c);
+		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
+		const body = profileUpdateSchema.safeParse(await c.req.json().catch(() => null));
+		if (!body.success) return c.json(invalid(body.error), 400);
+		// An organization always has a display name.
+		if (body.data.name === null) return c.json({ error: "invalid", issues: [{ path: "name", message: "An organization needs a name." }] }, 400);
+		const store = owners();
+		await store.updateProfile(org.id, body.data);
+		return c.json({ owner: await store.byId(org.id), profile: await store.profile(org.id) });
 	})
 	.put("/:handle/members", async (c) => {
 		const org = await orgFor(c);

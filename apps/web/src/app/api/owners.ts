@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, Repo, SessionInfo } from '@appmarket/shared';
+import type { OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** #102: users and organizations (handles, owner pages, members). */
@@ -8,9 +8,18 @@ import { type Observable, map } from 'rxjs';
 export class OwnersApi {
   private readonly http = inject(HttpClient);
 
-  /** Public owner page: the user or org and its public repos. */
-  page(handle: string): Observable<{ owner: Owner; repos: Repo[] }> {
-    return this.http.get<{ owner: Owner; repos: Repo[] }>(`/api/owners/${encodeURIComponent(handle)}`);
+  /** Public owner page: the user or org, its profile and its public repos. */
+  page(handle: string): Observable<{ owner: Owner; profile: OwnerProfile | null; repos: Repo[] }> {
+    return this.http.get<{ owner: Owner; profile: OwnerProfile | null; repos: Repo[] }>(`/api/owners/${encodeURIComponent(handle)}`);
+  }
+
+  /** #139: the profile of the signed-in user, or of an organization (owners only). */
+  profile(org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
+    return this.http.get<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile');
+  }
+
+  updateProfile(update: OwnerProfileUpdate, org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
+    return this.http.patch<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile', update);
   }
 
   me(): Observable<{ owner: Owner; orgs: OrgMembership[] }> {

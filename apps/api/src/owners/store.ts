@@ -1,4 +1,4 @@
-import { handleProblem, type OrgMember, type OrgMembership, type OrgRole, type Owner, type OwnerKind } from "@appmarket/shared";
+import { handleProblem, type OrgMember, type OrgMembership, type OrgRole, type Owner, type OwnerKind, type OwnerProfile } from "@appmarket/shared";
 
 interface OwnerRow {
 	id: string;
@@ -70,6 +70,27 @@ export class OwnerStore {
 			throw error;
 		}
 		return this.byId(id);
+	}
+
+	/** #139: public profile fields (empty ones left out). */
+	async profile(ownerId: string): Promise<OwnerProfile | null> {
+		const row = await this.db
+			.prepare(`SELECT o.bio, o.location, o.website, COALESCE(u.createdAt, o.created_at) AS since FROM owners o LEFT JOIN "user" u ON u.id = o.user_id WHERE o.id = ?`)
+			.bind(ownerId)
+			.first<{ bio: string | null; location: string | null; website: string | null; since: string | number }>();
+		if (!row) return null;
+		const since = typeof row.since === "number" || /^\d+$/.test(String(row.since)) ? new Date(Number(row.since)).toISOString() : new Date(row.since).toISOString();
+		return { ...(row.bio ? { bio: row.bio } : {}), ...(row.location ? { location: row.location } : {}), ...(row.website ? { website: row.website } : {}), memberSince: since };
+	}
+
+	/** Sets the given fields; null clears one (a user's name then falls back to the sign-in name). */
+	async updateProfile(ownerId: string, update: { name?: string | null; bio?: string | null; location?: string | null; website?: string | null }): Promise<void> {
+		const columns = (["name", "bio", "location", "website"] as const).filter((k) => update[k] !== undefined);
+		if (!columns.length) return;
+		await this.db
+			.prepare(`UPDATE owners SET ${columns.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`)
+			.bind(...columns.map((k) => update[k] ?? null), ownerId)
+			.run();
 	}
 
 	/** Organizations the user belongs to, with their role. */

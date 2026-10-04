@@ -1,11 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { RESPONSE_INIT, inject } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
-import type { Owner, Repo } from '@appmarket/shared';
+import type { Owner, Repo, OwnerProfile } from '@appmarket/shared';
 import { catchError, of, throwError } from 'rxjs';
 import { OwnersApi } from '../../api/owners';
 
-export type OwnerPageData = { owner: Owner; repos: Repo[] } | null;
+export type OwnerPageData = { owner: Owner; profile: OwnerProfile | null; repos: Repo[] } | null;
 
 /** #102: a user or organization page; an unknown handle becomes an HTTP 404. */
 export const ownerResolver: ResolveFn<OwnerPageData> = (route) => {

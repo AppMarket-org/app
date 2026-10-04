@@ -11,8 +11,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
-import type { OrgMember, OrgRole, Owner } from '@appmarket/shared';
+import type { OrgMember, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
+import { ProfileForm } from '../../../components/profile-form/profile-form';
+import { profileErrors } from '../../../components/profile-form/profile-errors';
 import { OwnersApi } from '../../../api/owners';
 import { Auth } from '../../../auth/auth';
 import { Seo } from '../../../seo/seo';
@@ -25,7 +27,7 @@ const ERRORS: Record<string, string> = {
 /** #102: an organization's members. Owners add, remove and promote; members can leave. */
 @Component({
   selector: 'app-org-settings',
-  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, MatSnackBarModule, ReactiveFormsModule, RouterLink],
+  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './org-settings.html',
   styleUrl: './org-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +46,9 @@ export class OrgSettings {
   protected readonly role = signal<OrgRole | null>(null);
   protected readonly members = signal<OrgMember[]>([]);
   protected readonly notFound = signal(false);
+  protected readonly profile = signal<OwnerProfile | null>(null);
+  protected readonly profileSaving = signal(false);
+  protected readonly profileFieldErrors = signal<Record<string, string>>({});
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly add = inject(FormBuilder).nonNullable.group({
@@ -58,9 +63,27 @@ export class OrgSettings {
       this.org.set(org);
       this.role.set(role);
       this.members.set(members);
+      // #139: only owners edit the organization's profile.
+      if (role === 'owner') this.profile.set((await firstValueFrom(this.api.profile(org.handle))).profile);
       this.seo.setHeading([{ label: org.handle, link: `/${org.handle}` }, { label: 'Members' }]);
     } catch {
       this.notFound.set(true);
+    }
+  }
+
+  protected async saveProfile(update: OwnerProfileUpdate): Promise<void> {
+    this.profileSaving.set(true);
+    this.profileFieldErrors.set({});
+    try {
+      const { owner, profile } = await firstValueFrom(this.api.updateProfile(update, this.handle()));
+      this.org.set(owner);
+      this.profile.set(profile);
+      this.snackBar.open('Profile saved', undefined, { duration: 2500 });
+    } catch (error) {
+      this.profileFieldErrors.set(profileErrors(error));
+      this.snackBar.open('Check the highlighted fields.', 'OK', { duration: 4000 });
+    } finally {
+      this.profileSaving.set(false);
     }
   }
 

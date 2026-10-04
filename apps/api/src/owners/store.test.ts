@@ -61,4 +61,26 @@ describe("OwnerStore", () => {
 		await store.removeMember(org.id, "u3");
 		expect(await store.roleIn(org.id, "u3")).toBeNull();
 	});
+
+	it("stores profile fields, leaves empty ones out, and falls back to the sign-in name (#139)", async () => {
+		const jane = await store.forUser({ id: "u1", email: "jane@example.test" });
+		expect(await store.profile(jane.id)).toEqual({ memberSince: "1970-01-01T00:00:00.000Z" });
+		await store.updateProfile(jane.id, { name: "Jane Doe", bio: "Builds Workers.", website: "https://jane.example.test" });
+		expect(await store.profile(jane.id)).toEqual({ bio: "Builds Workers.", website: "https://jane.example.test", memberSince: "1970-01-01T00:00:00.000Z" });
+		expect((await store.byId(jane.id))?.name).toBe("Jane Doe");
+		await store.updateProfile(jane.id, { name: null, bio: null });
+		expect((await store.byId(jane.id))?.name).toBe("U1");
+		expect(await store.profile(jane.id)).toEqual({ website: "https://jane.example.test", memberSince: "1970-01-01T00:00:00.000Z" });
+	});
+});
+
+describe("profileUpdateSchema", () => {
+	it("validates lengths and https-only websites, and turns empty strings into null", async () => {
+		const { profileUpdateSchema } = await import("@appmarket/shared/schemas");
+		expect(profileUpdateSchema.parse({ bio: "", website: "https://example.test/me" })).toEqual({ bio: null, website: "https://example.test/me" });
+		expect(profileUpdateSchema.safeParse({ website: "http://example.test" }).success).toBe(false);
+		expect(profileUpdateSchema.safeParse({ website: "javascript:alert(1)" }).success).toBe(false);
+		expect(profileUpdateSchema.safeParse({ bio: "x".repeat(161) }).success).toBe(false);
+		expect(profileUpdateSchema.safeParse({ role: "admin" }).success).toBe(false);
+	});
 });

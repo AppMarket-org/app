@@ -12,16 +12,18 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
-import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type SessionInfo } from '@appmarket/shared';
+import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type OwnerProfile, type OwnerProfileUpdate, type SessionInfo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { OwnersApi } from '../../api/owners';
+import { ProfileForm } from '../../components/profile-form/profile-form';
+import { profileErrors } from '../../components/profile-form/profile-errors';
 import { Auth } from '../../auth/auth';
 import { Seo } from '../../seo/seo';
 
-/** #102: your username and your organizations. */
+/** #102, #139: your profile, username and organizations. */
 @Component({
   selector: 'app-settings',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSnackBarModule, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +36,9 @@ export class Settings {
   protected readonly owner = signal<Owner | null>(null);
   protected readonly orgs = signal<OrgMembership[] | undefined>(undefined);
   protected readonly sessions = signal<SessionInfo[] | undefined>(undefined);
+  protected readonly profile = signal<OwnerProfile | null>(null);
+  protected readonly profileSaving = signal(false);
+  protected readonly profileFieldErrors = signal<Record<string, string>>({});
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly handle = new FormControl('', {
@@ -42,7 +47,7 @@ export class Settings {
   });
 
   constructor() {
-    inject(Seo).set({ title: 'Settings', description: 'Your username and organizations.', path: '/settings', noindex: true });
+    inject(Seo).set({ title: 'Settings', description: 'Your profile, username and organizations.', path: '/settings', noindex: true });
   }
 
   async ngOnInit(): Promise<void> {
@@ -50,7 +55,24 @@ export class Settings {
     this.owner.set(owner);
     this.orgs.set(orgs);
     this.handle.setValue(owner.handle);
+    this.profile.set((await firstValueFrom(this.api.profile())).profile);
     this.sessions.set(await firstValueFrom(this.api.sessions()).catch(() => []));
+  }
+
+  protected async saveProfile(update: OwnerProfileUpdate): Promise<void> {
+    this.profileSaving.set(true);
+    this.profileFieldErrors.set({});
+    try {
+      const { owner, profile } = await firstValueFrom(this.api.updateProfile(update));
+      this.owner.set(owner);
+      this.profile.set(profile);
+      this.snackBar.open('Profile saved', undefined, { duration: 2500 });
+    } catch (error) {
+      this.profileFieldErrors.set(profileErrors(error));
+      this.snackBar.open('Check the highlighted fields.', 'OK', { duration: 4000 });
+    } finally {
+      this.profileSaving.set(false);
+    }
   }
 
   /** Device logins show their name; browsers a short label from the user agent. */

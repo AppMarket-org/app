@@ -31,6 +31,27 @@ export interface Owner {
 	name: string;
 }
 
+/** #139: public profile fields; empty ones are left out. */
+export interface OwnerProfile {
+	/** A user's bio or an organization's description (160 characters). */
+	bio?: string;
+	location?: string;
+	/** https only. */
+	website?: string;
+	/** When the account or organization was created (ISO). */
+	memberSince: string;
+}
+
+/** What a user or organization owner edits; null or "" clears a field. */
+export interface OwnerProfileUpdate {
+	name?: string | null;
+	bio?: string | null;
+	location?: string | null;
+	website?: string | null;
+}
+
+export const PROFILE_LIMITS = { name: 80, bio: 160, location: 80, website: 200 } as const;
+
 export interface OrgMembership {
 	org: Owner;
 	role: OrgRole;

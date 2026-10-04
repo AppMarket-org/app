@@ -1,0 +1,11 @@
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}

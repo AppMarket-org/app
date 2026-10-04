@@ -2,6 +2,20 @@
 
 <mat-card appearance="outlined">
   <mat-card-header>
+    <mat-card-title>Profile</mat-card-title>
+    <mat-card-subtitle>Shown on your public page{{ owner() ? ', appmarket.org/' + owner()!.handle : '' }}. Empty fields are not shown.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (owner() && profile(); as p) {
+      <app-profile-form kind="user" [name]="owner()!.name" [profile]="p" [saving]="profileSaving()" [errors]="profileFieldErrors()" (save)="saveProfile($event)" />
+    } @else {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading profile" />
+    }
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined">
+  <mat-card-header>
     <mat-card-title>Username</mat-card-title>
     <mat-card-subtitle>Your repos live at appmarket.org/{{ owner()?.handle ?? '…' }}/…</mat-card-subtitle>
   </mat-card-header>
