@@ -27,6 +27,7 @@ import { ChecksCard } from './checks-card/checks-card';
 import { ExportCard } from './export-card/export-card';
 import { PreviewsCard } from './previews-card/previews-card';
 import { SessionsCard } from './sessions-card/sessions-card';
+import { WebhooksCard } from './webhooks-card/webhooks-card';
 import { Seo } from '../../seo/seo';
 import { describeRepoError } from '../repo-errors';
 import { STATE_LABELS } from '../state-labels';
@@ -55,6 +56,7 @@ import { STATE_LABELS } from '../state-labels';
     ExportCard,
     PreviewsCard,
     SessionsCard,
+    WebhooksCard,
     ReleasesCard,
     RuntimeBadge,
   ],

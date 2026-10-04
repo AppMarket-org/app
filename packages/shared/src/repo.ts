@@ -170,3 +170,12 @@ export interface CowbellStatus {
 /** Catalog sort orders: newest first, or most cowbells first. */
 export const REPO_SORTS = ["newest", "cowbells"] as const;
 export type RepoSort = (typeof REPO_SORTS)[number];
+
+/** #34: a push webhook as the owner sees it (secrets are never returned after creation). */
+export interface RepoWebhook {
+	id: string;
+	url: string;
+	format: "generic" | "github";
+	createdAt: string;
+	deliveries: { id: string; ref: string; sha: string; status: number | null; error: string | null; createdAt: string }[];
+}

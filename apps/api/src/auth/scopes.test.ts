@@ -6,7 +6,7 @@ const all = ["checkpoints:write", "checkpoints:read", "repos:read"];
 describe("grantScopes", () => {
 	it("defaults to the client's scopes and refuses anything wider or unknown", () => {
 		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write"]);
-		expect(grantScopes("appmarket-ci", undefined)).toEqual(all);
+		expect(grantScopes("appmarket-ci", undefined)).toEqual([...all, "releases:write"]);
 		expect(grantScopes("appmarket-ci", "sessions:write")).toBeNull();
 		expect(grantScopes("appmarket-cli", "repos:read")).toEqual(["repos:read"]);
 		expect(grantScopes("appmarket-cli", "repos:read repos:write")).toBeNull();
@@ -36,6 +36,12 @@ describe("deviceMayCall", () => {
 			expect(deviceMayCall(all, method, path), `${method} ${path}`).toBe(false);
 		}
 		expect(deviceMayCall(["sessions:write"], "POST", "/api/repos/acme/todo/tokens")).toBe(false);
+	});
+
+	it("lets CI tokens upload releases with releases:write (#34)", () => {
+		expect(deviceMayCall(["releases:write"], "POST", "/api/repos/acme/todo/releases")).toBe(true);
+		expect(deviceMayCall(all, "POST", "/api/repos/acme/todo/releases")).toBe(false);
+		expect(deviceMayCall(["releases:write"], "DELETE", "/api/repos/acme/todo/releases/r1")).toBe(false);
 	});
 
 	it("refuses everything else", () => {
