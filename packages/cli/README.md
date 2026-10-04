@@ -76,7 +76,8 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
 | `adapter install\|uninstall claude-code\|codex` | Add or remove the hooks for Claude Code or Codex |
 | `sync` | Upload queued checkpoints now (offline uploads retry with backoff for 7 days) |
-| `status` | Queue and sign-in state |
+| `status` | Queued uploads, last upload, adapters, and this repo's checkpoints still waiting for a push (flags those older than 30 days) |
+| `doctor` | Checks git hooks, sign-in, connection, and each adapter against the installed harness (reads its newest transcript) |
 
 `--api <url>` or `APPMARKET_API` points at another server (staging, local dev). `APPMARKET_HOME`
 moves `~/.appmarket`.
@@ -87,6 +88,11 @@ moves `~/.appmarket`.
 commit gets the original checkpoint with `rewritten_from` set (an amend also adds prompts recorded
 since), and the old commit's checkpoint stays as history. Repos set up with an earlier version: run
 `appmarket init` again.
+
+## Privacy of the CLI itself
+
+No telemetry. The only request besides your own uploads is a daily check of the npm registry for a
+newer version (a one-line notice; it never updates itself). `APPMARKET_NO_UPDATE_CHECK=1` turns it off.
 
 ## Safety
 

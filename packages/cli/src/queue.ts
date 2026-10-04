@@ -5,6 +5,7 @@ import { ApiError, call } from "./api.ts";
 import { ensureDirs, QUEUE_DIR } from "./config.ts";
 import { loadCredentials } from "./credentials.ts";
 import { log } from "./log.ts";
+import { writeState } from "./state.ts";
 
 /** C13: one file per pending upload; deleted only after a 2xx (or a settled conflict). */
 interface QueueItem {
@@ -65,6 +66,7 @@ export async function flush(opts: { all?: boolean } = {}): Promise<SyncResult> {
 			await call(item.api, `/api/repos/${item.repo}/checkpoints${item.force ? "?force=1" : ""}`, { token: creds.token, body: item.record, timeoutMs: 20_000 });
 			rmSync(file, { force: true });
 			result.sent++;
+			writeState({ lastUploadAt: new Date().toISOString() });
 		} catch (error) {
 			const status = error instanceof ApiError ? error.status : 0;
 			if (status === 409) {
