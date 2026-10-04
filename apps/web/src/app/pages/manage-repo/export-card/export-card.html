@@ -1,0 +1,23 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Export</mat-card-title>
+    <mat-card-subtitle>Your code and every release file, to keep or move elsewhere. Nothing is locked in.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Preparing the export" />
+    }
+    @if (script(); as s) {
+      <p class="hint">{{ summary() }} Create a read token above, then run:</p>
+      <pre><code>APPMARKET_GIT_TOKEN=… sh export.sh</code></pre>
+      <pre class="script"><code>{{ s }}</code></pre>
+    }
+  </mat-card-content>
+  <mat-card-actions>
+    @if (script()) {
+      <button mat-stroked-button type="button" (click)="copy()"><mat-icon>content_copy</mat-icon>Copy script</button>
+    } @else {
+      <button mat-stroked-button type="button" [disabled]="busy()" (click)="prepare()"><mat-icon>archive</mat-icon>Prepare export</button>
+    }
+  </mat-card-actions>
+</mat-card>

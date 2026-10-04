@@ -1,9 +1,9 @@
-import type { Release } from "@appmarket/shared";
+import type { Release, RepoExport } from "@appmarket/shared";
 import { RELEASE_LIMITS } from "@appmarket/shared";
 import { releaseUploadSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
-import { resolveTag } from "../artifacts/git.ts";
+import { gitRemote, resolveTag } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { canEdit, canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
@@ -94,8 +94,8 @@ export const downloadRoutes = new Hono<Ctx>().get("/:id", async (c) => {
 	const range = c.req.header("range") ? c.req.raw.headers : undefined;
 	const object = await store.object(release.r2_key, range);
 	if (!object) return c.json({ error: "not_found" }, 404);
-	// Count a download once per file, not per resumed chunk.
-	if (!range || /^bytes=0-/.test(c.req.header("range") ?? "")) {
+	// Count a download once per file, not per resumed chunk; the owner's export (#31) is not a download.
+	if (c.req.query("export") !== "1" && (!range || /^bytes=0-/.test(c.req.header("range") ?? ""))) {
 		logEvent("download.started", { release: id, platform: release.platform, size: object.size });
 		c.executionCtx.waitUntil(store.countDownload(id));
 	}
@@ -118,4 +118,25 @@ export const downloadRoutes = new Hono<Ctx>().get("/:id", async (c) => {
 	}
 	headers.set("Content-Length", String(object.size));
 	return new Response(object.body, { status: 200, headers });
+});
+
+/** #31 (R25): the owner's export: Git remote and signed links to every release file (1 hour). Mounted under /api/repos. */
+export const repoExportRoutes = new Hono<Ctx>().get("/:owner/:slug/export", requireRole(), async (c) => {
+	const repo = await repos().findByPath(c.req.param("owner"), c.req.param("slug"));
+	if (!repo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+	const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+	const files = await releases().list(repo.id);
+	const releasesOut = await Promise.all(
+		files.map(async (r) => ({
+			tag: r.tag,
+			platform: r.platform,
+			filename: r.filename,
+			sizeBytes: r.sizeBytes,
+			sha256: r.sha256,
+			url: `${env.PUBLIC_ORIGIN}/api/downloads/${r.id}?exp=${expiresAt}&sig=${await signDownload(env.DOWNLOAD_SIGNING_KEY, r.id, expiresAt)}&export=1`,
+		})),
+	);
+	logEvent("repo.exported", { repo: repo.fullName, releases: files.length });
+	c.header("Cache-Control", "no-store");
+	return c.json({ repo: repo.fullName, gitRemote: repo.gitRepo ? await gitRemote(repo.gitRepo) : null, releases: releasesOut, expiresAt: new Date(expiresAt * 1000).toISOString() } satisfies RepoExport);
 });

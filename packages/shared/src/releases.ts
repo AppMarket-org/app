@@ -29,6 +29,14 @@ export interface Release {
 	createdAt: string;
 }
 
+/** #31 (R25): everything needed to take a repo elsewhere. Links are signed and expire in an hour. */
+export interface RepoExport {
+	repo: string;
+	gitRemote: string | null;
+	releases: { tag: string; platform: ReleasePlatform; filename: string; sizeBytes: number; sha256: string; url: string }[];
+	expiresAt: string;
+}
+
 /** PRD R14: a short-lived signed link for one release. */
 export interface DownloadLink {
 	url: string;
