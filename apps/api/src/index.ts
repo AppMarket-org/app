@@ -16,6 +16,7 @@ import { cowbellRoutes, repoCowbellRoutes } from "./cowbells/routes.ts";
 import { deploymentRoutes, repoDeployRoutes } from "./deploy/routes.ts";
 import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
 import { ejectDownloadRoutes, ejectRoutes } from "./deploy/eject.ts";
+import { ogRoutes } from "./og/routes.ts";
 import { previewRoutes } from "./previews/routes.ts";
 import { scanPreviews } from "./previews/scan.ts";
 import { downloadRoutes, repoExportRoutes, repoReleaseRoutes, releaseLinkRoutes } from "./releases/routes.ts";
@@ -80,6 +81,7 @@ api.route("/admin", adminRepoRoutes);
 api.route("/admin", adminReportRoutes);
 api.route("/admin", adminCheckpointRoutes);
 api.route("/me", checkpointExportRoutes);
+api.route("/og", ogRoutes);
 api.route("/media", mediaRoutes);
 api.route("/media", avatarMediaRoutes);
 

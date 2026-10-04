@@ -25,15 +25,16 @@ export const reqHandler = createRequestHandler(async (req) => {
 	return (await angularApp.handle(req)) ?? new Response('Page not found.', { status: 404 });
 });
 
-/** Only the production hosts are indexed; staging and local hosts say noindex everywhere. */
+/**
+ * Only the production hosts are indexed; staging and local hosts send noindex on every response.
+ * (robots.txt is a static asset served before the Worker, and must not block crawling, or crawlers
+ * would never see the noindex.)
+ */
 const INDEXED_HOSTS = new Set(['appmarket.org', 'www.appmarket.org']);
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		if (INDEXED_HOSTS.has(new URL(request.url).hostname)) return serve(request, env, ctx);
-		if (new URL(request.url).pathname === '/robots.txt') {
-			return new Response('User-agent: *\nDisallow: /\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
-		}
 		return withHeaders(await serve(request, env, ctx), { 'X-Robots-Tag': 'noindex, nofollow' });
 	},
 };

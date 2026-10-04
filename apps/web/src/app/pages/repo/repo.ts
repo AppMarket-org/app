@@ -94,7 +94,8 @@ export class RepoPage {
       description: app.summary,
       path: `/${app.fullName}`,
       heading: [{ label: app.owner.handle, link: `/${app.owner.handle}` }, { label: app.slug }],
-      image: data.screenshots[0] ? `https://appmarket.org${data.screenshots[0].url}` : undefined,
+      // Generated card; ?v= changes with the repo so social sites fetch a new one after edits.
+      image: `/api/og/${app.fullName}.png?v=${Date.parse(app.updatedAt) || 0}`,
       noindex: app.state !== 'published',
       jsonLd: {
         '@type': 'SoftwareApplication',

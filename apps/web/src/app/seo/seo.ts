@@ -21,6 +21,8 @@ export interface HeadingPart {
 }
 
 const ORIGIN = 'https://appmarket.org';
+const DEFAULT_CARD = '/api/og/home.png';
+const absolute = (url: string) => (url.startsWith('/') ? ORIGIN + url : url);
 
 /** Sets title, description, canonical, Open Graph, Twitter and JSON-LD tags; rendered into server HTML. */
 @Injectable({ providedIn: 'root' })
@@ -42,10 +44,21 @@ export class Seo {
     this.meta.updateTag({ property: 'og:description', content: page.description });
     this.meta.updateTag({ property: 'og:url', content: url });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
-    if (page.image) {
-      this.meta.updateTag({ property: 'og:image', content: page.image });
+    // Social preview cards: generated 1200×630 images (/api/og/…); pages without their own use the site card.
+    const image = page.noindex ? undefined : (page.image ?? DEFAULT_CARD);
+    const card = !!image && /\/api\/og\//.test(image);
+    for (const [property, content] of [
+      ['og:image', image],
+      ['og:image:width', card ? '1200' : undefined],
+      ['og:image:height', card ? '630' : undefined],
+      ['og:image:alt', image ? page.title : undefined],
+    ] as const) {
+      if (content) this.meta.updateTag({ property, content: property === 'og:image' ? absolute(content) : content });
+      else this.meta.removeTag(`property="${property}"`);
     }
-    this.meta.updateTag({ name: 'twitter:card', content: page.image ? 'summary_large_image' : 'summary' });
+    this.meta.updateTag({ name: 'twitter:card', content: card ? 'summary_large_image' : 'summary' });
+    if (image) this.meta.updateTag({ name: 'twitter:image', content: absolute(image) });
+    else this.meta.removeTag('name="twitter:image"');
     this.setLink('canonical', url);
     this.setJsonLd(page.jsonLd);
   }
