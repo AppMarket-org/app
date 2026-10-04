@@ -70,6 +70,17 @@
     }
   </mat-form-field>
 
+  <mat-form-field appearance="outline">
+    <mat-label>Live demo URL (optional)</mat-label>
+    <input matInput formControlName="demoUrl" type="url" inputmode="url" placeholder="https://my-app.example.workers.dev" />
+    <mat-hint>Where people can try the app. Web apps that pass the install check can be installed from here.</mat-hint>
+    @if (form.controls.demoUrl.hasError('server')) {
+      <mat-error>{{ form.controls.demoUrl.getError('server') }}</mat-error>
+    } @else {
+      <mat-error>Use an https:// address.</mat-error>
+    }
+  </mat-form-field>
+
   @if (errorMessage(); as message) {
     <p class="error" role="alert">{{ message }}</p>
   }

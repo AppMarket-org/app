@@ -22,7 +22,7 @@ export function transitionUpdate(
 		draft: [CLEAR_SUBMITTED, []],
 		// D3: the reviewed version's manifest becomes the repo's.
 		published: [
-			`published_tag = submitted_tag, published_commit = submitted_commit, published_manifest = json_extract(submitted_checks, '$.manifest'), ${CLEAR_SUBMITTED}, approved_by = ?`,
+			`published_tag = submitted_tag, published_commit = submitted_commit, published_manifest = json_extract(submitted_checks, '$.manifest'), published_pwa = json_extract(submitted_checks, '$.pwa'), ${CLEAR_SUBMITTED}, approved_by = ?`,
 			[actorId],
 		],
 		unpublished: [CLEAR_SUBMITTED, []],

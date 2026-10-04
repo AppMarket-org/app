@@ -21,7 +21,7 @@ describe('RepoForm', () => {
     const { cmp, emitted } = setup();
     cmp.form.patchValue({ name: 'My App', summary: 'Does useful things', category: 'ai', license: '  ' });
     cmp.submit();
-    expect(emitted).toEqual([{ name: 'My App', summary: 'Does useful things', description: '', category: 'ai', runtime: 'workers-js', platforms: ['workers'], license: null }]);
+    expect(emitted).toEqual([{ name: 'My App', summary: 'Does useful things', description: '', category: 'ai', runtime: 'workers-js', platforms: ['workers'], license: null, demoUrl: null }]);
   });
 
   it('accepts a license with surrounding spaces, trimmed', () => {

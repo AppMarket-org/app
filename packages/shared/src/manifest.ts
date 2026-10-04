@@ -36,3 +36,16 @@ export interface ContractResult {
 	warnings: ContractIssue[];
 	manifest: DeployManifest | null;
 }
+
+/** #32 (M1): whether the version is an installable web app (PWA), from its files at submit. */
+export interface PwaCheck {
+	installable: boolean;
+	/** Path of the web app manifest, if one was found. */
+	manifest: string | null;
+	name: string | null;
+	display: string | null;
+	/** Service worker file or tooling that generates one (e.g. "@angular/service-worker"). */
+	serviceWorker: string | null;
+	/** What is missing for installability; empty when installable. */
+	issues: string[];
+}

@@ -40,6 +40,24 @@
                   <mat-progress-bar mode="indeterminate" aria-label="Loading README" />
                 }
               </mat-expansion-panel>
+              @if (l.submittedChecks?.pwa; as pwa) {
+                <!-- #32: installability as a web app (informational, never blocks). -->
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>Web app install check</mat-panel-title>
+                    <mat-panel-description>{{ pwa.installable ? 'Installable' : 'Not installable' }}{{ l.demoUrl ? '' : ' · no demo URL' }}</mat-panel-description>
+                  </mat-expansion-panel-header>
+                  @if (pwa.installable) {
+                    <p>Manifest {{ pwa.manifest ?? '(generated)' }}, display {{ pwa.display ?? 'set by the plugin' }}, service worker {{ pwa.serviceWorker }}.</p>
+                  } @else {
+                    <mat-list>
+                      @for (issue of pwa.issues; track issue) {
+                        <mat-list-item><span matListItemTitle class="wrap">{{ issue }}</span></mat-list-item>
+                      }
+                    </mat-list>
+                  }
+                </mat-expansion-panel>
+              }
               @if (l.submittedChecks?.manifest; as manifest) {
                 <mat-expansion-panel>
                   <mat-expansion-panel-header>

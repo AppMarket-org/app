@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import type { RepoInput } from '@appmarket/shared';
 import { NewRepo } from './new-repo';
 
-const input: RepoInput = { name: 'My App', summary: 'Does useful things', description: '', category: 'ai', runtime: 'workers-js', platforms: ['workers'], license: 'MIT' };
+const input: RepoInput = { name: 'My App', summary: 'Does useful things', description: '', category: 'ai', runtime: 'workers-js', platforms: ['workers'], license: 'MIT', demoUrl: null };
 
 describe('NewRepo', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }));
