@@ -17,6 +17,12 @@ export async function createGitRepo(name: string): Promise<{ name: string; remot
 	return { name: created.name, remote: created.remote };
 }
 
+/** #26: a native Artifacts fork of `source` (all refs, so the published tag comes along). */
+export async function forkGitRepo(source: string, name: string): Promise<void> {
+	using git = await env.ARTIFACTS.get(source);
+	await git.fork(name, { defaultBranchOnly: false });
+}
+
 export async function deleteGitRepo(name: string): Promise<void> {
 	await env.ARTIFACTS.delete(name);
 }

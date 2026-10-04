@@ -23,6 +23,21 @@
   }
 
   <div class="grid">
+    @if (l.forkedFrom; as f) {
+      <mat-card appearance="outlined" class="wide">
+        <mat-card-header>
+          <mat-icon mat-card-avatar aria-hidden="true">fork_right</mat-icon>
+          <mat-card-title>Forked from <a mat-button [routerLink]="'/' + f.fullName">{{ f.fullName }}</a></mat-card-title>
+          <mat-card-subtitle>Your copy has the source's branches and tags as they were when you forked.{{ f.tag ? ' The reviewed, published version is the tag ' + f.tag + '.' : '' }}</mat-card-subtitle>
+        </mat-card-header>
+        @if (f.tag) {
+          <mat-card-content>
+            <p class="hint">To start exactly from the published version, after cloning (with a push token below):</p>
+            <pre><code>git checkout -B main {{ f.tag }} && git push --force appmarket main</code></pre>
+          </mat-card-content>
+        }
+      </mat-card>
+    }
     @if (l.state !== 'removed') {
       <mat-card appearance="outlined">
         <mat-card-header><mat-card-title>Push your code</mat-card-title></mat-card-header>

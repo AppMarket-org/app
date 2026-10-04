@@ -8,7 +8,11 @@
         }
       </div>
       <p class="summary">{{ d.repo.summary }}</p>
-      <p class="by">by <a mat-button class="owner" [routerLink]="'/' + d.repo.owner.handle">{{ d.repo.owner.name }}</a></p>
+      <p class="by">by <a mat-button class="owner" [routerLink]="'/' + d.repo.owner.handle">{{ d.repo.owner.name }}</a>
+        @if (d.repo.forkedFrom; as f) {
+          · forked from <a mat-button [routerLink]="'/' + f.fullName">{{ f.fullName }}</a>
+        }
+      </p>
       <div class="meta">
         <app-runtime-badge [runtime]="d.repo.runtime" />
         <mat-chip-set aria-label="Details">
@@ -64,6 +68,9 @@
             <app-domain-guide />
           }
           <mat-divider />
+        }
+        @if (d.repo.state === 'published' && !d.repo.priceCents) {
+          <button mat-stroked-button type="button" class="fork" (click)="useTemplate(d.repo)"><mat-icon>fork_right</mat-icon>Use this template</button>
         }
         <app-get-code [path]="d.repo.fullName" />
         @if (d.repo.state === 'published') {

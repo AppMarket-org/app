@@ -8,8 +8,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CATEGORIES, TARGET_PLATFORMS, type CheckpointSummary } from '@appmarket/shared';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { CATEGORIES, TARGET_PLATFORMS, type CheckpointSummary, type Repo } from '@appmarket/shared';
 import { CowbellButton } from '../../components/cowbell-button/cowbell-button';
 import { DeployAction } from '../../components/deploy-action/deploy-action';
 import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
@@ -22,6 +22,8 @@ import { Markdown } from '../../components/markdown/markdown';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { builtWith, summaryLine } from '../../components/checkpoint-details/timeline';
 import { LanguageBar } from '../../components/language-bar/language-bar';
+import { ForkDialog, type ForkDialogData } from '../../components/fork-dialog/fork-dialog';
+import { Auth } from '../../auth/auth';
 import { Seo } from '../../seo/seo';
 import { firstValueFrom } from 'rxjs';
 import type { RepoDetails } from './repo-resolver';
@@ -55,6 +57,19 @@ export class RepoPage {
 
   protected readonly platformName = (p: keyof typeof PLATFORM_NAMES) => PLATFORM_NAMES[p];
   protected readonly builtWith = builtWith;
+  private readonly forkDialog = inject(MatDialog);
+  private readonly forkRouter = inject(Router);
+  private readonly forkAuth = inject(Auth);
+
+  /** #26: copy this app into a repo of your own; sign in first if needed. */
+  protected async useTemplate(repo: Repo): Promise<void> {
+    if (!this.forkAuth.user()) {
+      await this.forkRouter.navigate(['/login'], { queryParams: { next: `/${repo.fullName}` } });
+      return;
+    }
+    const fork = await firstValueFrom(this.forkDialog.open<ForkDialog, ForkDialogData, Repo>(ForkDialog, { data: { repo }, width: '30rem', maxWidth: 'calc(100vw - 2rem)' }).afterClosed());
+    if (fork) await this.forkRouter.navigate(['/dashboard/repos', fork.owner.handle, fork.slug]);
+  }
   /** #137: "Built with Claude Code · 74% of commits with published prompts" (counts only). */
   protected badge(history: CheckpointSummary | null): string | null {
     if (!history?.total) return null;

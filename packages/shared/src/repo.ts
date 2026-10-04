@@ -86,6 +86,8 @@ export interface Repo {
 	/** D3: what deploying the published version creates. */
 	manifest: DeployManifest | null;
 	createdAt: string;
+	/** #26: the published app this repo was forked from, at which tag and commit. */
+	forkedFrom: { fullName: string; tag: string | null; commit: string | null } | null;
 	/** #170: bytes per language in the published version (null until computed). */
 	languages: Record<string, number> | null;
 	/** Checkpoints PRD: default visibility for new checkpoints on this repo. */

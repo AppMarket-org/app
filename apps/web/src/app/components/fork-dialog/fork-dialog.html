@@ -1,0 +1,29 @@
+<h2 mat-dialog-title>Use this template</h2>
+<mat-dialog-content>
+  <p>Creates a private repo of your own with {{ data.repo.name }}'s code{{ data.repo.publishedTag ? ' (published version ' + data.repo.publishedTag + ')' : '' }}. You can change it, deploy it and publish it as your own app.</p>
+  <form [formGroup]="form" (ngSubmit)="fork()" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>Owner</mat-label>
+      <mat-select formControlName="owner">
+        @for (o of owners(); track o) {
+          <mat-option [value]="o">{{ o }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" maxlength="80" />
+      <mat-error>Give it a name (up to 80 characters).</mat-error>
+    </mat-form-field>
+  </form>
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Creating your copy" />
+  }
+  @if (error(); as message) {
+    <p role="alert">{{ message }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancel</button>
+  <button mat-flat-button type="button" [disabled]="busy()" (click)="fork()">Create my copy</button>
+</mat-dialog-actions>
