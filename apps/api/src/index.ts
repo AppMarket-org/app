@@ -5,6 +5,8 @@ import { auth } from "./auth/auth.ts";
 import { type AuthVariables, deviceAuthGate, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminRepoRoutes, repoRoutes, mediaRoutes } from "./repos/routes.ts";
 import { checkpointRoutes } from "./checkpoints/routes.ts";
+import { scanContributions } from "./contributions/scan.ts";
+import { logEvent } from "./observability/log.ts";
 import { avatarMediaRoutes } from "./owners/avatars.ts";
 import { cloudflareRoutes } from "./cloudflare/routes.ts";
 import { cowbellRoutes, repoCowbellRoutes } from "./cowbells/routes.ts";
@@ -65,7 +67,13 @@ app.route("/api", api);
 app.get("/sitemap.xml", sitemap);
 app.get("/sitemaps/:name", sitemapPage);
 
-export default app;
+export default {
+	fetch: app.fetch,
+	// #143: every minute, contributions from new commits and events.
+	async scheduled(_controller: ScheduledController, _env: unknown, ctx: ExecutionContext): Promise<void> {
+		ctx.waitUntil(scanContributions().catch((error: unknown) => logEvent("contributions.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
+	},
+} satisfies ExportedHandler;
 
 // D6: the deploy Workflow and its build Sandbox (Durable Object with a container).
 export { CiSandbox, DeployWorkflow } from "./deploy/workflow.ts";
