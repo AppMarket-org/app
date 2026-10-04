@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { Deployment, DeploymentRequest } from '@appmarket/shared';
+import type { Deployment, DeploymentRequest, WorkerVersion } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** PRD D6: one-click deploys into the buyer's Cloudflare account. */
@@ -18,5 +18,14 @@ export class DeploymentsApi {
 
   mine(): Observable<Deployment[]> {
     return this.http.get<{ items: Deployment[] }>('/api/deployments').pipe(map((r) => r.items));
+  }
+
+  /** #38 */
+  versions(id: string): Observable<WorkerVersion[]> {
+    return this.http.get<{ items: WorkerVersion[] }>(`/api/deployments/${id}/versions`).pipe(map((r) => r.items));
+  }
+
+  rollback(id: string, versionId: string): Observable<unknown> {
+    return this.http.post(`/api/deployments/${id}/rollback`, { versionId });
   }
 }

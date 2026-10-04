@@ -53,3 +53,16 @@ export function deployAvailability(
 	if (repo.priceCents > 0) return { ok: false, reason: "paid" };
 	return { ok: true };
 }
+
+/** #38 (D8): one version of the deployed Worker in the buyer's account. */
+export interface WorkerVersion {
+	id: string;
+	number: number;
+	createdAt: string;
+	/** Annotation message, e.g. "Rolled back via appmarket.org". */
+	message: string | null;
+	/** How it was made: "wrangler"/"cf" uploads, the dashboard, an API call. */
+	source: string | null;
+	/** Share of traffic it serves now (0 when not deployed). */
+	percentage: number;
+}
