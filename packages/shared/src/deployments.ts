@@ -71,7 +71,11 @@ export interface WorkerVersion {
 
 /** #28 (R8): branch previews, deployed into the developer's own Cloudflare account. */
 export interface PreviewSettings {
+	/** Previews of non-default branches. */
 	enabled: boolean;
+	/** #37: the default branch redeploys to `workerName` on every push. */
+	deployDefault: boolean;
+	workerName: string | null;
 	accountId: string;
 	/** Name of the person whose Cloudflare connection deploys them. */
 	connectedBy: string;
