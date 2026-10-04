@@ -77,6 +77,8 @@ export class CheckpointsPage {
     return counts ? `${summaryLine(counts)}.` : '';
   });
   protected readonly notesCommand = 'git log --notes=appmarket';
+  /** #128: secrets appmarket.org redacted because the uploading CLI missed them. */
+  protected readonly serverRedactions = computed(() => this.items().reduce((n, c) => n + (c.server_redactions ?? 0), 0));
 
   constructor() {
     inject(Seo).set({ title: 'Checkpoints', description: 'The prompts behind your commits.', path: '/dashboard', noindex: true, heading: [{ label: 'Dashboard', link: '/dashboard' }] });

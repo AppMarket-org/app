@@ -4,7 +4,7 @@ import { requireAccess } from "./auth/access.ts";
 import { auth } from "./auth/auth.ts";
 import { type AuthVariables, deviceAuthGate, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminRepoRoutes, repoRoutes, mediaRoutes } from "./repos/routes.ts";
-import { checkpointRoutes } from "./checkpoints/routes.ts";
+import { adminCheckpointRoutes, checkpointRoutes } from "./checkpoints/routes.ts";
 import { scanContributions } from "./contributions/scan.ts";
 import { backfillLanguages } from "./repos/languages.ts";
 import { logEvent } from "./observability/log.ts";
@@ -56,6 +56,7 @@ api.route("/cloudflare", cloudflareRoutes);
 api.use("/admin/*", requireAccess());
 api.route("/admin", adminRepoRoutes);
 api.route("/admin", adminReportRoutes);
+api.route("/admin", adminCheckpointRoutes);
 api.route("/media", mediaRoutes);
 api.route("/media", avatarMediaRoutes);
 

@@ -71,6 +71,8 @@ export interface CheckpointRecord {
 export interface Checkpoint extends Omit<CheckpointRecord, "prompts" | "assistant_summary" | "tools" | "usage"> {
 	repo: string;
 	state: CheckpointState;
+	/** #128: secrets appmarket.org redacted that the uploading CLI missed. */
+	server_redactions?: number;
 	visibility: CheckpointVisibility;
 	device: string | null;
 	received_at: string;

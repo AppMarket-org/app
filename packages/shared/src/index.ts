@@ -3,6 +3,7 @@
 export * from "./checkpoints";
 export * from "./prices";
 export * from "./languages";
+export * from "./redaction";
 export * from "./cloudflare";
 export * from "./deployments";
 export * from "./repo";
