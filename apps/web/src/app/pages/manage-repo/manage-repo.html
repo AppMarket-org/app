@@ -23,6 +23,15 @@
   }
 
   <div class="grid">
+    @if (l.sessionOf) {
+      <mat-card appearance="outlined" class="wide">
+        <mat-card-header>
+          <mat-icon mat-card-avatar aria-hidden="true">smart_toy</mat-icon>
+          <mat-card-title>Agent session fork</mat-card-title>
+          <mat-card-subtitle>An agent's workspace. Review its commits here, merge what you want into the repo it came from, and submit that repo; this fork cannot be submitted.</mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+    }
     @if (l.importedFrom; as src) {
       <mat-card appearance="outlined" class="wide">
         <mat-card-header>
@@ -208,6 +217,9 @@
 
       <app-checks-card [path]="path()" />
       <app-previews-card [path]="path()" [slug]="slug()" />
+      @if (!l.sessionOf) {
+        <app-sessions-card [path]="path()" />
+      }
       <app-export-card [path]="path()" />
       <app-releases-card class="wide" [path]="l.fullName" [suggestedTag]="l.publishedTag ?? l.submittedTag" />
 

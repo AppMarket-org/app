@@ -3,7 +3,8 @@
 
 /** Scopes each device client may request; also its default when it asks for none. */
 export const DEVICE_CLIENT_SCOPES: Readonly<Record<string, readonly string[]>> = {
-	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read"],
+	// #29: sessions:write lets `appmarket session` start agent sessions in forks. CI tokens cannot.
+	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read", "sessions:write"],
 	// #134: CI tokens created in Settings, for pipelines that cannot approve a device code.
 	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read"],
 };
@@ -29,6 +30,9 @@ const RULES: readonly Rule[] = [
 	{ scope: "repos:read", methods: ["GET"], path: /^\/api\/owners\/[^/]+$/ },
 	{ scope: "checkpoints:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
 	{ scope: "checkpoints:write", methods: ["POST", "PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
+	{ scope: "sessions:write", methods: ["GET", "POST"], path: new RegExp(`^/api/repos/${REPO}/sessions$`) },
+	{ scope: "sessions:write", methods: ["POST"], path: /^\/api\/sessions\/[0-9a-f-]{36}\/(token|end)$/ },
+	{ scope: "sessions:write", methods: ["DELETE"], path: /^\/api\/sessions\/[0-9a-f-]{36}$/ },
 ];
 
 /** Better Auth endpoints a device session may use: read its own session and sign itself out. */
