@@ -7,15 +7,15 @@ import { checkpoint } from "./checkpoint.ts";
 import { settingsPath } from "./adapter.ts";
 
 /**
- * `appmarket hook claude-code`: Claude Code runs this for each hook event with JSON on stdin (#112).
+ * `appmarket hook claude-code|codex`: the harness runs this for each hook event with JSON on stdin (#112).
  * Records only sessions working in an initialised repo, prints nothing (UserPromptSubmit output
  * would be added to the conversation) and always exits 0.
  */
 export function hook(harness: string, stdin: string, opts: { plugin?: boolean } = {}): number {
 	try {
-		if (harness !== "claude-code") return 0;
+		if (harness !== "claude-code" && harness !== "codex") return 0;
 		// Plugin and `adapter install` both present: the settings hooks record, the plugin's stay quiet.
-		if (opts.plugin && settingsHooksInstalled()) return 0;
+		if (opts.plugin && harness === "claude-code" && settingsHooksInstalled()) return 0;
 		const input = JSON.parse(stdin) as HookInput;
 		const root = input.cwd ? repoRoot(input.cwd) : null;
 		if (!root) return 0;
@@ -28,7 +28,7 @@ export function hook(harness: string, stdin: string, opts: { plugin?: boolean } 
 		// git hook already made one, checkpoint() sees the note and does nothing. The commit call
 		// itself is not recorded: it would land in the next commit's checkpoint.
 		if (committed) return checkpoint({ hook: true, cwd: root });
-		for (const event of eventsFor(input, undefined, root)) append(key, event);
+		for (const event of eventsFor(input, undefined, root, harness)) append(key, event);
 	} catch (error) {
 		log("hook claude-code failed", error);
 	}
@@ -37,7 +37,7 @@ export function hook(harness: string, stdin: string, opts: { plugin?: boolean } 
 
 function settingsHooksInstalled(): boolean {
 	try {
-		return readFileSync(settingsPath(), "utf8").includes("appmarket hook claude-code");
+		return readFileSync(settingsPath("claude-code"), "utf8").includes("appmarket hook claude-code");
 	} catch {
 		return false;
 	}

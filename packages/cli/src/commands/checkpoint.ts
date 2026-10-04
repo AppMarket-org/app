@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { advanceMarker, bufferKey, readSinceMarker, type BufferEvent } from "../buffer.ts";
 import { transcriptEvents } from "../adapters/claude-code.ts";
+import { codexTranscriptEvents } from "../adapters/codex.ts";
 import { buildRecord, type CommitInfo } from "../build-record.ts";
 import { apiBase, HOME } from "../config.ts";
 import { git, gitOr, repoRoot } from "../git.ts";
@@ -53,20 +54,23 @@ function rewriting(root: string): boolean {
 	return gitOr(["reflog", "-1", "--format=%gs", "HEAD"], "", { cwd: root }).startsWith("commit (amend)");
 }
 
-/** Claude Code: adds model, effort, usage and the assistant's last text from each session transcript in the window. */
+/** Claude Code and Codex: adds model, effort, usage and the assistant's last text from each session transcript in the window. */
 export function withTranscripts(events: BufferEvent[], committedAt: string): BufferEvent[] {
 	const until = new Date(Date.parse(committedAt) + 2000).toISOString();
 	// Per transcript: where to start reading (an optimisation) and the earliest event of this window
 	// (the bound: a session that ended before this window contributes nothing).
-	const windows = new Map<string, { offset: number; since: string }>();
+	const windows = new Map<string, { offset: number; since: string; harness: string }>();
 	for (const e of events) {
 		if (!e.transcript_path) continue;
-		const w = windows.get(e.transcript_path) ?? { offset: Number.POSITIVE_INFINITY, since: e.ts };
+		const w = windows.get(e.transcript_path) ?? { offset: Number.POSITIVE_INFINITY, since: e.ts, harness: e.harness };
 		if (e.transcript_offset !== undefined) w.offset = Math.min(w.offset, e.transcript_offset);
 		if (e.ts < w.since) w.since = e.ts;
 		windows.set(e.transcript_path, w);
 	}
-	return [...events, ...[...windows].flatMap(([path, w]) => transcriptEvents(path, Number.isFinite(w.offset) ? w.offset : 0, until, w.since))];
+	return [
+		...events,
+		...[...windows].flatMap(([path, w]) => (w.harness === "codex" ? codexTranscriptEvents : transcriptEvents)(path, Number.isFinite(w.offset) ? w.offset : 0, until, w.since)),
+	];
 }
 
 /**

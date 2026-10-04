@@ -5,7 +5,7 @@ model and effort produced each commit. Open source (MIT) so you can read exactly
 
 ```sh
 npx @appmarket/cli login                 # device code sign-in; the token goes in your OS keychain
-appmarket adapter install claude-code    # once per machine: record Claude Code sessions
+appmarket adapter install claude-code    # once per machine: record Claude Code sessions (or: codex)
 cd my-app && appmarket init              # post-commit hook + repo config
 git commit ...                           # every commit gets a checkpoint
 ```
@@ -23,6 +23,15 @@ you ran `appmarket init` and nowhere else:
 When an agent runs `git commit`, the hook also makes the checkpoint itself, so commits are recorded
 even where the git hook is missing. Hook failures never interrupt Claude Code; they go to
 `~/.appmarket/cli.log`.
+
+## Codex
+
+`appmarket adapter install codex` adds three hooks to `~/.codex/hooks.json` (SessionStart,
+UserPromptSubmit, PostToolUse; other hooks there are kept). Codex runs user hooks only after you
+review them once: open Codex and run `/hooks`. Prompts and tool calls (shell commands, and the
+files an `apply_patch` touched) come from the hooks; model, Codex version, `model_reasoning_effort`,
+token usage (reasoning tokens separately) and the final message come from the session's rollout
+file at commit time.
 
 ## Other agents (MCP)
 
@@ -65,7 +74,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
-| `adapter install\|uninstall claude-code` | Add or remove the Claude Code hooks |
+| `adapter install\|uninstall claude-code\|codex` | Add or remove the hooks for Claude Code or Codex |
 | `sync` | Upload queued checkpoints now (offline uploads retry with backoff for 7 days) |
 | `status` | Queue and sign-in state |
 
