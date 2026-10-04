@@ -36,3 +36,17 @@ mat-card {
 .danger {
   color: var(--mat-sys-error);
 }
+
+// #146
+.privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1rem;
+
+  .hint {
+    display: block;
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

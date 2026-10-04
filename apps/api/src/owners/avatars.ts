@@ -4,6 +4,7 @@ import { type Context, Hono } from "hono";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { sniffImageType } from "../repos/images.ts";
+import { purgeOwnerPage } from "../routes/seo.ts";
 import { OwnerStore } from "./store.ts";
 
 const key = (ownerId: string, avatarId: string) => `avatars/${ownerId}/${avatarId}`;
@@ -26,14 +27,18 @@ export async function replaceAvatar(c: Context<{ Variables: AuthVariables }>, ow
 	const previous = await store.setAvatar(ownerId, { id, contentType });
 	if (previous) await env.MEDIA.delete(key(ownerId, previous));
 	logEvent("avatar.changed", { owner: ownerId });
-	return c.json({ owner: await store.byId(ownerId) });
+	const owner = await store.byId(ownerId);
+	if (owner) c.executionCtx.waitUntil(purgeOwnerPage(owner.handle));
+	return c.json({ owner });
 }
 
 export async function removeAvatar(c: Context<{ Variables: AuthVariables }>, ownerId: string): Promise<Response> {
 	const store = new OwnerStore(env.DB);
 	const previous = await store.setAvatar(ownerId, null);
 	if (previous) await env.MEDIA.delete(key(ownerId, previous));
-	return c.json({ owner: await store.byId(ownerId) });
+	const owner = await store.byId(ownerId);
+	if (owner) c.executionCtx.waitUntil(purgeOwnerPage(owner.handle));
+	return c.json({ owner });
 }
 
 /** Serves pictures. Mounted at /api/media. An id is never reused, so responses cache for a year. */

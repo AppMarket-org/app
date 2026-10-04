@@ -1,4 +1,5 @@
-import { MAX_PINS, type ContributionCalendar, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
+import { MAX_PINS, type ActivityPage, type ContributionCalendar, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
+import { purgeOwnerPage } from "../routes/seo.ts";
 import { ContributionStore } from "../contributions/store.ts";
 import { handleSchema, orgCreateSchema, orgMemberSchema, profileUpdateSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
@@ -34,9 +35,10 @@ export const ownerRoutes = new Hono<Ctx>()
 			from = start.toISOString().slice(0, 10);
 			to = today;
 		}
-		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to);
-		// Same for every visitor (public repos only), so cacheable for a few minutes.
-		c.header("Cache-Control", "public, max-age=300");
+		const privacy = await owners().privacy(owner.id);
+		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to, privacy.privateContributions);
+		// The profile page is cached at the edge (and purged on changes); privacy changes must show at once here.
+		c.header("Cache-Control", "no-cache");
 		return c.json({ from, to, ...data } satisfies ContributionCalendar);
 	})
 	// #145: activity by month (users: theirs; organizations: on their repos).
@@ -49,8 +51,11 @@ export const ownerRoutes = new Hono<Ctx>()
 		const [from, end] = year && /^\d{4}$/.test(year) ? [`${year}-01-01`, `${Number(year) + 1}-01-01`] : [new Date(Date.parse(`${today}T00:00:00Z`) - 371 * 86_400_000).toISOString().slice(0, 10), tomorrow];
 		const before = c.req.query("before");
 		const upper = before && /^\d{4}-\d{2}-\d{2}$/.test(before) && before < end ? before : end;
-		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper);
-		c.header("Cache-Control", "public, max-age=300");
+		const privacy = await owners().privacy(owner.id);
+		c.header("Cache-Control", "no-cache");
+		// #146: a hidden feed is hidden from the API too.
+		if (privacy.hideActivity) return c.json({ months: [], next: null, hidden: true } satisfies ActivityPage);
+		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper, 3, owner.kind === "user" && privacy.privateContributions);
 		return c.json(page);
 	})
 	.get("/:handle", async (c) => {
@@ -91,7 +96,7 @@ export const meRoutes = new Hono<Ctx>()
 	.get("/profile", async (c) => {
 		const store = owners();
 		const self = await store.forUser(c.get("session")!.user);
-		return c.json({ owner: self, profile: await store.profile(self.id) });
+		return c.json({ owner: self, profile: await store.profile(self.id, "self"), privacy: await store.privacy(self.id) });
 	})
 	.patch("/profile", async (c) => {
 		const body = profileUpdateSchema.safeParse(await c.req.json().catch(() => null));
@@ -99,7 +104,8 @@ export const meRoutes = new Hono<Ctx>()
 		const store = owners();
 		const self = await store.forUser(c.get("session")!.user);
 		await store.updateProfile(self.id, body.data);
-		return c.json({ owner: await store.byId(self.id), profile: await store.profile(self.id) });
+		c.executionCtx.waitUntil(purgeOwnerPage(self.handle));
+		return c.json({ owner: await store.byId(self.id), profile: await store.profile(self.id, "self"), privacy: await store.privacy(self.id) });
 	})
 	// #142: pins.
 	.get("/pins", async (c) => {
@@ -191,7 +197,7 @@ export const orgRoutes = new Hono<Ctx>()
 	.get("/:handle/profile", async (c) => {
 		const org = await orgFor(c);
 		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
-		return c.json({ owner: org, profile: await owners().profile(org.id) });
+		return c.json({ owner: org, profile: await owners().profile(org.id, "self"), privacy: await owners().privacy(org.id) });
 	})
 	.patch("/:handle/profile", async (c) => {
 		const org = await orgFor(c);
@@ -202,7 +208,8 @@ export const orgRoutes = new Hono<Ctx>()
 		if (body.data.name === null) return c.json({ error: "invalid", issues: [{ path: "name", message: "An organization needs a name." }] }, 400);
 		const store = owners();
 		await store.updateProfile(org.id, body.data);
-		return c.json({ owner: await store.byId(org.id), profile: await store.profile(org.id) });
+		c.executionCtx.waitUntil(purgeOwnerPage(org.handle));
+		return c.json({ owner: await store.byId(org.id), profile: await store.profile(org.id, "self"), privacy: await store.privacy(org.id) });
 	})
 	// #142: organization pins, owners only.
 	.get("/:handle/pins", async (c) => {
@@ -232,7 +239,11 @@ export const orgRoutes = new Hono<Ctx>()
 		if (!org) return c.json({ error: "not_found" }, 404);
 		const visible = ((await c.req.json().catch(() => ({}))) as { public?: unknown }).public;
 		if (typeof visible !== "boolean") return c.json({ error: "invalid", issues: [{ path: "public", message: "true or false" }] }, 400);
-		if (!(await owners().setMembershipPublic(org.id, c.get("session")!.user.id, visible))) return c.json({ error: "not_found" }, 404);
+		const store = owners();
+		if (!(await store.setMembershipPublic(org.id, c.get("session")!.user.id, visible))) return c.json({ error: "not_found" }, 404);
+		// Both profiles list the membership.
+		const self = await store.forUser(c.get("session")!.user);
+		c.executionCtx.waitUntil(Promise.all([purgeOwnerPage(org.handle), purgeOwnerPage(self.handle)]).then(() => undefined));
 		return c.json({ public: visible });
 	})
 	.put("/:handle/members", async (c) => {
@@ -291,6 +302,7 @@ async function savePins(c: Context<Ctx>, owner: Owner, orgIds: string[]): Promis
 	if (unknown.length) return c.json({ error: "not_pinnable", repos: unknown }, 400);
 	const repos = new RepoStore(env.DB);
 	await repos.setPins(owner.id, (raw as string[]).map((p) => byPath.get(p)!.id));
+	c.executionCtx.waitUntil(purgeOwnerPage(owner.handle));
 	return c.json({ pinned: await repos.pinned(owner.id) });
 }
 

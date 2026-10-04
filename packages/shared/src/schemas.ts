@@ -155,6 +155,10 @@ export const profileUpdateSchema = z
 		bio: optionalText(160),
 		location: optionalText(80),
 		website: optionalText(200).refine((v) => v == null || /^https:\/\/[^\s/$.?#][^\s]*$/i.test(v), "Use a full https:// address."),
+		// #146 privacy switches.
+		privateContributions: z.boolean().optional(),
+		hideActivity: z.boolean().optional(),
+		hideLocation: z.boolean().optional(),
 	})
 	.strict();
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;

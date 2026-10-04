@@ -22,6 +22,9 @@
         </mat-expansion-panel>
       }
     </mat-accordion>
+    @if (m.privateCount) {
+      <p class="private"><mat-icon aria-hidden="true">lock</mat-icon>{{ m.privateCount }} contribution{{ m.privateCount === 1 ? '' : 's' }} in private repos</p>
+    }
   } @empty {
     @if (!loading()) {
       <p class="empty">No public activity {{ year() ? 'in ' + year() : 'in the last year' }}.</p>

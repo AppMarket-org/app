@@ -10,9 +10,10 @@ import { DatePipe } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
-import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type OwnerProfile, type OwnerProfileUpdate, type SessionInfo } from '@appmarket/shared';
+import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type OwnerPrivacy, type OwnerProfile, type OwnerProfileUpdate, type SessionInfo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { OwnersApi } from '../../api/owners';
 import { ProfileForm } from '../../components/profile-form/profile-form';
@@ -24,7 +25,7 @@ import { Seo } from '../../seo/seo';
 /** #102, #139: your profile, username and organizations. */
 @Component({
   selector: 'app-settings',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +41,7 @@ export class Settings {
   protected readonly profile = signal<OwnerProfile | null>(null);
   protected readonly profileSaving = signal(false);
   protected readonly profileFieldErrors = signal<Record<string, string>>({});
+  protected readonly privacy = signal<OwnerPrivacy | null>(null);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly handle = new FormControl('', {
@@ -56,8 +58,25 @@ export class Settings {
     this.owner.set(owner);
     this.orgs.set(orgs);
     this.handle.setValue(owner.handle);
-    this.profile.set((await firstValueFrom(this.api.profile())).profile);
+    const mine = await firstValueFrom(this.api.profile());
+    this.profile.set(mine.profile);
+    this.privacy.set(mine.privacy);
     this.sessions.set(await firstValueFrom(this.api.sessions()).catch(() => []));
+  }
+
+  /** #146: each switch saves at once (and the public profile is purged from the cache). */
+  protected async setPrivacy(change: Partial<OwnerPrivacy>): Promise<void> {
+    const before = this.privacy();
+    this.privacy.update((p) => (p ? { ...p, ...change } : p));
+    try {
+      const { privacy, profile } = await firstValueFrom(this.api.updateProfile(change));
+      this.privacy.set(privacy);
+      this.profile.set(profile);
+      this.snackBar.open('Saved', undefined, { duration: 2000 });
+    } catch {
+      this.privacy.set(before);
+      this.snackBar.open('Could not save that. Try again.', 'OK', { duration: 4000 });
+    }
   }
 
   protected avatarChanged(owner: Owner): void {

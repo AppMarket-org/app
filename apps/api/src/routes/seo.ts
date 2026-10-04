@@ -63,6 +63,11 @@ export async function sitemapPage(c: Context): Promise<Response> {
  * centers expire within the web Worker's cache TTL (5 minutes); a global purge needs the zone purge
  * API (#24).
  */
+/** #146: a profile changed (fields, picture, pins, privacy): drop its cached page. */
+export async function purgeOwnerPage(handle: string): Promise<void> {
+	await caches.default.delete(new Request(`${env.PUBLIC_ORIGIN}/${handle}`)).catch(() => false);
+}
+
 export async function purgeRepoPage(fullName: string): Promise<void> {
 	await caches.default.delete(new Request(`${env.PUBLIC_ORIGIN}/${fullName}`)).catch(() => false);
 }

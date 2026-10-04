@@ -17,12 +17,14 @@ export class ContributionStore {
 	 * #144: a user's contributions per day in [from, to], counting only published repos (private
 	 * contributions are #146), plus the years that have any.
 	 */
-	async calendar(userId: string, from: string, to: string): Promise<{ days: Record<string, number>; total: number; years: number[] }> {
+	async calendar(userId: string, from: string, to: string, includePrivate = false): Promise<{ days: Record<string, number>; total: number; years: number[] }> {
+		// #146: with the opt-in, unpublished repos count too (as numbers only; removed ones never).
+		const visible = includePrivate ? "r.state != 'removed'" : "r.state = 'published'";
 		const [days, years] = await this.db.batch<{ day?: string; n?: number; year?: string }>([
 			this.db
-				.prepare(`SELECT c.day, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND r.state = 'published' AND c.day BETWEEN ? AND ? GROUP BY c.day`)
+				.prepare(`SELECT c.day, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${visible} AND c.day BETWEEN ? AND ? GROUP BY c.day`)
 				.bind(userId, from, to),
-			this.db.prepare(`SELECT DISTINCT substr(c.day, 1, 4) AS year FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND r.state = 'published' ORDER BY year DESC`).bind(userId),
+			this.db.prepare(`SELECT DISTINCT substr(c.day, 1, 4) AS year FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${visible} ORDER BY year DESC`).bind(userId),
 		]);
 		const map = Object.fromEntries((days!.results ?? []).map((r) => [r.day!, r.n!]));
 		return { days: map, total: Object.values(map).reduce((a, b) => a + b, 0), years: (years!.results ?? []).map((r) => Number(r.year)) };
@@ -33,12 +35,15 @@ export class ContributionStore {
 	 * to its repos), published repos only, newest first: up to `months` months with activity in
 	 * [from, before).
 	 */
-	async activity(subject: { userId: string } | { ownerId: string }, from: string, before: string, months = 3): Promise<ActivityPage> {
+	async activity(subject: { userId: string } | { ownerId: string }, from: string, before: string, months = 3, includePrivate = false): Promise<ActivityPage> {
 		const who = "userId" in subject ? "c.user_id = ?" : "r.owner_id = ?";
 		const id = "userId" in subject ? subject.userId : subject.ownerId;
-		const base = `FROM contributions c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id WHERE ${who} AND r.state = 'published' AND c.day >= ? AND c.day < ?`;
+		const scope = `FROM contributions c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id WHERE ${who} AND c.day >= ? AND c.day < ?`;
+		const base = `${scope} AND r.state = 'published'`;
+		// #146: months with only private activity still appear (as a count) when opted in.
+		const monthScope = includePrivate ? `${scope} AND r.state != 'removed'` : base;
 		const { results: monthRows } = await this.db
-			.prepare(`SELECT DISTINCT substr(c.day, 1, 7) AS month ${base} ORDER BY month DESC LIMIT ?`)
+			.prepare(`SELECT DISTINCT substr(c.day, 1, 7) AS month ${monthScope} ORDER BY month DESC LIMIT ?`)
 			.bind(id, from, before, months + 1)
 			.all<{ month: string }>();
 		const shown = monthRows.slice(0, months).map((m) => m.month);
@@ -51,6 +56,14 @@ export class ContributionStore {
 			)
 			.bind(id, from, before, ...shown)
 			.all<{ month: string; kind: ContributionKind; full_name: string; name: string; n: number }>();
+		const privateCounts = new Map<string, number>();
+		if (includePrivate) {
+			const { results: hidden } = await this.db
+				.prepare(`SELECT substr(c.day, 1, 7) AS month, COUNT(*) AS n ${scope} AND r.state NOT IN ('published', 'removed') AND substr(c.day, 1, 7) IN (${shown.map(() => "?").join(",")}) GROUP BY month`)
+				.bind(id, from, before, ...shown)
+				.all<{ month: string; n: number }>();
+			for (const h of hidden) privateCounts.set(h.month, h.n);
+		}
 		const order: ContributionKind[] = ["commit", "repo", "version", "release", "checkpoint"];
 		const out: ActivityMonth[] = shown.map((month) => {
 			const rows = results.filter((r) => r.month === month);
@@ -62,6 +75,7 @@ export class ContributionStore {
 						return { kind, total: repos.reduce((t, r) => t + r.count, 0), repos };
 					})
 					.filter((g) => g.total > 0),
+				...(privateCounts.get(month) ? { privateCount: privateCounts.get(month) } : {}),
 			};
 		});
 		// The next page ends where this one stopped: before the first day of its oldest month.
