@@ -3,6 +3,8 @@
 
 /** Installed in sandbox/Dockerfile, outside the repo's workspace. */
 const WRANGLER = "/usr/local/bin/wrangler";
+/** #87: Python Workers package tool (workers-py), installed with uv in sandbox/Dockerfile. */
+const PYWRANGLER = "/usr/local/bin/pywrangler";
 const DEPLOY_DIR = "/tmp/appmarket-deploy";
 const SECRETS_FILE = "/tmp/appmarket-secrets.json";
 /** Each secret is passed as its own variable so the runner redacts every value from failure output. */
@@ -13,6 +15,8 @@ export interface DeployPlan {
 	config: Record<string, unknown>;
 	assetsDir: string | null;
 	d1Migrations: { binding: string; dir: string }[];
+	/** #87: set for Python Workers (sources uploaded unbundled). */
+	python?: { sourceDir: string };
 }
 
 const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
@@ -28,6 +32,11 @@ export function buildCommand(plan: DeployPlan): string {
 		"elif [ -f package.json ]; then npm install",
 		"fi",
 	].join("; ");
+	if (plan.python) {
+		// #87: vendor the pyproject.toml dependencies into python_modules/; nothing is bundled.
+		return `set -e; ${install}; if [ -f pyproject.toml ]; then ${PYWRANGLER} sync; fi`;
+	}
+	// Rust Workers build here too: Wrangler runs the repo's build.command (worker-build) first.
 	const bundle = typeof plan.config.main === "string" ? `${WRANGLER} deploy --dry-run --outdir .appmarket/out` : "true";
 	return `set -e; ${install}; ${bundle}`;
 }
@@ -38,7 +47,14 @@ export function buildCommand(plan: DeployPlan): string {
  */
 export function deployCommand(plan: DeployPlan): string {
 	const copy: string[] = [];
-	if (typeof plan.config.main === "string") copy.push(`cp -R .appmarket/out ${DEPLOY_DIR}/out`);
+	if (plan.python) {
+		// Only .py sources and the vendored packages: Wrangler reads them, nothing runs them here.
+		const dir = plan.python.sourceDir;
+		copy.push(
+			dir === "." ? `find . -maxdepth 1 -name '*.py' -exec cp {} ${DEPLOY_DIR}/ \\;` : `mkdir -p ${DEPLOY_DIR}/${quote(dir)} && cp -R ${quote(dir)}/. ${DEPLOY_DIR}/${quote(dir)}/`,
+			`if [ -d python_modules ]; then cp -R python_modules ${DEPLOY_DIR}/python_modules; fi`,
+		);
+	} else if (typeof plan.config.main === "string") copy.push(`cp -R .appmarket/out ${DEPLOY_DIR}/out`);
 	if (plan.assetsDir) copy.push(`cp -R ${quote(plan.assetsDir)} ${DEPLOY_DIR}/assets`);
 	for (const { binding, dir } of plan.d1Migrations) copy.push(`if [ -d ${quote(dir)} ]; then cp -R ${quote(dir)} ${DEPLOY_DIR}/migrations/${binding}; fi`);
 	const migrate = plan.d1Migrations.map(

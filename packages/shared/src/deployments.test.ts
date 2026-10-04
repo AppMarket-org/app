@@ -18,7 +18,9 @@ describe("deployAvailability", () => {
 	it("says why other repos cannot deploy", () => {
 		expect(deployAvailability({ ...base, state: "draft" })).toEqual({ ok: false, reason: "not_published" });
 		expect(deployAvailability({ ...base, platforms: ["download"] })).toEqual({ ok: false, reason: "platform" });
-		expect(deployAvailability({ ...base, runtime: "workers-rust" })).toEqual({ ok: false, reason: "runtime" });
+		expect(deployAvailability({ ...base, runtime: "workers-rust" })).toEqual({ ok: true });
+		expect(deployAvailability({ ...base, runtime: "workers-python" })).toEqual({ ok: true });
+		expect(deployAvailability({ ...base, runtime: "container" })).toEqual({ ok: false, reason: "runtime" });
 		expect(deployAvailability({ ...base, runtime: "container" })).toEqual({ ok: false, reason: "runtime" });
 		expect(deployAvailability({ ...base, manifest: null })).toEqual({ ok: false, reason: "no_config" });
 		expect(deployAvailability({ ...base, priceCents: 500 })).toEqual({ ok: false, reason: "paid" });
