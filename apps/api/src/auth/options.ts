@@ -80,7 +80,8 @@ export function authOptions(database: BetterAuthOptions["database"], settings: A
 			captcha({
 				provider: "cloudflare-turnstile",
 				secretKey: settings.turnstileSecretKey,
-				endpoints: ["/sign-in/social"],
+				// #132: approving a device sign-in also needs a Turnstile token.
+				endpoints: ["/sign-in/social", "/device/approve"],
 			}),
 		],
 	} satisfies BetterAuthOptions;
