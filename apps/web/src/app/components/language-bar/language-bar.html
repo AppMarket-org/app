@@ -1,0 +1,15 @@
+@if (shares().length) {
+  <section aria-labelledby="languages-heading">
+    <h2 id="languages-heading">Languages</h2>
+    <div class="bar" role="img" [attr.aria-label]="'Languages: ' + summary()">
+      @for (s of shares(); track s.name) {
+        <span class="segment" [class.other]="!s.color" [style.flex-grow]="s.percent" [style.background-color]="s.color" [matTooltip]="s.name + ' ' + s.percent + '%'"></span>
+      }
+    </div>
+    <div class="legend" aria-hidden="true">
+      @for (s of shares(); track s.name) {
+        <span class="item"><span class="dot" [class.other]="!s.color" [style.background-color]="s.color"></span><strong>{{ s.name }}</strong> {{ s.percent }}%</span>
+      }
+    </div>
+  </section>
+}

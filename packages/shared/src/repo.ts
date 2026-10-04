@@ -86,6 +86,8 @@ export interface Repo {
 	/** D3: what deploying the published version creates. */
 	manifest: DeployManifest | null;
 	createdAt: string;
+	/** #170: bytes per language in the published version (null until computed). */
+	languages: Record<string, number> | null;
 	/** Checkpoints PRD: default visibility for new checkpoints on this repo. */
 	checkpointVisibility: CheckpointVisibility;
 	/** Cowbells (appmarket's stars) from signed-in users. */

@@ -21,6 +21,7 @@ import { GetCode } from '../../components/get-code/get-code';
 import { Markdown } from '../../components/markdown/markdown';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { builtWith, summaryLine } from '../../components/checkpoint-details/timeline';
+import { LanguageBar } from '../../components/language-bar/language-bar';
 import { Seo } from '../../seo/seo';
 import { firstValueFrom } from 'rxjs';
 import type { RepoDetails } from './repo-resolver';
@@ -35,7 +36,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-repo',
-  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, CowbellButton, DeployAction, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
+  imports: [LanguageBar, DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, CowbellButton, DeployAction, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
   templateUrl: './repo.html',
   styleUrl: './repo.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -34,3 +34,28 @@ p {
     color: #f9c12b;
   }
 }
+
+// #170: main language, GitHub style.
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.language {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+
+  .dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+  }
+
+  .other {
+    background-color: var(--mat-sys-outline);
+  }
+}

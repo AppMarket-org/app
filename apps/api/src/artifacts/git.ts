@@ -1,3 +1,4 @@
+import { languageOf } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 
 /** Repo name for a repo: readable slug plus a short id, within Artifacts' 63-character limit. */
@@ -102,11 +103,11 @@ const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".wrangler",
  * G4: the file tree of a commit, breadth first, skipping build output and dependencies, bounded so
  * a huge repo cannot make publish slow.
  */
-export async function listTree(gitRepo: string, commit: string, limits = { maxEntries: 2000, maxDirs: 300 }): Promise<{ path: string; type: string }[]> {
+export async function listTree(gitRepo: string, commit: string, limits = { maxEntries: 2000, maxDirs: 300 }): Promise<{ path: string; type: string; hash: string }[]> {
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const meta = await git.readCommit(commit);
 	if (!meta) return [];
-	const entries: { path: string; type: string }[] = [];
+	const entries: { path: string; type: string; hash: string }[] = [];
 	const queue: { prefix: string; hash: string }[] = [{ prefix: "", hash: meta.treeHash }];
 	let dirs = 0;
 	while (queue.length > 0 && dirs < limits.maxDirs && entries.length < limits.maxEntries) {
@@ -114,12 +115,33 @@ export async function listTree(gitRepo: string, commit: string, limits = { maxEn
 		dirs++;
 		for (const e of (await git.readTree(hash)) ?? []) {
 			const path = prefix + e.name;
-			entries.push({ path, type: e.type });
+			entries.push({ path, type: e.type, hash: e.hash });
 			if (e.type === "tree" && !SKIP_DIRS.has(e.name)) queue.push({ prefix: `${path}/`, hash: e.hash });
 			if (entries.length >= limits.maxEntries) break;
 		}
 	}
 	return entries.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/**
+ * #170: bytes per language in a commit. The tree API has no sizes, so each counted file's blob
+ * is read for its size (16 at a time, at most 1,500 files).
+ */
+export async function languageBytes(gitRepo: string, commit: string): Promise<Record<string, number>> {
+	const files = (await listTree(gitRepo, commit, { maxEntries: 5000, maxDirs: 600 }))
+		.filter((e) => e.type === "blob")
+		.flatMap((e) => {
+			const language = languageOf(e.path);
+			return language ? [{ ...e, language }] : [];
+		})
+		.slice(0, 1500);
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const bytes: Record<string, number> = {};
+	for (let i = 0; i < files.length; i += 16) {
+		const sizes = await Promise.all(files.slice(i, i + 16).map((f) => git.readBlob(f.hash).then((b) => b?.size ?? 0).catch(() => 0)));
+		files.slice(i, i + 16).forEach((f, k) => (bytes[f.language] = (bytes[f.language] ?? 0) + sizes[k]!));
+	}
+	return bytes;
 }
 
 /** Checkpoints: whether a commit has reached appmarket.org yet (pending vs attached). */

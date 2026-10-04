@@ -10,6 +10,11 @@
   </mat-card-content>
   <mat-card-actions class="actions">
     <a mat-button [routerLink]="'/' + repo().fullName" [attr.aria-label]="'View app: ' + repo().name">View app</a>
-    <span class="cowbells" [attr.aria-label]="repo().cowbells + ' cowbells'"><mat-icon svgIcon="cowbell" aria-hidden="true" />{{ repo().cowbells }}</span>
+    <span class="meta">
+      @if (topLanguage(); as lang) {
+        <span class="language"><span class="dot" [class.other]="!lang.color" [style.background-color]="lang.color" aria-hidden="true"></span>{{ lang.name }}</span>
+      }
+      <span class="cowbells" [attr.aria-label]="repo().cowbells + ' cowbells'"><mat-icon svgIcon="cowbell" aria-hidden="true" />{{ repo().cowbells }}</span>
+    </span>
   </mat-card-actions>
 </mat-card>
