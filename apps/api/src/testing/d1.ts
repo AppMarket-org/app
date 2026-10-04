@@ -19,16 +19,19 @@ export function testD1(): { d1: D1Database; sqlite: Database.Database } {
 			bind: (...next: unknown[]) => statement(sql, next),
 			first: async <T>() => (reader ? ((stmt.get(...params) as T) ?? null) : null),
 			all: async <T>() => ({ results: (reader ? stmt.all(...params) : []) as T[], success: true, meta: {} }),
-			run: async () => {
-				const info = reader ? { changes: 0 } : stmt.run(...params);
-				return { results: [], success: true, meta: { changes: info.changes } };
-			},
+			run: async () => runSync(),
+			runSync,
 		};
+		function runSync() {
+			const info = reader ? { changes: 0 } : stmt.run(...params);
+			return { results: [], success: true, meta: { changes: info.changes } };
+		}
 	};
 
 	const d1 = {
 		prepare: (sql: string) => statement(sql),
-		batch: async (stmts: ReturnType<typeof statement>[]) => sqlite.transaction(() => stmts.map((s) => s.run()))(),
+		// Like D1: all statements in one transaction, resolving to each statement's result.
+		batch: async (stmts: ReturnType<typeof statement>[]) => sqlite.transaction(() => stmts.map((s) => s.runSync()))(),
 	};
 	return { d1: d1 as unknown as D1Database, sqlite };
 }

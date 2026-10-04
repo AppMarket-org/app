@@ -3,7 +3,7 @@ import { checkpointPatchSchema, checkpointRecordSchema, checkpointVisibilitySche
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
-import { commitExists } from "../artifacts/git.ts";
+import { commitExists, pushedCommits } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { canView, isOwner } from "../repos/access.ts";
@@ -17,6 +17,26 @@ const SHA = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
 
 async function repoFor(c: Context<Ctx>): Promise<Repo | null> {
 	return new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
+}
+
+/**
+ * #124: Artifacts has no push events, so the first read after a push reconciles: checkpoints of
+ * pushed commits become attached, and pushed commits without one get a `missing` placeholder.
+ */
+async function reconcilePushes(repo: Repo): Promise<void> {
+	if (!repo.gitRepo) return;
+	try {
+		const store = checkpoints();
+		const { lastPushAt, commits } = await pushedCommits(repo.gitRepo);
+		if (!lastPushAt) return;
+		const done = await store.reconciledAt(repo.id);
+		if (done && done >= lastPushAt) return;
+		const result = await store.reconcilePushed({ id: repo.id, defaultVisibility: repo.checkpointVisibility }, commits, lastPushAt);
+		if (result.attached || result.missing) logEvent("checkpoint.reconciled", { repo: repo.fullName, ...result });
+	} catch (error) {
+		// Reading checkpoints must not fail because Artifacts is slow; the next read retries.
+		logEvent("checkpoint.reconcile_failed", { repo: repo.fullName, error: error instanceof Error ? error.message : String(error) });
+	}
 }
 
 /**
@@ -85,6 +105,7 @@ export const checkpointRoutes = new Hono<Ctx>()
 	.get("/:owner/:slug/checkpoints", async (c) => {
 		const repo = await repoFor(c);
 		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		await reconcilePushes(repo);
 		const q = c.req.query();
 		// view=public: what anyone sees (the server-rendered build history, even for the owner).
 		const viewer = q.view === "public" ? "public" : viewerOf(c, repo);
@@ -111,6 +132,7 @@ export const checkpointRoutes = new Hono<Ctx>()
 		const repo = await repoFor(c);
 		const sha = c.req.param("sha");
 		if (!repo || !canView(repo, c.get("session")) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
+		await reconcilePushes(repo);
 		const checkpoint = await checkpoints().get({ id: repo.id, path: repo.fullName }, sha, viewerOf(c, repo));
 		return checkpoint ? c.json((await reconcile(repo, [checkpoint]))[0]) : c.json({ error: "not_found" }, 404);
 	})
