@@ -81,4 +81,6 @@ export const RATE_LIMITS = {
 	DEPLOY: { offset: 6, limit: 3, period: 60 },
 	/** Checkpoint uploads, per device session (Checkpoints PRD: 60/min per device). */
 	CHECKPOINT: { offset: 7, limit: 60, period: 60 },
+	/** #132: device codes, per IP. */
+	DEVICE_CODE: { offset: 8, limit: 10, period: 60 },
 } as const;

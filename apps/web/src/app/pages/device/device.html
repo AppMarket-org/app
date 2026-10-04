@@ -30,6 +30,8 @@
           }
         </div>
         <p class="warn">It cannot create or change repos, get Git tokens or deploy. Approve only if this code matches the one on your screen and you started this sign-in. You can sign it out any time in Settings.</p>
+        <!-- #132: approving needs a Turnstile check, like signing in. -->
+        <app-turnstile (token)="captchaToken.set($event)" />
       }
       @case ('approved') {
         <p class="done" role="status"><mat-icon aria-hidden="true">check_circle</mat-icon> {{ client() }} is signed in. You can close this page.</p>
@@ -46,7 +48,7 @@
   <mat-card-actions align="end">
     @if (step() === 'confirm') {
       <button mat-button type="button" [disabled]="busy()" (click)="decide(false)">Deny</button>
-      <button mat-flat-button type="button" [disabled]="busy()" (click)="decide(true)">Approve</button>
+      <button mat-flat-button type="button" [disabled]="busy() || !captchaToken()" (click)="decide(true)">Approve</button>
     } @else if (step() !== 'enter') {
       <a mat-button routerLink="/settings">Manage devices</a>
       <button mat-button type="button" (click)="reset()">Connect another</button>

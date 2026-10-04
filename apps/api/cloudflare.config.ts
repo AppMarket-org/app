@@ -83,6 +83,7 @@ export default defineConfig(({ mode }) => {
 				// D6 deploys. RL_DEPLOY limits container builds per user.
 				RL_DEPLOY: rateLimit(RATE_LIMITS.DEPLOY),
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
+				RL_DEVICE_CODE: rateLimit(RATE_LIMITS.DEVICE_CODE),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
 				CLOUDFLARE_ACCOUNT_ID: bindings.text(CLOUDFLARE_ACCOUNT_ID),

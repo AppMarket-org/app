@@ -28,6 +28,18 @@ api.get("/health", (c) => c.json({ ok: true, env: env.APP_ENV }));
 
 // R11: Better Auth handles sign-in, OAuth callbacks, sessions and sign-out under /api/auth/*.
 api.post("/auth/sign-in/*", rateLimit(() => env.RL_SIGN_IN, (c) => `sign-in:${clientIp(c)}`, env.RATE_LIMIT_CONFIG.SIGN_IN.period));
+// #132: device codes, 10 a minute per IP.
+api.post("/auth/device/code", rateLimit(() => env.RL_DEVICE_CODE, (c) => `device-code:${clientIp(c)}`, env.RATE_LIMIT_CONFIG.DEVICE_CODE.period));
+// #132: token revocation (RFC 7009) for device and CI tokens; always 200, so it reveals nothing.
+api.post("/oauth/revoke", async (c) => {
+	const form = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
+	const token = typeof form.token === "string" ? form.token : "";
+	if (token) {
+		const result = await env.DB.prepare(`DELETE FROM "session" WHERE token = ? AND scopes IS NOT NULL`).bind(token).run();
+		if (result.meta.changes) logEvent("device.revoked", { via: "oauth/revoke" });
+	}
+	return c.body(null, 200);
+});
 api.on(["GET", "POST"], "/auth/*", deviceAuthGate, (c) => auth.handler(c.req.raw));
 
 api.use("*", sessionMiddleware);

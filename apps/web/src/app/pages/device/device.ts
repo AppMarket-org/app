@@ -28,9 +28,11 @@ type Step = 'enter' | 'confirm' | 'approved' | 'denied';
  * #104: approve a CLI or agent sign-in. The client shows a code and this page's address; the
  * signed-in user checks the code matches, sees which client is asking, and approves or denies.
  */
+import { Turnstile } from '../../auth/turnstile/turnstile';
+
 @Component({
   selector: 'app-device',
-  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, ReactiveFormsModule, RouterLink],
+  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, ReactiveFormsModule, RouterLink, Turnstile],
   templateUrl: './device.html',
   styleUrl: './device.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +43,8 @@ export class DevicePage {
 
   protected readonly auth = inject(Auth);
   private readonly http = inject(HttpClient);
+  /** #132: Turnstile token for Approve. */
+  protected readonly captchaToken = signal<string | null>(null);
 
   protected readonly step = signal<Step>('enter');
   protected readonly client = signal<string>('');
@@ -81,7 +85,8 @@ export class DevicePage {
 
   protected async decide(approve: boolean): Promise<void> {
     await this.run(async () => {
-      await firstValueFrom(this.http.post(`/api/auth/device/${approve ? 'approve' : 'deny'}`, { userCode: this.normalized() }));
+      const headers: Record<string, string> = approve && this.captchaToken() ? { 'x-captcha-response': this.captchaToken()! } : {};
+      await firstValueFrom(this.http.post(`/api/auth/device/${approve ? 'approve' : 'deny'}`, { userCode: this.normalized() }, { headers }));
       this.step.set(approve ? 'approved' : 'denied');
     });
   }
