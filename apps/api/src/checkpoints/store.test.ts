@@ -13,11 +13,12 @@ describe("checkpointRecordSchema", () => {
 
 describe("CheckpointStore", () => {
 	let store: CheckpointStore;
+	let db: ReturnType<typeof testD1>;
 	const repo = { id: "r1", path: "dev/app" };
 	const meta = { state: "pending" as const, visibility: "private" as const, uploadedBy: "dev", device: "laptop", force: false };
 
 	beforeEach(() => {
-		const db = testD1();
+		db = testD1();
 		seedUser(db.sqlite, "dev");
 		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, git_repo) VALUES ('r1', 'dev', 'dev', 'app', 'App', 'Summary text', 'ai', 'app-1')`).run();
 		store = new CheckpointStore(db.d1);
@@ -103,5 +104,21 @@ describe("CheckpointStore", () => {
 		expect((await store.audit()).withSecrets).toEqual([]);
 		await store.addPrompt("r1", sha(5), `and ${key}`);
 		expect((await store.get(repo, sha(5), "owner"))?.prompts?.[1]?.text).toBe("and [redacted:anthropic]");
+	});
+
+	it("exports the account's checkpoints as JSONL and purges removed repos (#131)", async () => {
+		await store.put(repo, record(1), meta);
+		await store.put(repo, record(2), meta);
+		const lines: string[] = [];
+		for await (const line of store.exportLines(["dev"])) lines.push(line);
+		expect(lines.map((l) => JSON.parse(l).commit)).toEqual([sha(1), sha(2)]);
+		expect(JSON.parse(lines[0]!)).toMatchObject({ repo: "dev/app", prompts: [{ text: "Add a todo list" }] });
+		const none: string[] = [];
+		for await (const line of store.exportLines(["someone-else"])) none.push(line);
+		expect(none).toEqual([]);
+		expect(await store.purgeRemovedRepos()).toBe(0);
+		db.sqlite.prepare("UPDATE repos SET state = 'removed' WHERE id = 'r1'").run();
+		expect(await store.purgeRemovedRepos()).toBe(2);
+		expect((await store.list(repo, "owner")).items).toEqual([]);
 	});
 });

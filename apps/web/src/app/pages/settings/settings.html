@@ -40,6 +40,16 @@
 
 <mat-card appearance="outlined">
   <mat-card-header>
+    <mat-card-title>Your checkpoints</mat-card-title>
+    <mat-card-subtitle>Every checkpoint in your repos and the organizations you own, as JSON Lines. Delete single checkpoints from a repo's timeline; checkpoints of a removed repo are deleted automatically.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-actions>
+    <a mat-stroked-button href="/api/me/checkpoints/export" download><mat-icon>download</mat-icon>Download checkpoints</a>
+  </mat-card-actions>
+</mat-card>
+
+<mat-card appearance="outlined">
+  <mat-card-header>
     <mat-card-title>Username</mat-card-title>
     <mat-card-subtitle>Your repos live at appmarket.org/{{ owner()?.handle ?? '…' }}/…</mat-card-subtitle>
   </mat-card-header>

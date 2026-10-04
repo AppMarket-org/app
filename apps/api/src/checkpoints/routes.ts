@@ -11,6 +11,7 @@ import { RepoStore } from "../repos/repository.ts";
 import { priceRecord } from "./pricing.ts";
 import { redactRecord } from "./redact.ts";
 import { CheckpointStore, type CheckpointViewer } from "./store.ts";
+import { OwnerStore } from "../owners/store.ts";
 
 type Ctx = { Variables: AuthVariables };
 const checkpoints = () => new CheckpointStore(env.DB);
@@ -170,3 +171,27 @@ export const checkpointRoutes = new Hono<Ctx>()
 
 /** #128: admin audit: stored checkpoints that still contain a known secret format. Mounted under /api/admin. */
 export const adminCheckpointRoutes = new Hono<Ctx>().use(requireRole("admin")).get("/checkpoints/audit", async (c) => c.json(await checkpoints().audit()));
+
+/** #131: download every checkpoint of the account's repos (and organizations it owns) as JSONL. Mounted under /api/me. */
+export const checkpointExportRoutes = new Hono<Ctx>().use(requireRole()).get("/checkpoints/export", async (c) => {
+	const session = c.get("session")!;
+	const owners = new OwnerStore(env.DB);
+	const ownedOrgs = (await owners.membershipsOf(session.user.id)).filter((m) => m.role === "owner").map((m) => m.org.id);
+	const lines = checkpoints().exportLines([session.user.id, ...ownedOrgs]);
+	const encoder = new TextEncoder();
+	const body = new ReadableStream<Uint8Array>({
+		async pull(controller) {
+			const next = await lines.next();
+			if (next.done) controller.close();
+			else controller.enqueue(encoder.encode(next.value));
+		},
+	});
+	logEvent("checkpoints.exported", { user: session.user.id });
+	return new Response(body, {
+		headers: {
+			"Content-Type": "application/x-ndjson; charset=utf-8",
+			"Content-Disposition": `attachment; filename="appmarket-checkpoints-${new Date().toISOString().slice(0, 10)}.jsonl"`,
+			"Cache-Control": "private, no-store",
+		},
+	});
+});
