@@ -127,7 +127,7 @@ export async function init(api: string, explicit?: string, opts: { agentsMd?: bo
 	console.log(`Checkpoints on for ${repo}.`);
 	console.log(`  Hook:       ${hook}`);
 	console.log(`  Harnesses:  ${harnesses.length ? harnesses.join(", ") : "none found"}${harnesses.includes("claude-code") ? " (run `appmarket adapter install <harness>` to record prompts)" : ""}`);
-	console.log(`  Notes:      shown in \`git log\`; push them with \`git push ${remote ?? "<remote>"} refs/notes/appmarket\``);
+	console.log(`  Notes:      shown in \`git log\`; ${remote ? `pushed to ${remote} after each checkpoint` : "no appmarket remote found, so they stay local"}`);
 	if (agentsFile) console.log(`  Agents:     added a record_context line to ${agentsFile.slice(root.length + 1)}; add the MCP server \`appmarket mcp\` to your agent`);
 	console.log("Every commit now gets a checkpoint; agent prompts are added when a harness adapter is installed.");
 	return 0;

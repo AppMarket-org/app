@@ -80,7 +80,10 @@ export function rewritten(kind: string, stdin: string, cwd?: string): number {
 			enqueue(api, repo, record, { force: true });
 			sent++;
 		}
-		if (sent) spawn(process.execPath, [process.argv[1]!, "sync", "--quiet"], { detached: true, stdio: "ignore", env: process.env }).unref();
+		if (sent) {
+			spawn(process.execPath, [process.argv[1]!, "sync", "--quiet"], { detached: true, stdio: "ignore", env: process.env }).unref();
+			spawn(process.execPath, [process.argv[1]!, "push-notes"], { cwd: root, detached: true, stdio: "ignore", env: process.env }).unref();
+		}
 	} catch (error) {
 		log("post-rewrite failed", error);
 	}
