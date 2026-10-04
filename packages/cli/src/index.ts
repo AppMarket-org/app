@@ -46,6 +46,7 @@ async function main(argv: string[]): Promise<number> {
 			"no-keychain": { type: "boolean" },
 			hook: { type: "boolean" },
 			force: { type: "boolean" },
+			plugin: { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
 			tool: { type: "string" },
@@ -84,7 +85,7 @@ async function main(argv: string[]): Promise<number> {
 		case "checkpoint":
 			return checkpoint({ hook: !!values.hook, commit: values.commit as string | undefined, force: !!values.force });
 		case "hook":
-			return hook(rest[0] ?? "", await readStdin());
+			return hook(rest[0] ?? "", await readStdin(), { plugin: !!values.plugin });
 		case "adapter":
 			return adapter(rest[0], rest[1]);
 		case "sync": {

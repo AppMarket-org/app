@@ -1,0 +1,61 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v appmarket >/dev/null 2>&1 && appmarket hook claude-code --plugin || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v appmarket >/dev/null 2>&1 && appmarket hook claude-code --plugin || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v appmarket >/dev/null 2>&1 && appmarket hook claude-code --plugin || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v appmarket >/dev/null 2>&1 && appmarket hook claude-code --plugin || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v appmarket >/dev/null 2>&1 && appmarket hook claude-code --plugin || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

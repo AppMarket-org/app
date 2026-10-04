@@ -1,0 +1,12 @@
+{
+  "name": "appmarket",
+  "owner": { "name": "appmarket.org", "url": "https://appmarket.org" },
+  "metadata": { "description": "Claude Code plugins from appmarket.org" },
+  "plugins": [
+    {
+      "name": "appmarket",
+      "source": "./plugin",
+      "description": "Checkpoints: record the prompt, model, effort and tools behind every commit Claude Code makes, for your appmarket.org repos."
+    }
+  ]
+}
