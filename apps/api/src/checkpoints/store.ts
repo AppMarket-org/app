@@ -287,6 +287,30 @@ export class CheckpointStore {
 		return (await this.db.prepare("SELECT checkpoints_reconciled_at AS t FROM repos WHERE id = ?").bind(repoId).first<{ t: string | null }>())?.t ?? null;
 	}
 
+	/** #131: every checkpoint in these owners' repos, oldest first, as JSONL lines (owner view). */
+	async *exportLines(ownerIds: string[]): AsyncGenerator<string> {
+		if (!ownerIds.length) return;
+		let after = "";
+		for (;;) {
+			const { results } = await this.db
+				.prepare(
+					`SELECT c.*, o.handle || '/' || r.slug AS path FROM checkpoints c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id
+					 WHERE r.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND c.repo_id || c.commit_sha > ? ORDER BY c.repo_id || c.commit_sha LIMIT 200`,
+				)
+				.bind(...ownerIds, after)
+				.all<Row & { path: string }>();
+			if (!results.length) return;
+			for (const row of results) yield JSON.stringify(toCheckpoint(row, row.path, "owner")) + "\n";
+			after = results.at(-1)!.repo_id + results.at(-1)!.commit_sha;
+		}
+	}
+
+	/** #131 retention: checkpoints of removed repos are deleted (the cron runs this every minute). */
+	async purgeRemovedRepos(): Promise<number> {
+		const result = await this.db.prepare("DELETE FROM checkpoints WHERE repo_id IN (SELECT id FROM repos WHERE state = 'removed')").run();
+		return result.meta.changes;
+	}
+
 	async delete(repoId: string, sha: string): Promise<boolean> {
 		const result = await this.db.prepare("DELETE FROM checkpoints WHERE repo_id = ? AND commit_sha = ?").bind(repoId, sha).run();
 		return result.meta.changes > 0;
