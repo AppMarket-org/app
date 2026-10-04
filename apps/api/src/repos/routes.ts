@@ -7,6 +7,7 @@ import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { strictLimit } from "../strict-limit.ts";
 import {
 	createGitRepo,
+	forkGitRepo,
 	deleteGitRepo,
 	listGitTokens,
 	mintGitToken,
@@ -91,6 +92,41 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			const created = await store.insert(ids, owner.id, user.id, input.data, gitRepo);
 			logEvent("repo.created", { repo: created.fullName, gitRepo: gitRepo, user: user.id });
 			return c.json(created, 201);
+		} catch (error) {
+			await deleteGitRepo(gitRepo).catch(() => undefined);
+			if (String(error).includes("UNIQUE")) return c.json({ error: "conflict", message: "Name just taken; retry." }, 409);
+			throw error;
+		}
+	})
+	// #26 (R6): "use this template": fork a published free app into a repo of your own.
+	.post("/:owner/:slug/fork", requireRole(), limitRepoCreate, async (c) => {
+		const store = repos();
+		const source = await store.findByPath(c.req.param("owner"), c.req.param("slug"));
+		if (!source || source.state !== "published" || !source.gitRepo) return c.json({ error: "not_found" }, 404);
+		// Paid apps need an entitlement first (R17, #42).
+		if (source.priceCents > 0) return c.json({ error: "paid", message: "Paid apps can be forked after purchase." }, 402);
+		const body = ((await c.req.json().catch(() => ({}))) as { owner?: unknown; name?: unknown }) ?? {};
+		const session = c.get("session")!;
+		const user = session.user;
+		const owners = new OwnerStore(env.DB);
+		const self = await owners.forUser(user);
+		const ownerHandle = typeof body.owner === "string" && body.owner.trim() ? body.owner.trim().toLowerCase() : self.handle;
+		const owner = ownerHandle === self.handle ? self : await owners.byHandle(ownerHandle);
+		if (!owner || (owner.id !== self.id && !session.orgIds.includes(owner.id))) return c.json({ error: "invalid", issues: [{ path: "owner", message: "Fork into your account or an organization you belong to." }] }, 400);
+		if (user.role !== "admin" && (await store.countActiveByCreator(user.id)) >= MAX_REPOS_PER_DEVELOPER) {
+			return c.json({ error: "quota_exceeded", limit: MAX_REPOS_PER_DEVELOPER }, 409);
+		}
+		const name = typeof body.name === "string" && body.name.trim() ? body.name.trim().slice(0, 80) : source.name;
+		if (user.role === "buyer") await env.DB.prepare(`UPDATE "user" SET role = 'developer' WHERE id = ? AND role = 'buyer'`).bind(user.id).run();
+		const ids = await store.reserve(owner.id, name);
+		const gitRepo = gitRepoNameFor(ids.slug, ids.id);
+		await forkGitRepo(source.gitRepo, gitRepo);
+		try {
+			const input = repoInputSchema.parse({ name, summary: source.summary, description: source.description, category: source.category, runtime: source.runtime, platforms: source.platforms, license: source.license });
+			const created = await store.insert(ids, owner.id, user.id, input, gitRepo);
+			await store.setForkedFrom(created.id, source);
+			logEvent("repo.forked", { repo: created.fullName, from: source.fullName, tag: source.publishedTag, user: user.id });
+			return c.json(await store.findById(created.id), 201);
 		} catch (error) {
 			await deleteGitRepo(gitRepo).catch(() => undefined);
 			if (String(error).includes("UNIQUE")) return c.json({ error: "conflict", message: "Name just taken; retry." }, 409);

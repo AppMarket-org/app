@@ -38,6 +38,9 @@ interface RepoRow {
 	owner_kind: OwnerKind;
 	owner_avatar_id: string | null;
 	published_languages: string | null;
+	forked_from_path: string | null;
+	forked_tag: string | null;
+	forked_commit: string | null;
 	owner_image: string | null;
 	git_repo: string | null;
 	submitted_tag: string | null;
@@ -53,7 +56,7 @@ interface RepoRow {
 }
 
 // The owner is a user or an organization (#102); users show their profile name.
-const SELECT = `SELECT l.*, o.handle AS owner_handle, o.kind AS owner_kind, COALESCE(o.name, u.name, o.handle) AS owner_name, o.avatar_id AS owner_avatar_id, u.image AS owner_image
+const SELECT = `SELECT l.*, (SELECT fo.handle || '/' || f.slug FROM repos f JOIN owners fo ON fo.id = f.owner_id WHERE f.id = l.forked_from) AS forked_from_path, o.handle AS owner_handle, o.kind AS owner_kind, COALESCE(o.name, u.name, o.handle) AS owner_name, o.avatar_id AS owner_avatar_id, u.image AS owner_image
 	FROM repos l JOIN owners o ON o.id = l.owner_id LEFT JOIN "user" u ON u.id = o.user_id`;
 
 function toRepo(row: RepoRow): Repo {
@@ -80,6 +83,7 @@ function toRepo(row: RepoRow): Repo {
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
+		forkedFrom: row.forked_from_path ? { fullName: row.forked_from_path, tag: row.forked_tag, commit: row.forked_commit } : null,
 		languages: row.published_languages ? (JSON.parse(row.published_languages) as Record<string, number>) : null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
@@ -189,6 +193,11 @@ export class RepoStore {
 			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo)
 			.run();
 		return (await this.findById(ids.id))!;
+	}
+
+	/** #26: marks a new repo as a fork of `source` at its published version. */
+	async setForkedFrom(id: string, source: Repo): Promise<void> {
+		await this.db.prepare("UPDATE repos SET forked_from = ?, forked_commit = ?, forked_tag = ? WHERE id = ?").bind(source.id, source.publishedCommit, source.publishedTag, id).run();
 	}
 
 	/** Updates editable fields. The slug stays fixed so published URLs never break. */
