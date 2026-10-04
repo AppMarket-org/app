@@ -128,6 +128,13 @@ export const checkpointRoutes = new Hono<Ctx>()
 		await checkpoints().setRepoDefault(repo.id, body.data.visibility);
 		return c.json({ visibility: body.data.visibility });
 	})
+	// #130: preview before publishing a session: how many private checkpoints would become visible.
+	.get("/:owner/:slug/checkpoints/visibility-preview", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		const session = c.req.query("session") ?? "";
+		if (!repo || !ownedBy(c, repo) || !session) return c.json({ error: "not_found" }, 404);
+		return c.json({ becomingVisible: await checkpoints().privateInSession(repo.id, session) });
+	})
 	.post("/:owner/:slug/checkpoints/visibility", requireRole(), async (c) => {
 		const repo = await repoFor(c);
 		if (!repo || !ownedBy(c, repo)) return c.json({ error: "not_found" }, 404);

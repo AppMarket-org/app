@@ -136,11 +136,31 @@ export class CheckpointsPage {
     }, `New checkpoints: ${VISIBILITY_LABELS[visibility].label.toLowerCase()}`);
   }
 
+  /**
+   * #130: changes are retroactive and immediate, so making private checkpoints visible asks first,
+   * with how many will become visible and to whom.
+   */
+  private async confirmVisible(count: number, visibility: CheckpointVisibility): Promise<boolean> {
+    if (visibility === 'private' || count === 0) return true;
+    const who = visibility === 'public' ? 'anyone who can see this repo' : "visitors of the app's build history";
+    const data: ConfirmDialogData = {
+      title: `Make ${count} checkpoint${count === 1 ? '' : 's'} visible?`,
+      message: `${count === 1 ? 'Its' : 'Their'} prompts, the agent's messages, tools and usage will be shown to ${who}, starting now. Secrets were redacted on upload; you can make ${count === 1 ? 'it' : 'them'} private again at any time.`,
+      confirm: visibility === 'public' ? 'Make public' : 'Show on the app page',
+    };
+    return !!(await firstValueFrom(this.dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, { data }).afterClosed()));
+  }
+
   protected async setVisibility(c: Checkpoint, visibility: CheckpointVisibility): Promise<void> {
+    if (!(await this.confirmVisible(c.visibility === 'private' ? 1 : 0, visibility))) return;
     await this.act(async () => this.replace(await firstValueFrom(this.api.setVisibility(this.path(), c.commit, visibility))), `${this.short(c.commit)}: ${VISIBILITY_LABELS[visibility].label}`);
   }
 
   protected async setSessionVisibility(group: SessionGroup, visibility: CheckpointVisibility): Promise<void> {
+    if (visibility !== 'private') {
+      const { becomingVisible } = await firstValueFrom(this.api.previewSession(this.path(), group.session)).catch(() => ({ becomingVisible: group.items.filter((c) => c.visibility === 'private').length }));
+      if (!(await this.confirmVisible(becomingVisible, visibility))) return;
+    }
     await this.act(async () => {
       await firstValueFrom(this.api.setSessionVisibility(this.path(), group.session, visibility));
       await this.refresh();

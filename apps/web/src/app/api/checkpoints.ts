@@ -29,6 +29,11 @@ export class CheckpointsApi {
     return this.http.post<{ updated: number }>(`/api/repos/${path}/checkpoints/visibility`, { session, visibility });
   }
 
+  /** #130: private checkpoints in a session that a visibility change would expose. */
+  previewSession(path: string, session: string): Observable<{ becomingVisible: number }> {
+    return this.http.get<{ becomingVisible: number }>(`/api/repos/${path}/checkpoints/visibility-preview`, { params: { session } });
+  }
+
   setDefault(path: string, visibility: CheckpointVisibility): Observable<{ visibility: CheckpointVisibility }> {
     return this.http.put<{ visibility: CheckpointVisibility }>(`/api/repos/${path}/checkpoint-settings`, { visibility });
   }
