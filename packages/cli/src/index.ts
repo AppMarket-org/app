@@ -124,7 +124,9 @@ main(process.argv.slice(2)).then(
 	(code) => process.exit(code),
 	(error) => {
 		log("command failed", error);
-		console.error(error instanceof Error ? error.message : String(error));
+		const api = apiBase(process.argv.find((a, i) => process.argv[i - 1] === "--api"));
+		const offline = error instanceof TypeError || (error instanceof Error && /fetch failed|ENOTFOUND|ECONNREFUSED|timeout|aborted/i.test(`${error.message} ${String(error.cause ?? "")}`));
+		console.error(offline ? `Could not reach ${api}. Check your connection, or point the CLI at another server with --api <url> or APPMARKET_API.` : error instanceof Error ? error.message : String(error));
 		process.exit(1);
 	},
 );
