@@ -11,6 +11,7 @@ import { adapter } from "./commands/adapter.ts";
 import { hook } from "./commands/hook.ts";
 import { mcp } from "./commands/mcp.ts";
 import { rewritten } from "./commands/rewritten.ts";
+import { pushNotes } from "./commands/notes.ts";
 import { doctor, status, updateNotice } from "./commands/doctor.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
@@ -27,6 +28,7 @@ Usage: appmarket <command> [options]
   mcp                                                            MCP server (stdio) with record_context, for agents without hooks
   adapter install|uninstall claude-code|codex                    Record agent sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
+  push-notes                                                     Push refs/notes/appmarket to the appmarket remote (runs after each checkpoint)
   status                                                         Queue, last upload, checkpoints waiting for a push
   doctor                                                         Check hooks, sign-in, connection and adapters
 
@@ -72,7 +74,7 @@ async function main(argv: string[]): Promise<number> {
 	if (values.version) return (console.log(VERSION), 0);
 	if (!command || values.help) return (console.log(HELP), 0);
 	// C8: queued uploads go out at the start of every interactive command.
-	if (!["checkpoint", "record", "sync", "hook", "mcp", "rewritten"].includes(command)) {
+	if (!["checkpoint", "record", "sync", "hook", "mcp", "rewritten", "push-notes"].includes(command)) {
 		await flush().catch(() => undefined);
 		await updateNotice().catch(() => undefined);
 	}
@@ -97,6 +99,8 @@ async function main(argv: string[]): Promise<number> {
 			return hook(rest[0] ?? "", await readStdin(), { plugin: !!values.plugin });
 		case "mcp":
 			return mcp();
+		case "push-notes":
+			return pushNotes();
 		case "rewritten":
 			return rewritten(rest[0] ?? "", await readStdin());
 		case "adapter":

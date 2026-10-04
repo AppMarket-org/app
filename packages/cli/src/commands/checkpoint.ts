@@ -106,6 +106,7 @@ export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: bo
 		if (!flags.noSync) {
 			// C14: upload detached so the hook returns immediately.
 			spawn(process.execPath, [process.argv[1]!, "sync", "--quiet"], { detached: true, stdio: "ignore", env: process.env }).unref();
+			spawn(process.execPath, [process.argv[1]!, "push-notes"], { cwd: root, detached: true, stdio: "ignore", env: process.env }).unref();
 		}
 		if (!flags.hook) console.log(`Checkpoint for ${sha.slice(0, 7)} (${record.harness}, ${record.prompts.length} prompt${record.prompts.length === 1 ? "" : "s"}, ${record.redactions} redacted).`);
 	} catch (error) {
