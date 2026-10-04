@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => {
 			entrypoint,
 			exports: {
 				CiSandbox: exports.durableObject({ storage: "sqlite", container: buildContainer }),
+				// #182: exact rate limits for sensitive actions.
+				RateLimiter: exports.durableObject({ storage: "sqlite" }),
 				DeployWorkflow: exports.workflow({ name: `${workerName}-deploy`, concurrency: { limit: 5 } }),
 			},
 			env: {
@@ -63,11 +65,7 @@ export default defineConfig(({ mode }) => {
 				TURNSTILE_SECRET_KEY: bindings.secret(),
 				// R20 rate limits. RATE_LIMIT_CONFIG gives Worker code the same settings (it may not import this file).
 				RATE_LIMIT_CONFIG: bindings.json(RATE_LIMITS),
-				RL_TOKENS: rateLimit(RATE_LIMITS.TOKENS),
-				RL_REPO_CREATE: rateLimit(RATE_LIMITS.REPO_CREATE),
-				RL_SIGN_IN: rateLimit(RATE_LIMITS.SIGN_IN),
 				RL_DOWNLOAD_LINK: rateLimit(RATE_LIMITS.DOWNLOAD_LINK),
-				RL_REPORT: rateLimit(RATE_LIMITS.REPORT),
 				// R24 screenshots. 
 				MEDIA: bindings.r2({ name: mediaBucket }),
 				// R13/R14 release binaries, served only through signed download links.
@@ -80,12 +78,11 @@ export default defineConfig(({ mode }) => {
 				CF_TOKEN_ENCRYPTION_KEY: bindings.secret(),
 				// #129: base64 32-byte master key; per-account transcript keys are derived from it.
 				TRANSCRIPT_KEY: bindings.secret(),
-				// D6 deploys. RL_DEPLOY limits container builds per user.
-				RL_DEPLOY: rateLimit(RATE_LIMITS.DEPLOY),
+				// Checkpoint uploads per device (approximate is fine at 60/min); deploys use the exact RateLimiter.
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
-				RL_DEVICE_CODE: rateLimit(RATE_LIMITS.DEVICE_CODE),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
+				RATE_LIMITER: bindings.durableObject({ worker: workerName, exportName: "RateLimiter" }),
 				CLOUDFLARE_ACCOUNT_ID: bindings.text(CLOUDFLARE_ACCOUNT_ID),
 				BACKUP_BUCKET: bindings.r2({ name: buildsBucket }),
 				BACKUP_BUCKET_NAME: bindings.text(buildsBucket),
