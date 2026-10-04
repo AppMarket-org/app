@@ -9,6 +9,7 @@ import { record } from "./commands/record.ts";
 import { checkpoint } from "./commands/checkpoint.ts";
 import { adapter } from "./commands/adapter.ts";
 import { hook } from "./commands/hook.ts";
+import { mcp } from "./commands/mcp.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
 
@@ -17,10 +18,11 @@ Usage: appmarket <command> [options]
   login [--no-browser] [--device-name <name>] [--no-keychain]   Sign in with a device code
   logout                                                         Sign this device out
   whoami                                                         Account, device, scopes, expiry
-  init [<owner>/<repo>]                                          Turn on checkpoints in this Git repo
+  init [<owner>/<repo>] [--agents-md]                            Turn on checkpoints in this Git repo
   disable | enable                                               Pause or resume checkpoints here
   record [--prompt <text>] [--tool <name> --args <a>] [--for <sha>]   Add events (adapters pipe JSON on stdin)
   checkpoint [--commit <sha>] [--force]                          Checkpoint a commit (the git hook runs this)
+  mcp                                                            MCP server (stdio) with record_context, for agents without hooks
   adapter install|uninstall claude-code                          Record Claude Code sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
   status                                                         Queue and sign-in state
@@ -47,6 +49,7 @@ async function main(argv: string[]): Promise<number> {
 			hook: { type: "boolean" },
 			force: { type: "boolean" },
 			plugin: { type: "boolean" },
+			"agents-md": { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
 			tool: { type: "string" },
@@ -66,7 +69,7 @@ async function main(argv: string[]): Promise<number> {
 	if (values.version) return (console.log(VERSION), 0);
 	if (!command || values.help) return (console.log(HELP), 0);
 	// C8: queued uploads go out at the start of every interactive command.
-	if (!["checkpoint", "record", "sync", "hook"].includes(command)) await flush().catch(() => undefined);
+	if (!["checkpoint", "record", "sync", "hook", "mcp"].includes(command)) await flush().catch(() => undefined);
 	switch (command) {
 		case "login":
 			return login(api, { noBrowser: !!values["no-browser"], deviceName: values["device-name"] as string | undefined, noKeychain: !!values["no-keychain"] });
@@ -75,7 +78,7 @@ async function main(argv: string[]): Promise<number> {
 		case "whoami":
 			return whoami(api);
 		case "init":
-			return init(api, rest[0]);
+			return init(api, rest[0], { agentsMd: !!values["agents-md"] });
 		case "disable":
 			return setEnabled(false);
 		case "enable":
@@ -86,6 +89,8 @@ async function main(argv: string[]): Promise<number> {
 			return checkpoint({ hook: !!values.hook, commit: values.commit as string | undefined, force: !!values.force });
 		case "hook":
 			return hook(rest[0] ?? "", await readStdin(), { plugin: !!values.plugin });
+		case "mcp":
+			return mcp();
 		case "adapter":
 			return adapter(rest[0], rest[1]);
 		case "sync": {
