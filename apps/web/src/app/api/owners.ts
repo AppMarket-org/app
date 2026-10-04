@@ -101,6 +101,11 @@ export class OwnersApi {
   }
 
   /** #104: browsers and device logins signed in to this account. */
+  /** #134: a labelled CI token; the token is returned once. */
+  createCiToken(label: string): Observable<{ token: string; label: string; expiresAt: string }> {
+    return this.http.post<{ token: string; label: string; expiresAt: string }>('/api/me/sessions/ci', { label });
+  }
+
   /** #133 */
   renameSession(id: string, name: string): Observable<{ name: string }> {
     return this.http.patch<{ name: string }>(`/api/me/sessions/${id}`, { name });

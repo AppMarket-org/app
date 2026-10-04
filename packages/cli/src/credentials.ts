@@ -58,6 +58,8 @@ export async function saveCredentials(creds: Credentials, opts: { noKeychain?: b
 }
 
 export async function loadCredentials(api: string): Promise<Credentials | null> {
+	// #134: in CI, a token from the environment is used as is and never written anywhere.
+	if (process.env.APPMARKET_TOKEN) return { api, token: process.env.APPMARKET_TOKEN, handle: "(APPMARKET_TOKEN)", device: "CI" };
 	const entry = await keychain(api);
 	if (entry) {
 		try {

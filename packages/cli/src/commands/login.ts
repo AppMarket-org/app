@@ -24,6 +24,20 @@ function openBrowser(url: string): void {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** #134: sign in with a CI token from Settings (non-interactive). */
+export async function loginWithToken(api: string, token: string, opts: { noKeychain?: boolean }): Promise<number> {
+	const session = await call<{ session: { deviceName?: string } } | null>(api, "/api/auth/get-session", { token }).catch(() => null);
+	if (!session) {
+		console.error("That token is not valid (wrong, expired or revoked). Create one in Settings → Signed-in devices.");
+		return 1;
+	}
+	const me = await call<{ owner: { handle: string } }>(api, "/api/me/owner", { token });
+	const device = session.session.deviceName ?? "CI";
+	const where = await saveCredentials({ api, token, handle: me.owner.handle, device }, { noKeychain: opts.noKeychain });
+	console.log(`Signed in as ${me.owner.handle} with the CI token "${device}" (${where === "keychain" ? "OS keychain" : "~/.appmarket/credentials.json"}).`);
+	return 0;
+}
+
 /** C1 (#106): OAuth device code login (RFC 8628). */
 export async function login(api: string, opts: { noBrowser?: boolean; deviceName?: string; noKeychain?: boolean }): Promise<number> {
 	const code = await call<CodeResponse>(api, "/api/auth/device/code", { body: { client_id: CLIENT_ID } });

@@ -115,6 +115,17 @@
     <mat-card-subtitle>Browsers, CLIs and agents using your account. Connect a CLI at appmarket.org/device.</mat-card-subtitle>
   </mat-card-header>
   <mat-card-content>
+    @if (ciToken(); as t) {
+      <div class="ci-token" role="status">
+        <p><strong>{{ t.label }}</strong>: copy this token now; it is not shown again. Valid until {{ t.expiresAt | date: 'mediumDate' }} (extended while in use); revoke it below.</p>
+        <pre><code>{{ t.token }}</code></pre>
+        <p class="hint">In the pipeline: set the secret <code>APPMARKET_TOKEN</code>, or run <code>appmarket login --token -</code> with the token on stdin.</p>
+        <div class="row-actions">
+          <button mat-stroked-button type="button" (click)="copyToken()"><mat-icon>content_copy</mat-icon>Copy token</button>
+          <button mat-button type="button" (click)="ciToken.set(null)">Done</button>
+        </div>
+      </div>
+    }
     @switch (sessions()) {
       @case (undefined) {
         <mat-progress-bar mode="indeterminate" aria-label="Loading devices" />
@@ -141,4 +152,7 @@
       }
     }
   </mat-card-content>
+  <mat-card-actions>
+    <button mat-stroked-button type="button" (click)="createCiToken()"><mat-icon>key</mat-icon>New CI token</button>
+  </mat-card-actions>
 </mat-card>

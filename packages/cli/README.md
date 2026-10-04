@@ -80,6 +80,12 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `status` | Queued uploads, last upload, adapters, and this repo's checkpoints still waiting for a push (flags those older than 30 days) |
 | `doctor` | Checks git hooks, sign-in, connection, and each adapter against the installed harness (reads its newest transcript) |
 
+## CI
+
+Create a CI token in Settings → Signed-in devices (same limited scopes as a CLI login, revocable
+there). In the pipeline set it as the secret `APPMARKET_TOKEN` (used directly, nothing is
+written), or run `appmarket login --token -` with the token on stdin.
+
 `--api <url>` or `APPMARKET_API` points at another server (staging, local dev). `APPMARKET_HOME`
 moves `~/.appmarket`.
 

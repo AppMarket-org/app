@@ -4,6 +4,8 @@
 /** Scopes each device client may request; also its default when it asks for none. */
 export const DEVICE_CLIENT_SCOPES: Readonly<Record<string, readonly string[]>> = {
 	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read"],
+	// #134: CI tokens created in Settings, for pipelines that cannot approve a device code.
+	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read"],
 };
 
 /** The granted scopes: the request (or the client's default), refused if it asks for more. */

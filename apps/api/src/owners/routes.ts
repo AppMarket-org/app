@@ -1,5 +1,6 @@
 import { MAX_PINS, type ActivityPage, type ContributionCalendar, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
 import { purgeOwnerPage } from "../routes/seo.ts";
+import { DEVICE_CLIENT_SCOPES } from "../auth/scopes.ts";
 import { ContributionStore } from "../contributions/store.ts";
 import { handleSchema, orgCreateSchema, orgMemberSchema, profileUpdateSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
@@ -153,6 +154,24 @@ export const sessionRoutes = new Hono<Ctx>()
 				ipPrefix: r.lastIpPrefix,
 			})),
 		});
+	})
+	// #134: a labelled CI token (same scopes as a CLI login), shown once. Browser sessions only:
+	// device tokens never reach /api/me/* except their own allow-list.
+	.post("/ci", async (c) => {
+		const label = String(((await c.req.json().catch(() => ({}))) as { label?: unknown }).label ?? "").trim().slice(0, 64);
+		if (!label) return c.json({ error: "invalid", issues: [{ path: "label", message: "Name the pipeline, e.g. GitHub Actions." }] }, 400);
+		const user = c.get("session")!.user;
+		// 128 random bits as 32 hex characters.
+		const token = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
+		const now = new Date();
+		const expiresAt = new Date(now.getTime() + 90 * 86_400_000).toISOString();
+		await env.DB.prepare(
+			`INSERT INTO "session" (id, expiresAt, token, createdAt, updatedAt, userId, userAgent, clientId, scopes, deviceName) VALUES (?, ?, ?, ?, ?, ?, 'appmarket CI token', 'appmarket-ci', ?, ?)`,
+		)
+			.bind(crypto.randomUUID(), expiresAt, token, now.toISOString(), now.toISOString(), user.id, DEVICE_CLIENT_SCOPES["appmarket-ci"]!.join(" "), label)
+			.run();
+		logEvent("ci_token.created", { user: user.id, label });
+		return c.json({ token, label, expiresAt }, 201);
 	})
 	// #133: rename a device login.
 	.patch("/:id", async (c) => {
