@@ -7,12 +7,15 @@
         <span matListItemTitle>{{ r.filename }}</span>
         <span matListItemLine>{{ platforms[r.platform] }} · {{ size(r.sizeBytes) }} · {{ r.tag }}</span>
         <span matListItemLine class="sha" [title]="r.sha256">SHA-256 {{ r.sha256.slice(0, 16) }}…</span>
-        <button matListItemMeta mat-icon-button type="button" [disabled]="pending() === r.id" (click)="download(r)" [attr.aria-label]="'Download ' + r.filename" [matTooltip]="'Download ' + r.filename">
+        <button matListItemMeta mat-icon-button type="button" [disabled]="pending() === r.id || (r.platform === 'android' && !android())" (click)="download(r)" [attr.aria-label]="'Download ' + r.filename" [matTooltip]="'Download ' + r.filename">
           <mat-icon>{{ pending() === r.id ? 'hourglass_top' : 'download' }}</mat-icon>
         </button>
       </mat-list-item>
     }
   </mat-list>
+  @if (!android() && hasApk()) {
+    <p class="note">The Android download opens once the developer confirms Android developer verification for this app.</p>
+  }
   @if (error(); as message) {
     <p class="error" role="alert">{{ message }}</p>
   }

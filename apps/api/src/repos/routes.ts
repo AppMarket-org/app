@@ -1,4 +1,4 @@
-import { MAX_REPOS_PER_DEVELOPER, SCREENSHOT_LIMITS, TOKEN_TTL, canTransition, type Repo, type GitToken, type Role, type TransitionActor } from "@appmarket/shared";
+import { ANDROID_PACKAGE, MAX_REPOS_PER_DEVELOPER, SCREENSHOT_LIMITS, TOKEN_TTL, canTransition, type Repo, type GitToken, type Role, type TransitionActor } from "@appmarket/shared";
 import { repoInputSchema, repoSearchSchema, repoUpdateSchema, tokenRequestSchema, transitionSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -179,6 +179,23 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		return c.json(await store.findById(repo.id));
 	})
 	// PRD R12: lifecycle. Owners submit a tag, withdraw, unpublish or remove; admins publish (approve).
+	// #33 (M2): the developer declares the app's Android package and that its developer verification is done.
+	.put("/:owner/:slug/android", requireRole(), async (c) => {
+		const store = repos();
+		const repo = await store.findByPath(c.req.param("owner"), c.req.param("slug"));
+		if (!repo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const body = (await c.req.json().catch(() => null)) as { package?: unknown; verified?: unknown } | null;
+		if (body?.package === null) {
+			await store.setAndroid(repo.id, null);
+			return c.json(await store.findById(repo.id));
+		}
+		if (typeof body?.package !== "string" || !ANDROID_PACKAGE.test(body.package) || body.package.length > 150) return c.json({ error: "invalid", issues: [{ path: "package", message: "Use an Android application ID such as com.example.notes." }] }, 400);
+		if (body.verified !== true) return c.json({ error: "invalid", issues: [{ path: "verified", message: "Confirm that you completed Android developer verification for this package." }] }, 400);
+		await store.setAndroid(repo.id, body.package);
+		logEvent("android.declared", { repo: repo.fullName, package: body.package, user: c.get("session")!.user.id });
+		if (repo.state === "published") c.executionCtx.waitUntil(purgeRepoPage(repo.fullName));
+		return c.json(await store.findById(repo.id));
+	})
 	.post("/:owner/:slug/transitions", requireRole(), async (c) => {
 		const store = repos();
 		const repo = await store.findByPath(c.req.param("owner"), c.req.param("slug"));

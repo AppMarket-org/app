@@ -6,7 +6,7 @@ import type { Repo, RepoState } from '@appmarket/shared';
 import { ManageRepo } from './manage-repo';
 
 const repo = (state: RepoState): Repo =>
-  ({ id: '1', slug: 'app', name: 'App', summary: 'Summary', state, runtime: 'workers-js', owner: { id: 'o', handle: 'dev', kind: 'user', name: 'Owner' }, fullName: 'dev/app' }) as Repo;
+  ({ id: '1', slug: 'app', name: 'App', summary: 'Summary', state, runtime: 'workers-js', platforms: ['workers'], owner: { id: 'o', handle: 'dev', kind: 'user', name: 'Owner' }, fullName: 'dev/app' }) as Repo;
 
 async function setup(state: RepoState) {
   TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });

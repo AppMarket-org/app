@@ -69,6 +69,10 @@ export const releaseLinkRoutes = new Hono<Ctx>().post(
 		if (!release || !repo || !canView(repo, session) || !visible(release, repo, canEdit(repo, session))) {
 			return c.json({ error: "not_found" }, 404);
 		}
+		// #33: APKs only after the developer declared Android developer verification for the package.
+		if (release.platform === "android" && !repo.android) {
+			return c.json({ error: "android_not_verified", message: "The developer has not confirmed Android developer verification for this app yet." }, 403);
+		}
 		// R17: paid repos need an entitlement check here before a link is issued.
 		if (repo.priceCents > 0) return c.json({ error: "payment_required" }, 402);
 		const expiresAt = Math.floor(Date.now() / 1000) + LINK_TTL_SECONDS;

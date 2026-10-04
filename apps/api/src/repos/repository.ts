@@ -53,6 +53,8 @@ interface RepoRow {
 	published_manifest: string | null;
 	published_pwa: string | null;
 	demo_url: string | null;
+	android_package: string | null;
+	android_verified_at: string | null;
 	cowbell_count: number;
 	checkpoint_visibility: CheckpointVisibility;
 	created_at: string;
@@ -87,6 +89,7 @@ function toRepo(row: RepoRow): Repo {
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		pwa: row.published_pwa ? JSON.parse(row.published_pwa) : null,
 		demoUrl: row.demo_url,
+		android: row.android_package && row.android_verified_at ? { package: row.android_package, verifiedAt: row.android_verified_at } : null,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
 		importedFrom: row.imported_from,
@@ -201,6 +204,14 @@ export class RepoStore {
 			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo, input.demoUrl ?? null)
 			.run();
 		return (await this.findById(ids.id))!;
+	}
+
+	/** #33: the developer's Android verification declaration, or null to clear it. */
+	async setAndroid(id: string, pkg: string | null): Promise<void> {
+		await this.db
+			.prepare("UPDATE repos SET android_package = ?, android_verified_at = CASE WHEN ? IS NULL THEN NULL ELSE strftime('%Y-%m-%dT%H:%M:%fZ', 'now') END, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
+			.bind(pkg, pkg, id)
+			.run();
 	}
 
 	/** #29: marks a new repo as an agent session's fork (hidden from lists, never submitted). */
