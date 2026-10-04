@@ -20,3 +20,25 @@ export function parseBranches(advertisement: string): { name: string; sha: strin
 	}
 	return branches;
 }
+
+/**
+ * #34: every branch and tag with the commit it points to. Annotated tags are peeled to their
+ * commit (the advertisement lists `refs/tags/x^{}` after the tag object).
+ */
+export function parseRefs(advertisement: string): Record<string, string> {
+	const refs: Record<string, string> = {};
+	let i = 0;
+	while (i + 4 <= advertisement.length) {
+		const length = Number.parseInt(advertisement.slice(i, i + 4), 16);
+		if (Number.isNaN(length)) break;
+		if (length === 0) {
+			i += 4;
+			continue;
+		}
+		const line = advertisement.slice(i + 4, i + length).replace(/\n$/, "").split("\0")[0]!;
+		i += length;
+		const match = /^([0-9a-f]{40}) (refs\/(?:heads|tags)\/.+?)(\^\{\})?$/.exec(line);
+		if (match) refs[match[2]!] = match[1]!;
+	}
+	return refs;
+}

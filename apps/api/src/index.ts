@@ -17,6 +17,7 @@ import { deploymentRoutes, repoDeployRoutes } from "./deploy/routes.ts";
 import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
 import { ejectDownloadRoutes, ejectRoutes } from "./deploy/eject.ts";
 import { ogRoutes } from "./og/routes.ts";
+import { scanWebhooks, webhookRoutes } from "./webhooks/routes.ts";
 import { agentSessionRoutes, repoSessionRoutes } from "./sessions/routes.ts";
 import { previewRoutes } from "./previews/routes.ts";
 import { scanPreviews } from "./previews/scan.ts";
@@ -64,6 +65,7 @@ api.route("/repos", checkpointRoutes);
 api.route("/repos", repoExportRoutes);
 api.route("/repos", previewRoutes);
 api.route("/repos", repoSessionRoutes);
+api.route("/repos", webhookRoutes);
 api.route("/sessions", agentSessionRoutes);
 api.route("/cowbells", cowbellRoutes);
 api.route("/owners", ownerRoutes);
@@ -106,6 +108,8 @@ export default {
 		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		// #28: branch previews into developers' own Cloudflare accounts.
 		ctx.waitUntil(scanPreviews().catch((error: unknown) => logEvent("previews.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
+		// #34: push webhooks to developers' CI.
+		ctx.waitUntil(scanWebhooks().catch((error: unknown) => logEvent("webhooks.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(scanContributions().catch((error: unknown) => logEvent("contributions.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 	},
 } satisfies ExportedHandler;

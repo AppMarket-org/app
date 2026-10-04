@@ -6,7 +6,8 @@ export const DEVICE_CLIENT_SCOPES: Readonly<Record<string, readonly string[]>> =
 	// #29: sessions:write lets `appmarket session` start agent sessions in forks. CI tokens cannot.
 	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read", "sessions:write"],
 	// #134: CI tokens created in Settings, for pipelines that cannot approve a device code.
-	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read"],
+	// #34: CI pipelines upload release builds (releases:write).
+	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read", "releases:write"],
 };
 
 /** The granted scopes: the request (or the client's default), refused if it asks for more. */
@@ -30,6 +31,7 @@ const RULES: readonly Rule[] = [
 	{ scope: "repos:read", methods: ["GET"], path: /^\/api\/owners\/[^/]+$/ },
 	{ scope: "checkpoints:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
 	{ scope: "checkpoints:write", methods: ["POST", "PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
+	{ scope: "releases:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/releases$`) },
 	{ scope: "sessions:write", methods: ["GET", "POST"], path: new RegExp(`^/api/repos/${REPO}/sessions$`) },
 	{ scope: "sessions:write", methods: ["POST"], path: /^\/api\/sessions\/[0-9a-f-]{36}\/(token|end)$/ },
 	{ scope: "sessions:write", methods: ["DELETE"], path: /^\/api\/sessions\/[0-9a-f-]{36}$/ },

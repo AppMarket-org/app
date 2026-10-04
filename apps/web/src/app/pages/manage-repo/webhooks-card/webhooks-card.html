@@ -1,0 +1,64 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Webhooks</mat-card-title>
+    <mat-card-subtitle>Start your own CI on every push of a branch or tag, for example a GitHub Actions workflow that builds and signs your Android or iOS app and uploads it as a release. Each event includes a one-hour read token to clone the code. Your signing keys stay in your CI.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (secret(); as s) {
+      <div class="secret" role="status">
+        <p>Signing secret (shown once). Check the <code>X-Appmarket-Signature-256</code> header with it:</p>
+        <pre><code>{{ s }}</code></pre>
+        <button mat-button type="button" (click)="copySecret()"><mat-icon>content_copy</mat-icon>Copy</button>
+      </div>
+    }
+    @for (h of hooks() ?? []; track h.id) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title class="url">{{ h.format === 'github' ? 'GitHub Actions · ' : '' }}{{ h.url }}</mat-panel-title>
+        </mat-expansion-panel-header>
+        <mat-list role="list" aria-label="Recent deliveries">
+          @for (d of h.deliveries; track d.id) {
+            <mat-list-item role="listitem" lines="2">
+              <mat-icon matListItemIcon aria-hidden="true">{{ d.error ? 'error' : 'check_circle' }}</mat-icon>
+              <span matListItemTitle class="url">{{ d.ref }} → {{ d.sha.slice(0, 7) }}</span>
+              <span matListItemLine>{{ d.status ?? 'no response' }}{{ d.error ? ' · ' + d.error : '' }} · {{ d.createdAt | date: 'short' }}</span>
+            </mat-list-item>
+          } @empty {
+            <p class="hint">No deliveries yet. Push a branch or a tag.</p>
+          }
+        </mat-list>
+        <button mat-button type="button" [disabled]="busy()" (click)="remove(h)">Remove webhook</button>
+      </mat-expansion-panel>
+    }
+    @if (adding()) {
+      <div class="form">
+        <mat-button-toggle-group [value]="format()" (change)="format.set($event.value)" aria-label="Webhook type">
+          <mat-button-toggle value="github">GitHub Actions</mat-button-toggle>
+          <mat-button-toggle value="generic">Any URL</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ format() === 'github' ? 'GitHub repository with the workflow' : 'Endpoint URL' }}</mat-label>
+          <input matInput type="url" [ngModel]="url()" (ngModelChange)="url.set($event)" name="url" [placeholder]="format() === 'github' ? 'https://github.com/you/your-app' : 'https://ci.example.com/hooks/appmarket'" />
+        </mat-form-field>
+        @if (format() === 'github') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>GitHub fine-grained token</mat-label>
+            <input matInput type="password" [ngModel]="githubToken()" (ngModelChange)="githubToken.set($event)" name="githubToken" autocomplete="off" />
+            <mat-hint>Only that repository, Contents: read and write (needed to send repository_dispatch). Stored encrypted.</mat-hint>
+          </mat-form-field>
+        }
+        @if (error(); as e) {
+          <p class="error" role="alert">{{ e }}</p>
+        }
+      </div>
+    }
+  </mat-card-content>
+  <mat-card-actions>
+    @if (adding()) {
+      <button mat-button type="button" (click)="adding.set(false)">Cancel</button>
+      <button mat-flat-button type="button" [disabled]="busy() || !url()" (click)="add()">Add webhook</button>
+    } @else {
+      <button mat-stroked-button type="button" (click)="adding.set(true); secret.set(null)"><mat-icon>add</mat-icon>Add webhook</button>
+    }
+  </mat-card-actions>
+</mat-card>
