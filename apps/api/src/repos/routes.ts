@@ -8,6 +8,7 @@ import { strictLimit } from "../strict-limit.ts";
 import {
 	createGitRepo,
 	forkGitRepo,
+	importGitRepo,
 	deleteGitRepo,
 	listGitTokens,
 	mintGitToken,
@@ -89,11 +90,33 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		const store = repos();
 		const ids = await store.reserve(owner.id, input.data.name);
 		const gitRepo = gitRepoNameFor(ids.slug, ids.id);
-		await createGitRepo(gitRepo);
+		if (input.data.importUrl) {
+			// #30: start from a public GitHub repository.
+			try {
+				await importGitRepo(gitRepo, input.data.importUrl, input.data.importBranch);
+			} catch (error) {
+				const code = `${(error as { code?: string }).code ?? ""} ${error instanceof Error ? error.message : String(error)}`;
+				// GitHub answers 401 for missing repositories too, so "missing" and "private" read the same.
+				const message = /REMOTE_AUTH_REQUIRED|requires authentication/i.test(code)
+					? "That repository does not exist or is private; only public GitHub repositories can be imported."
+					: /Branch not found/i.test(code)
+						? `That repository has no branch ${input.data.importBranch ?? ""}.`.replace(" .", ".")
+						: /NOT_FOUND|INVALID_URL/.test(code)
+							? "Could not find that repository on GitHub."
+							: /MEMORY_LIMIT/.test(code)
+								? "That repository is too large to import."
+								: "GitHub could not be reached; try again.";
+				logEvent("repo.import_failed", { url: input.data.importUrl, reason: code.slice(0, 300) }, "warn");
+				return c.json({ error: "import_failed", message, issues: [{ path: "importUrl", message }] }, 422);
+			}
+		} else {
+			await createGitRepo(gitRepo);
+		}
 		try {
 			const created = await store.insert(ids, owner.id, user.id, input.data, gitRepo);
-			logEvent("repo.created", { repo: created.fullName, gitRepo: gitRepo, user: user.id });
-			return c.json(created, 201);
+			if (input.data.importUrl) await store.setImportedFrom(created.id, `${input.data.importUrl.replace(/(\.git)?\/?$/, "")}${input.data.importBranch ? `#${input.data.importBranch}` : ""}`);
+			logEvent("repo.created", { repo: created.fullName, gitRepo: gitRepo, user: user.id, imported: !!input.data.importUrl });
+			return c.json(await store.findById(created.id), 201);
 		} catch (error) {
 			await deleteGitRepo(gitRepo).catch(() => undefined);
 			if (String(error).includes("UNIQUE")) return c.json({ error: "conflict", message: "Name just taken; retry." }, 409);

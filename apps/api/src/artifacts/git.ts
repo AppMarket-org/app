@@ -17,6 +17,16 @@ export async function createGitRepo(name: string): Promise<{ name: string; remot
 	return { name: created.name, remote: created.remote };
 }
 
+/**
+ * #30 (R10): a new Artifacts repo imported from a public GitHub repository (one branch, or the
+ * default). The initial write token is revoked like on create (R3 mints scoped tokens).
+ */
+export async function importGitRepo(name: string, url: string, branch?: string): Promise<void> {
+	const created = await env.ARTIFACTS.import({ source: { url: url.replace(/\/$/, ""), ...(branch ? { branch } : {}) }, target: { name } });
+	using git = await env.ARTIFACTS.get(created.name);
+	await git.revokeToken(created.token);
+}
+
 /** #26: a native Artifacts fork of `source` (all refs, so the published tag comes along). */
 export async function forkGitRepo(source: string, name: string): Promise<void> {
 	using git = await env.ARTIFACTS.get(source);
