@@ -142,3 +142,24 @@ function list(v: unknown): Record<string, unknown>[] {
 function defined(values: Record<string, unknown>): Record<string, unknown> {
 	return Object.fromEntries(Object.entries(values).filter(([, v]) => v !== undefined));
 }
+
+/**
+ * #41 (D11): a wrangler.json for deploying from source on the buyer's own machine. It is the
+ * config appmarket.org deploys with (same Worker and resource names, so the existing resources in
+ * the buyer's account are reused) with the repo's own entry point, assets and migrations paths.
+ */
+export function ejectConfig(files: Map<string, string>, workerName: string): { ok: true; config: WranglerConfig; d1Bindings: string[] } | { ok: false; reason: string } {
+	const result = buildDeployConfig(files, workerName);
+	if (!result.ok) return result;
+	const source = readWrangler(files);
+	const original = source && !("error" in source) ? source.config : {};
+	const config: WranglerConfig = JSON.parse(JSON.stringify(result.deploy.config));
+	delete config.no_bundle;
+	delete config.find_additional_modules;
+	delete config.base_dir;
+	if (typeof original.main === "string") config.main = original.main;
+	if (isObject(config.assets) && result.deploy.assetsDir) config.assets.directory = result.deploy.assetsDir;
+	const dirs = new Map(result.deploy.d1Migrations.map((m) => [m.binding, m.dir]));
+	for (const db of list(config.d1_databases)) db.migrations_dir = dirs.get(String(db.binding)) ?? "migrations";
+	return { ok: true, config, d1Bindings: [...dirs.keys()] };
+}

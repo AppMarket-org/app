@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDeployConfig, scopedName } from "./deploy-config";
+import { buildDeployConfig, ejectConfig, scopedName } from "./deploy-config";
 
 const wrangler = (config: Record<string, unknown>) => new Map([["wrangler.json", JSON.stringify({ name: "todo", compatibility_date: "2026-10-01", ...config })]]);
 
@@ -67,5 +67,26 @@ describe("scopedName", () => {
 	it("stays within 63 lowercase characters", () => {
 		expect(scopedName("App", "My_DB")).toBe("app-my-db");
 		expect(scopedName("a".repeat(60), "bucket").length).toBeLessThanOrEqual(63);
+	});
+});
+
+describe("ejectConfig (#41)", () => {
+	it("keeps the deployed names but points at the repo's own sources", () => {
+		const files = new Map([
+			[
+				"wrangler.jsonc",
+				`{ "name": "todo", "main": "src/worker.ts", "compatibility_date": "2026-01-01",
+				   "assets": { "directory": "./public" },
+				   "d1_databases": [{ "binding": "DB", "database_name": "todo-db", "database_id": "dev-id", "migrations_dir": "db/migrations" }] }`,
+			],
+		]);
+		const r = ejectConfig(files, "todo-buyer");
+		expect(r.ok).toBe(true);
+		if (!r.ok) return;
+		expect(r.config).toMatchObject({ name: "todo-buyer", main: "src/worker.ts", assets: { directory: "public" }, observability: { enabled: true } });
+		expect(r.config.d1_databases).toEqual([{ binding: "DB", database_name: "todo-buyer-todo-db", migrations_dir: "db/migrations" }]);
+		expect(r.config).not.toHaveProperty("no_bundle");
+		expect(r.config).not.toHaveProperty("base_dir");
+		expect(r.d1Bindings).toEqual(["DB"]);
 	});
 });

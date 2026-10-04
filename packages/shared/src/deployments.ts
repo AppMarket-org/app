@@ -118,3 +118,37 @@ export interface RuntimeLogEvent {
 	trigger: string | null;
 	outcome: string | null;
 }
+
+/** #41 (D11): EJECT.md, the steps to own and deploy an app without appmarket.org. */
+export function buildEjectGuide(p: { repo: string; version: string; commit: string; folder: string; d1Bindings: string[] }): string {
+	const migrations = p.d1Bindings.map((b) => `npx wrangler d1 migrations apply ${b} --remote`);
+	return [
+		`# ${p.repo} ${p.version}, ejected from appmarket.org`,
+		"",
+		`This is the exact code you deployed (commit ${p.commit}), with a \`wrangler.json\` for the Worker and the resources already in your Cloudflare account. Nothing here depends on appmarket.org.`,
+		"",
+		"## Own the code",
+		"",
+		"```sh",
+		`cd ${p.folder}`,
+		"git init && git add -A",
+		`git commit -m "Start from ${p.repo} ${p.version} (${p.commit.slice(0, 12)})"`,
+		"```",
+		"",
+		"Push it to any Git host you like.",
+		"",
+		"## Deploy with Wrangler",
+		"",
+		"```sh",
+		"npm install            # or pnpm install, matching the lockfile",
+		"npx wrangler login     # the Cloudflare account you deployed to",
+		...migrations,
+		"npx wrangler deploy",
+		"```",
+		"",
+		"`wrangler.json` keeps the Worker name and resource names appmarket.org used, so the deploy updates the same Worker and reuses its data. Secrets you set at deploy time stay on the Worker; change them with `npx wrangler secret put NAME`.",
+		"",
+		"Updates from the app's developer no longer reach this copy. To take one later, compare it with the app's newer versions yourself.",
+		"",
+	].join("\n");
+}

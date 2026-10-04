@@ -50,6 +50,7 @@
     <app-logs-card [deploymentId]="d.id" [status]="d.status" />
     @if (d.status === 'succeeded') {
       <app-versions-card [deploymentId]="d.id" />
+      <app-eject-card [deploymentId]="d.id" />
     }
   }
 }

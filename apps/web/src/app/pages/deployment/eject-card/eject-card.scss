@@ -1,0 +1,14 @@
+mat-card {
+  margin-top: 1rem;
+}
+
+pre {
+  overflow: auto;
+  max-height: 24rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-small);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
