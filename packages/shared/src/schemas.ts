@@ -202,6 +202,14 @@ export const checkpointRecordSchema = z.object({
 	truncated: z.boolean().optional(),
 });
 
+/** #129: the full record behind a truncated checkpoint (same shape, without the array caps; 10 MB). */
+export const checkpointTranscriptSchema = checkpointRecordSchema.extend({
+	prompts: z.array(z.object({ ts: iso, text: z.string() })),
+	assistant_summary: z.string(),
+	tools: z.array(z.object({ name: z.string().max(128), args_summary: z.string(), outcome: z.enum(["ok", "error"]), ts: iso })),
+	files: z.array(z.object({ path: z.string().max(4096), added: count, removed: count })),
+});
+
 /** Owner edits: visibility, or a prompt added after the fact (`appmarket record --for <sha>`). */
 export const checkpointPatchSchema = z
 	.object({ visibility: z.enum(CHECKPOINT_VISIBILITIES).optional(), add_prompt: z.string().trim().min(1).max(100_000).optional() })

@@ -1,5 +1,5 @@
 import { CHECKPOINT_LIMITS, type Checkpoint, type CheckpointVisibility, type Repo } from "@appmarket/shared";
-import { checkpointPatchSchema, checkpointRecordSchema, checkpointVisibilitySchema, sessionVisibilitySchema } from "@appmarket/shared/schemas";
+import { checkpointPatchSchema, checkpointRecordSchema, checkpointTranscriptSchema, checkpointVisibilitySchema, sessionVisibilitySchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
@@ -10,6 +10,7 @@ import { canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { priceRecord } from "./pricing.ts";
 import { redactRecord } from "./redact.ts";
+import { deleteTranscript, getTranscript, putTranscript, TRANSCRIPT_LIMIT } from "./transcripts.ts";
 import { CheckpointStore, type CheckpointViewer } from "./store.ts";
 import { OwnerStore } from "../owners/store.ts";
 
@@ -151,6 +152,33 @@ export const checkpointRoutes = new Hono<Ctx>()
 		const checkpoint = await checkpoints().get({ id: repo.id, path: repo.fullName }, sha, viewerOf(c, repo));
 		return checkpoint ? c.json((await reconcile(repo, [checkpoint]))[0]) : c.json({ error: "not_found" }, 404);
 	})
+	// #129: the full record of a truncated checkpoint, encrypted per account in R2.
+	.post("/:owner/:slug/checkpoints/:sha/transcript", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		const sha = c.req.param("sha");
+		if (!repo || !ownedBy(c, repo) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
+		if (Number(c.req.header("content-length") ?? "0") > TRANSCRIPT_LIMIT) return c.json({ error: "too_large", maxBytes: TRANSCRIPT_LIMIT }, 413);
+		const text = await c.req.text();
+		if (new TextEncoder().encode(text).length > TRANSCRIPT_LIMIT) return c.json({ error: "too_large", maxBytes: TRANSCRIPT_LIMIT }, 413);
+		const parsed = checkpointTranscriptSchema.safeParse((() => { try { return JSON.parse(text); } catch { return null; } })());
+		if (!parsed.success) return c.json(invalid(parsed.error), 400);
+		if (parsed.data.commit !== sha) return c.json({ error: "invalid", issues: [{ path: "commit", message: "Does not match the checkpoint." }] }, 400);
+		if (!(await checkpoints().get({ id: repo.id, path: repo.fullName }, sha, "owner"))) return c.json({ error: "not_found" }, 404);
+		// The same server redaction pass as the record itself (#128).
+		const { record } = redactRecord(parsed.data);
+		const bytes = await putTranscript({ id: repo.id, ownerId: repo.owner.id }, sha, JSON.stringify(record));
+		return c.json({ stored: true, bytes }, 201);
+	})
+	.get("/:owner/:slug/checkpoints/:sha/transcript", async (c) => {
+		const repo = await repoFor(c);
+		const sha = c.req.param("sha");
+		if (!repo || !canView(repo, c.get("session")) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
+		// Follows the checkpoint's visibility: private ones only for owners.
+		if (!(await checkpoints().get({ id: repo.id, path: repo.fullName }, sha, viewerOf(c, repo)))) return c.json({ error: "not_found" }, 404);
+		const json = await getTranscript({ id: repo.id, ownerId: repo.owner.id }, sha);
+		if (!json) return c.json({ error: "not_found" }, 404);
+		return c.body(json, 200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store" });
+	})
 	.patch("/:owner/:slug/checkpoints/:sha", requireRole(), async (c) => {
 		const repo = await repoFor(c);
 		const sha = c.req.param("sha");
@@ -166,7 +194,10 @@ export const checkpointRoutes = new Hono<Ctx>()
 		const repo = await repoFor(c);
 		const sha = c.req.param("sha");
 		if (!repo || !ownedBy(c, repo) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
-		return (await checkpoints().delete(repo.id, sha)) ? c.json({ deleted: true }) : c.json({ error: "not_found" }, 404);
+		if (!(await checkpoints().delete(repo.id, sha))) return c.json({ error: "not_found" }, 404);
+		// #131: deleting a checkpoint deletes its transcript too.
+		await deleteTranscript(repo.id, sha);
+		return c.json({ deleted: true });
 	});
 
 /** #128: admin audit: stored checkpoints that still contain a known secret format. Mounted under /api/admin. */

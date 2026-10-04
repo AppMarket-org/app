@@ -8,6 +8,7 @@ import { adminCheckpointRoutes, checkpointExportRoutes, checkpointRoutes } from 
 import { scanContributions } from "./contributions/scan.ts";
 import { backfillLanguages } from "./repos/languages.ts";
 import { CheckpointStore } from "./checkpoints/store.ts";
+import { deleteTranscript } from "./checkpoints/transcripts.ts";
 import { logEvent } from "./observability/log.ts";
 import { avatarMediaRoutes } from "./owners/avatars.ts";
 import { cloudflareRoutes } from "./cloudflare/routes.ts";
@@ -76,7 +77,7 @@ export default {
 	// #143: every minute, contributions from new commits and events.
 	async scheduled(_controller: ScheduledController, _env: unknown, ctx: ExecutionContext): Promise<void> {
 		// #131: checkpoints of removed repos are deleted (well within the 24 h promise).
-		ctx.waitUntil(new CheckpointStore(env.DB).purgeRemovedRepos().then((n) => n && logEvent("checkpoints.purged", { count: n })).catch(() => undefined));
+		ctx.waitUntil(new CheckpointStore(env.DB).purgeRemovedRepos(deleteTranscript).then((n) => n && logEvent("checkpoints.purged", { count: n })).catch(() => undefined));
 		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(scanContributions().catch((error: unknown) => logEvent("contributions.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 	},

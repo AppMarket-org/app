@@ -71,6 +71,8 @@ export interface CheckpointRecord {
 export interface Checkpoint extends Omit<CheckpointRecord, "prompts" | "assistant_summary" | "tools" | "usage"> {
 	repo: string;
 	state: CheckpointState;
+	/** #129: the full record is stored encrypted (fetch …/transcript); its size in bytes. */
+	transcript_bytes?: number;
 	/** #128: secrets appmarket.org redacted that the uploading CLI missed. */
 	server_redactions?: number;
 	visibility: CheckpointVisibility;

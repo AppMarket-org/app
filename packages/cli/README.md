@@ -49,6 +49,8 @@ work, its record wins. `appmarket init --agents-md` adds the line even when Clau
   `refs/notes/appmarket` (`git log` shows it), queued in `~/.appmarket/queue/` and uploaded to
   appmarket.org in the background. The notes ref is also pushed to the repo's appmarket remote
   (merged with notes from your other machines); `git config appmarket.pushNotes false` keeps it local.
+- A checkpoint too large to store inline (over 256 KB) is uploaded trimmed, and its full
+  record goes up separately; appmarket.org stores that encrypted with a key for your account.
 - New checkpoints are **private** by default: only you (and members of the owning organization) see
   prompts. Others see the commit's metadata only.
 

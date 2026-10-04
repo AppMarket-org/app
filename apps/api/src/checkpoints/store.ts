@@ -12,6 +12,7 @@ interface Row {
 	device: string | null;
 	received_at: string;
 	server_redactions: number;
+	transcript_bytes: number | null;
 }
 
 /** Who is reading: owners see everything; everyone else only checkpoints the owner published (listing or public). */
@@ -85,6 +86,7 @@ function toCheckpoint(row: Row, repoPath: string, viewer: CheckpointViewer): Che
 		device: row.device,
 		received_at: row.received_at,
 		...(row.server_redactions ? { server_redactions: row.server_redactions } : {}),
+		...(row.transcript_bytes ? { transcript_bytes: row.transcript_bytes } : {}),
 	};
 	if (viewer === "owner") return base;
 	// #117: others never see private checkpoints (callers filter them out), the author's email or the device name.
@@ -306,7 +308,11 @@ export class CheckpointStore {
 	}
 
 	/** #131 retention: checkpoints of removed repos are deleted (the cron runs this every minute). */
-	async purgeRemovedRepos(): Promise<number> {
+	async purgeRemovedRepos(onTranscript?: (repoId: string, sha: string) => Promise<void>): Promise<number> {
+		if (onTranscript) {
+			const { results } = await this.db.prepare("SELECT repo_id, commit_sha FROM checkpoints WHERE transcript_ref IS NOT NULL AND repo_id IN (SELECT id FROM repos WHERE state = 'removed') LIMIT 500").all<{ repo_id: string; commit_sha: string }>();
+			for (const r of results) await onTranscript(r.repo_id, r.commit_sha);
+		}
 		const result = await this.db.prepare("DELETE FROM checkpoints WHERE repo_id IN (SELECT id FROM repos WHERE state = 'removed')").run();
 		return result.meta.changes;
 	}

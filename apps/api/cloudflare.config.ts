@@ -78,6 +78,8 @@ export default defineConfig(({ mode }) => {
 				CF_OAUTH_CLIENT_ID: bindings.secret(),
 				CF_OAUTH_CLIENT_SECRET: bindings.secret(),
 				CF_TOKEN_ENCRYPTION_KEY: bindings.secret(),
+				// #129: base64 32-byte master key; per-account transcript keys are derived from it.
+				TRANSCRIPT_KEY: bindings.secret(),
 				// D6 deploys. RL_DEPLOY limits container builds per user.
 				RL_DEPLOY: rateLimit(RATE_LIMITS.DEPLOY),
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
