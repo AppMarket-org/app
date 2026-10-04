@@ -1,6 +1,7 @@
 // Constants, types and pure helpers, safe for the browser (no zod).
 // Validation schemas live in "@appmarket/shared/schemas".
 export * from "./checkpoints";
+export * from "./prices";
 export * from "./cloudflare";
 export * from "./deployments";
 export * from "./repo";

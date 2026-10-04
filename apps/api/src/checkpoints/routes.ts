@@ -8,6 +8,7 @@ import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { priceRecord } from "./pricing.ts";
 import { CheckpointStore, type CheckpointViewer } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
@@ -88,7 +89,8 @@ export const checkpointRoutes = new Hono<Ctx>()
 		}
 		const parsed = checkpointRecordSchema.safeParse(body);
 		if (!parsed.success) return c.json(invalid(parsed.error), 400);
-		const record = parsed.data;
+		// #127: priced before hashing, so an identical retry still matches.
+		const record = priceRecord(parsed.data);
 		const attached = repo.gitRepo ? await commitExists(repo.gitRepo, record.commit) : false;
 		const device = (session.session as { deviceName?: string | null }).deviceName ?? null;
 		const result = await checkpoints().put({ id: repo.id, path: repo.fullName }, record, {

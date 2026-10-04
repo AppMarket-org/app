@@ -14,7 +14,7 @@ interface RolloutLine {
 		content?: { type: string; text?: string }[];
 		info?: {
 			total_token_usage?: { total_tokens?: number };
-			last_token_usage?: { input_tokens?: number; output_tokens?: number; reasoning_output_tokens?: number };
+			last_token_usage?: { input_tokens?: number; cached_input_tokens?: number; output_tokens?: number; reasoning_output_tokens?: number };
 		} | null;
 	};
 }
@@ -72,7 +72,7 @@ export function codexTranscriptEvents(path: string, offset: number, until: strin
 			if (total !== undefined && totals.has(total)) continue;
 			if (total !== undefined) totals.add(total);
 			const u = p.info.last_token_usage;
-			events.push({ v: 1, ts, type: "usage", harness: "codex", input_tokens: u.input_tokens ?? 0, output_tokens: u.output_tokens ?? 0, reasoning_tokens: u.reasoning_output_tokens });
+			events.push({ v: 1, ts, type: "usage", harness: "codex", input_tokens: u.input_tokens ?? 0, output_tokens: u.output_tokens ?? 0, reasoning_tokens: u.reasoning_output_tokens, cache_read_tokens: u.cached_input_tokens ?? 0 });
 		} else if (p.type === "message" && p.role === "assistant") {
 			const textPart = p.content?.filter((c) => c.type === "output_text" && c.text).at(-1)?.text;
 			if (textPart) assistant = { ts, text: textPart };

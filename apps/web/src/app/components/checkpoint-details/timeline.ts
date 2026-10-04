@@ -48,6 +48,8 @@ export function effortLine(c: Checkpoint): string {
   const parts = [`${m.turns} prompt${m.turns === 1 ? '' : 's'}`, duration(m.wall_clock_s), `${m.tool_calls} tool call${m.tool_calls === 1 ? '' : 's'}`];
   const tokens = (c.usage?.input_tokens ?? 0) + (c.usage?.output_tokens ?? 0);
   if (tokens) parts.push(`${compact(tokens)} tokens`);
+  // ~ marks an estimate from appmarket.org's price table (#127) rather than the harness's own figure.
+  if (c.usage?.cost_usd != null) parts.push(`${c.usage.cost_priced ? '~' : ''}$${c.usage.cost_usd < 0.01 ? c.usage.cost_usd.toFixed(4) : c.usage.cost_usd.toFixed(2)}`);
   if (m.retries) parts.push(`${m.retries} retr${m.retries === 1 ? 'y' : 'ies'}`);
   return parts.join(', ');
 }

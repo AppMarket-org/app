@@ -48,7 +48,16 @@ export interface CheckpointRecord {
 	prompts: { ts: string; text: string }[];
 	assistant_summary: string;
 	tools: { name: string; args_summary: string; outcome: "ok" | "error"; ts: string }[];
-	usage: { input_tokens: number | null; output_tokens: number | null; cost_usd: number | null };
+	usage: {
+		/** All input, including cache reads and writes. */
+		input_tokens: number | null;
+		output_tokens: number | null;
+		cost_usd: number | null;
+		cache_read_tokens?: number | null;
+		cache_write_tokens?: number | null;
+		/** Set when appmarket.org computed cost_usd: the price table version used (#127). */
+		cost_priced?: string;
+	};
 	files: { path: string; added: number; removed: number }[];
 	redactions: number;
 	source: CheckpointSource;
