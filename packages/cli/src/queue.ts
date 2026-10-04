@@ -17,16 +17,20 @@ interface QueueItem {
 	nextAt: string;
 	/** Replace whatever the server has for this commit (a rewritten commit's record). */
 	force?: boolean;
+	/** #129: the full record of a truncated one, uploaded after it. */
+	transcript?: CheckpointRecord;
+	/** The record is on the server; only the transcript is left. */
+	recordSent?: boolean;
 }
 
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 const fileFor = (repo: string, commit: string) => join(QUEUE_DIR, `${repo.replace(/[^A-Za-z0-9_-]+/g, "__")}-${commit}.json`);
 
-export function enqueue(api: string, repo: string, record: CheckpointRecord, opts: { force?: boolean } = {}): void {
+export function enqueue(api: string, repo: string, record: CheckpointRecord, opts: { force?: boolean; transcript?: CheckpointRecord } = {}): void {
 	ensureDirs();
 	const now = new Date().toISOString();
 	// Idempotent on (repo, commit): a newer record for the same commit replaces the queued one.
-	writeFileSync(fileFor(repo, record.commit), JSON.stringify({ api, repo, record, attempts: 0, firstAt: now, nextAt: now, ...(opts.force ? { force: true } : {}) } satisfies QueueItem), { mode: 0o600 });
+	writeFileSync(fileFor(repo, record.commit), JSON.stringify({ api, repo, record, attempts: 0, firstAt: now, nextAt: now, ...(opts.force ? { force: true } : {}), ...(opts.transcript ? { transcript: opts.transcript } : {}) } satisfies QueueItem), { mode: 0o600 });
 }
 
 export function queued(): QueueItem[] {
@@ -63,7 +67,12 @@ export async function flush(opts: { all?: boolean } = {}): Promise<SyncResult> {
 			continue;
 		}
 		try {
-			await call(item.api, `/api/repos/${item.repo}/checkpoints${item.force ? "?force=1" : ""}`, { token: creds.token, body: item.record, timeoutMs: 20_000 });
+			if (!item.recordSent) await call(item.api, `/api/repos/${item.repo}/checkpoints${item.force ? "?force=1" : ""}`, { token: creds.token, body: item.record, timeoutMs: 20_000 });
+			if (item.transcript) {
+				// Remember the record went through, so a failed transcript upload retries alone.
+				writeFileSync(file, JSON.stringify({ ...item, recordSent: true }), { mode: 0o600 });
+				await call(item.api, `/api/repos/${item.repo}/checkpoints/${item.record.commit}/transcript`, { token: creds.token, body: item.transcript, timeoutMs: 120_000 });
+			}
 			rmSync(file, { force: true });
 			result.sent++;
 			writeState({ lastUploadAt: new Date().toISOString() });

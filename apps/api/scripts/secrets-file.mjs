@@ -12,11 +12,12 @@ const NAMES = [
 	"CF_OAUTH_CLIENT_ID",
 	"CF_OAUTH_CLIENT_SECRET",
 	"CF_TOKEN_ENCRYPTION_KEY",
+	"TRANSCRIPT_KEY",
 	"R2_ACCESS_KEY_ID",
 	"R2_SECRET_ACCESS_KEY",
 ];
-/** Keys that sign sessions, download links and encrypt buyer tokens: never deployed as placeholders. */
-const REQUIRED = ["BETTER_AUTH_SECRET", "DOWNLOAD_SIGNING_KEY", "CF_TOKEN_ENCRYPTION_KEY"];
+/** Keys that sign sessions, download links and encrypt buyer tokens and transcripts: never deployed as placeholders. */
+const REQUIRED = ["BETTER_AUTH_SECRET", "DOWNLOAD_SIGNING_KEY", "CF_TOKEN_ENCRYPTION_KEY", "TRANSCRIPT_KEY"];
 const PLACEHOLDER = "not-configured";
 const absent = REQUIRED.filter((name) => !process.env[name]);
 if (absent.length) {

@@ -27,7 +27,7 @@ const RULES: readonly Rule[] = [
 	{ scope: "repos:read", methods: ["GET"], path: /^\/api\/repos(\/mine)?$/ },
 	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}(/(versions|readme|screenshots|releases|repo-map|git|events))?$`) },
 	{ scope: "repos:read", methods: ["GET"], path: /^\/api\/owners\/[^/]+$/ },
-	{ scope: "checkpoints:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+)?$`) },
+	{ scope: "checkpoints:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
 	{ scope: "checkpoints:write", methods: ["POST", "PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
 ];
 

@@ -9,6 +9,7 @@ import { apiBase, HOME } from "../config.ts";
 import { git, gitOr, repoRoot } from "../git.ts";
 import { log } from "../log.ts";
 import { enqueue } from "../queue.ts";
+import { fitRecord } from "../fit.ts";
 import { createRedactor, envValues } from "../redact.ts";
 
 /** The commit being checkpointed: HEAD, its parents, branch, author and diff stat. */
@@ -101,7 +102,9 @@ export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: bo
 		const record = buildRecord(events, info, createRedactor({ envValues: envValues(root), ...settings }));
 		// Local note first, so it travels with any push even if the upload never happens.
 		git(["notes", "--ref=appmarket", "add", "-f", "-F", "-", sha], { cwd: root, input: JSON.stringify(record, null, 2) });
-		enqueue(api, repo, record);
+		// #129: too large for inline storage → trimmed record plus the full one as an encrypted transcript.
+		const fitted = fitRecord(record);
+		enqueue(api, repo, fitted.record, fitted.transcript ? { transcript: fitted.transcript } : {});
 		advanceMarker(key);
 		if (!flags.noSync) {
 			// C14: upload detached so the hook returns immediately.
