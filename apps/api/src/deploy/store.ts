@@ -106,3 +106,13 @@ export async function deploymentsFor(userId: string): Promise<Deployment[]> {
 	const { results } = await env.DB.prepare(`${SELECT} WHERE d.user_id = ? ORDER BY d.created_at DESC LIMIT 50`).bind(userId).all<DeploymentRow>();
 	return results.map(toDeployment);
 }
+
+/** #40: appends a section of build or deploy output, keeping the newest 48,000 characters. */
+export async function appendDeploymentLog(id: string, section: string): Promise<void> {
+	await env.DB.prepare("UPDATE deployments SET logs = substr(COALESCE(logs, '') || ?, -48000) WHERE id = ?").bind(section, id).run();
+}
+
+export async function deploymentLogs(userId: string, id: string): Promise<string | null | undefined> {
+	const row = await env.DB.prepare("SELECT logs FROM deployments WHERE id = ? AND user_id = ?").bind(id, userId).first<{ logs: string | null }>();
+	return row ? row.logs : undefined;
+}

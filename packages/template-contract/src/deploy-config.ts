@@ -64,6 +64,8 @@ export function buildDeployConfig(files: Map<string, string>, workerName: string
 
 	const config: WranglerConfig = { name: workerName, workers_dev: true };
 	for (const key of COPIED) if (source[key] !== undefined) config[key] = JSON.parse(JSON.stringify(source[key]));
+	// #40: Workers Logs on unless the app configures observability itself, so the buyer's dashboard can show runtime logs.
+	if (config.observability === undefined) config.observability = { enabled: true };
 
 	const scoped = (name: unknown) => scopedName(workerName, typeof name === "string" ? name : "");
 	// Resource IDs in the repo belong to the developer's account. Without them Wrangler provisions

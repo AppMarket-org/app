@@ -1,0 +1,49 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Logs</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-tab-group (selectedIndexChange)="tabChanged($event)" animationDuration="0ms">
+      <mat-tab label="Deploy">
+        @switch (deployLog()) {
+          @case (undefined) {
+            <mat-progress-bar mode="indeterminate" aria-label="Loading deploy log" />
+          }
+          @case (null) {
+            <p class="hint">No output yet.</p>
+          }
+          @default {
+            <pre tabindex="0" aria-label="Deploy log"><code>{{ deployLog() }}</code></pre>
+          }
+        }
+      </mat-tab>
+      <mat-tab label="Runtime" [disabled]="status() !== 'succeeded'">
+        <div class="toolbar">
+          <mat-button-toggle-group [value]="minutes()" (change)="loadRuntime($event.value)" aria-label="Time range">
+            <mat-button-toggle [value]="60">1 hour</mat-button-toggle>
+            <mat-button-toggle [value]="1440">24 hours</mat-button-toggle>
+            <mat-button-toggle [value]="4320">3 days</mat-button-toggle>
+          </mat-button-toggle-group>
+          <button mat-icon-button type="button" aria-label="Refresh" [disabled]="loadingRuntime()" (click)="loadRuntime()"><mat-icon>refresh</mat-icon></button>
+        </div>
+        @if (loadingRuntime()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Loading runtime logs" />
+        }
+        @if (runtimeError(); as e) {
+          <p class="error" role="alert">{{ e }}</p>
+        } @else if (runtime(); as events) {
+          <mat-list role="list" aria-label="Runtime log events">
+            @for (e of events; track $index) {
+              <mat-list-item role="listitem" lines="2" [class]="e.level">
+                <span matListItemTitle class="message">{{ e.message || '(no message)' }}</span>
+                <span matListItemLine>{{ e.timestamp | date: 'medium' }} · {{ e.level }}{{ e.trigger ? ' · ' + e.trigger : '' }}{{ e.outcome && e.outcome !== 'ok' ? ' · ' + e.outcome : '' }}</span>
+              </mat-list-item>
+            } @empty {
+              <p class="hint">No log events in this time range. Workers Logs is on for deploys made by appmarket.org unless the app turns it off.</p>
+            }
+          </mat-list>
+        }
+      </mat-tab>
+    </mat-tab-group>
+  </mat-card-content>
+</mat-card>

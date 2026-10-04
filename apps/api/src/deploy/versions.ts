@@ -25,7 +25,7 @@ export class CloudflareApiError extends Error {
 	}
 }
 
-async function call<T>(fetcher: typeof fetch, token: string, path: string, init?: RequestInit): Promise<T> {
+export async function call<T>(fetcher: typeof fetch, token: string, path: string, init?: RequestInit): Promise<T> {
 	const response = await fetcher(`${API}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
 	const body = (await response.json().catch(() => null)) as { success?: boolean; result?: T; errors?: { message: string }[] } | null;
 	if (!response.ok || !body?.success) throw new CloudflareApiError(response.status, body?.errors?.map((e) => e.message).join("; ") || `HTTP ${response.status}`);

@@ -8,7 +8,8 @@ import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { readFiles } from "../artifacts/git.ts";
 import { accessToken, cloudflareAccounts } from "../cloudflare/oauth.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { deploymentFor, deploymentsFor, insertDeployment } from "./store.ts";
+import { runtimeLogs } from "./runtime-logs.ts";
+import { deploymentFor, deploymentLogs, deploymentsFor, insertDeployment } from "./store.ts";
 import { CloudflareApiError, rollbackTo, workerVersions } from "./versions.ts";
 import type { DeployParams } from "./workflow.ts";
 import { logEvent } from "../observability/log.ts";
@@ -72,6 +73,25 @@ export const deploymentRoutes = new Hono<Ctx>()
 	.get("/:id", async (c) => {
 		const deployment = await deploymentFor(c.get("session")!.user.id, c.req.param("id"));
 		return deployment ? c.json(deployment) : c.json({ error: "not_found" }, 404);
+	})
+	// #40 (D10): build and deploy output, kept with the deployment.
+	.get("/:id/logs", async (c) => {
+		const logs = await deploymentLogs(c.get("session")!.user.id, c.req.param("id"));
+		return logs === undefined ? c.json({ error: "not_found" }, 404) : c.json({ logs });
+	})
+	// #40 (D10): runtime logs from Workers Logs in the buyer's account (last 15 minutes to 3 days).
+	.get("/:id/runtime-logs", async (c) => {
+		const minutes = Math.min(Math.max(Number(c.req.query("minutes")) || 60, 15), 3 * 24 * 60);
+		const target = await cloudflareTarget(c);
+		if (target instanceof Response) return target;
+		try {
+			return c.json({ items: await runtimeLogs(fetch, target.token, target.deployment.accountId, target.deployment.workerName, minutes) });
+		} catch (error) {
+			if (error instanceof CloudflareApiError && error.status === 403) {
+				return c.json({ error: "logs_not_allowed", message: "Reconnect Cloudflare and allow reading Workers Logs to see runtime logs here." }, 403);
+			}
+			return cloudflareError(c, error);
+		}
 	})
 	// #38 (D8): the Worker's version history in the buyer's account, and rollback to any version.
 	.get("/:id/versions", async (c) => {

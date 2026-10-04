@@ -5,7 +5,8 @@ import { NonRetryableError } from "cloudflare:workflows";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { accessToken } from "../cloudflare/oauth.ts";
 import { buildCommand, deployCommand, type DeployPlan, SECRET_ENV_PREFIX, workerUrl } from "./commands.ts";
-import { finishDeployment, loadDeployment, readDeploymentSecrets, setDeploymentStatus } from "./store.ts";
+import { logSection } from "./logs.ts";
+import { appendDeploymentLog, finishDeployment, loadDeployment, readDeploymentSecrets, setDeploymentStatus } from "./store.ts";
 import { logEvent } from "../observability/log.ts";
 
 export { CiSandbox } from "./sandbox.ts";
@@ -28,6 +29,7 @@ export class DeployWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBind
 			const plan = JSON.parse(deployment.plan) as DeployPlan;
 			await status("building");
 			const built = await ci.runner({ name: "build", command: buildCommand(plan), config: { timeout: 15 * 60_000, retries: { limit: 1, delay: 10_000 } } });
+			await step.do("log: build", () => appendDeploymentLog(deploymentId, logSection("Install and build", built.logs)));
 			await status("deploying");
 
 			const token = await accessToken(deployment.userId);
@@ -45,6 +47,7 @@ export class DeployWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBind
 				},
 				config: { timeout: 10 * 60_000, retries: { limit: 1, delay: 10_000 } },
 			});
+			await step.do("log: deploy", () => appendDeploymentLog(deploymentId, logSection("Deploy to Cloudflare", deployed.logs)));
 			const url = workerUrl(typeof deployed.logs.stdout === "string" ? deployed.logs.stdout : "", plan.workerName);
 			await step.do("finish", async () => {
 				await finishDeployment(deploymentId, "succeeded", { url });
@@ -52,6 +55,7 @@ export class DeployWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBind
 			});
 		} catch (error) {
 			await step.do("fail", async () => {
+				await appendDeploymentLog(deploymentId, logSection("Failed", { stdout: error instanceof Error ? error.message : String(error) }));
 				await finishDeployment(deploymentId, "failed", { error: failureMessage(error) });
 				logEvent("deploy.failed", { deployment: deploymentId, error: failureMessage(error) }, "error");
 			});
