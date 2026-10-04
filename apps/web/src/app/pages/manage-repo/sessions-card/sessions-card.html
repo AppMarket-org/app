@@ -1,0 +1,31 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Agent sessions</mat-card-title>
+    <mat-card-subtitle>Each session works in its own fork with a write token that lasts 8 hours, so an agent can never push to this repo. Merge the work you want, then end the session.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (sessions(); as list) {
+      @if (list.length) {
+        <mat-list role="list" aria-label="Agent sessions">
+          @for (s of list; track s.id) {
+            <mat-list-item role="listitem" lines="2">
+              <mat-icon matListItemIcon aria-hidden="true">{{ s.status === 'active' ? 'smart_toy' : 'check' }}</mat-icon>
+              <span matListItemTitle class="fork">{{ s.fork }}</span>
+              <span matListItemLine>{{ s.harness }} · {{ s.status }} · {{ s.startedBy }} · {{ s.createdAt | date: 'short' }}</span>
+              <span matListItemMeta class="actions">
+                <a mat-button [routerLink]="['/dashboard/repos', s.fork]">Open</a>
+                @if (s.status === 'active') {
+                  <button mat-button type="button" [disabled]="busy()" (click)="end(s)">End</button>
+                }
+                <button mat-button type="button" [disabled]="busy()" (click)="discard(s)">Discard</button>
+              </span>
+            </mat-list-item>
+          }
+        </mat-list>
+      } @else {
+        <p class="hint">No sessions yet. In a checkout of this repo, start one for your agent:</p>
+        <pre><code>appmarket session start --harness claude-code</code></pre>
+      }
+    }
+  </mat-card-content>
+</mat-card>

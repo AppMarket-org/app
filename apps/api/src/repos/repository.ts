@@ -39,6 +39,7 @@ interface RepoRow {
 	owner_avatar_id: string | null;
 	published_languages: string | null;
 	forked_from_path: string | null;
+	session_of: string | null;
 	imported_from: string | null;
 	forked_tag: string | null;
 	forked_commit: string | null;
@@ -85,6 +86,7 @@ function toRepo(row: RepoRow): Repo {
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
 		importedFrom: row.imported_from,
+		sessionOf: row.session_of,
 		forkedFrom: row.forked_from_path ? { fullName: row.forked_from_path, tag: row.forked_tag, commit: row.forked_commit } : null,
 		languages: row.published_languages ? (JSON.parse(row.published_languages) as Record<string, number>) : null,
 		createdAt: row.created_at,
@@ -139,7 +141,7 @@ export class RepoStore {
 	/** Repos under any of these owners (a user and their organizations), newest change first. */
 	async listByOwners(ownerIds: string[]): Promise<Repo[]> {
 		const { results } = await this.db
-			.prepare(`${SELECT} WHERE l.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND l.state != 'removed' ORDER BY l.updated_at DESC`)
+			.prepare(`${SELECT} WHERE l.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND l.state != 'removed' AND l.session_of IS NULL ORDER BY l.updated_at DESC`)
 			.bind(...ownerIds)
 			.all<RepoRow>();
 		return results.map(toRepo);
@@ -197,6 +199,11 @@ export class RepoStore {
 		return (await this.findById(ids.id))!;
 	}
 
+	/** #29: marks a new repo as an agent session's fork (hidden from lists, never submitted). */
+	async setSessionOf(id: string, sourceId: string): Promise<void> {
+		await this.db.prepare("UPDATE repos SET session_of = ? WHERE id = ?").bind(sourceId, id).run();
+	}
+
 	/** #30 */
 	async setImportedFrom(id: string, source: string): Promise<void> {
 		await this.db.prepare("UPDATE repos SET imported_from = ? WHERE id = ?").bind(source, id).run();
@@ -229,7 +236,7 @@ export class RepoStore {
 	/** Repos an owner has that are not removed (R19 quota). */
 	/** R19 quota: repos a user created that are not removed (in any namespace). */
 	async countActiveByCreator(userId: string): Promise<number> {
-		const row = await this.db.prepare("SELECT COUNT(*) AS n FROM repos WHERE created_by = ? AND state != 'removed'").bind(userId).first<{ n: number }>();
+		const row = await this.db.prepare("SELECT COUNT(*) AS n FROM repos WHERE created_by = ? AND state != 'removed' AND session_of IS NULL").bind(userId).first<{ n: number }>();
 		return row?.n ?? 0;
 	}
 

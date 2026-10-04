@@ -186,6 +186,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!repo || !canView(repo, session)) return c.json({ error: "not_found" }, 404);
 		const request = transitionSchema.safeParse(await c.req.json().catch(() => null));
 		if (!request.success) return c.json(invalid(request.error), 400);
+		// #29: an agent session's fork is a workspace; its work reaches the marketplace through the repo it came from.
+		if (repo.sessionOf && request.data.to !== "removed") return c.json({ error: "session_fork", message: "Merge the session's work into the repo it came from and submit that." }, 409);
 		const actor = actorFor(repo, session, request.data.to);
 		if (!actor) {
 			return c.json({ error: "transition_not_allowed", from: repo.state, to: request.data.to }, canEdit(repo, session) ? 409 : 403);

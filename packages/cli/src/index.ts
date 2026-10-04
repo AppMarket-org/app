@@ -13,6 +13,7 @@ import { mcp } from "./commands/mcp.ts";
 import { rewritten } from "./commands/rewritten.ts";
 import { pushNotes } from "./commands/notes.ts";
 import { doctor, status, updateNotice } from "./commands/doctor.ts";
+import { gitCredential, sessionEnd, sessionList, sessionStart } from "./commands/session.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
 
@@ -30,6 +31,10 @@ Usage: appmarket <command> [options]
   adapter install|uninstall claude-code|codex                    Record agent sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
   push-notes                                                     Push refs/notes/appmarket to the appmarket remote (runs after each checkpoint)
+  session start [<owner>/<repo>] [--harness <name>]              Start an agent session in its own fork (short-lived write token)
+  session end [<id>] [--discard]                                 End it (revokes the token) or discard it (deletes the fork)
+  session list [<owner>/<repo>]                                  Agent sessions of this repo
+  git-credential get                                             Git credential helper for session remotes (set up by session start)
   status                                                         Queue, last upload, checkpoints waiting for a push
   doctor                                                         Check hooks, sign-in, connection and adapters
 
@@ -56,6 +61,7 @@ async function main(argv: string[]): Promise<number> {
 			hook: { type: "boolean" },
 			force: { type: "boolean" },
 			plugin: { type: "boolean" },
+			discard: { type: "boolean" },
 			"agents-md": { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
@@ -117,6 +123,14 @@ async function main(argv: string[]): Promise<number> {
 			if (!values.quiet) console.log(`Uploaded ${r.sent}, waiting ${r.pending}, dropped ${r.failed}.`);
 			return 0;
 		}
+		case "session":
+			if (rest[0] === "start") return sessionStart(api, rest[1], values.harness as string | undefined);
+			if (rest[0] === "end") return sessionEnd(api, rest[1], !!values.discard);
+			if (rest[0] === "list") return sessionList(api, rest[1]);
+			console.error("Usage: appmarket session start|end|list");
+			return 1;
+		case "git-credential":
+			return gitCredential(rest[0], await readStdin());
 		case "status":
 			return status(api);
 		case "doctor":

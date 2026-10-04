@@ -20,7 +20,7 @@ interface MineRepo {
 }
 
 /** Finds which appmarket repo this checkout is: an explicit owner/slug, or a remote that points at its Artifacts repo. */
-async function resolveRepo(api: string, token: string, root: string, explicit?: string): Promise<{ repo: string; remote: string | null }> {
+export async function resolveRepo(api: string, token: string, root: string, explicit?: string): Promise<{ repo: string; remote: string | null }> {
 	const remotes = gitOr(["remote", "-v"], "", { cwd: root })
 		.split("\n")
 		.map((l) => l.split(/\s+/))
