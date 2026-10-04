@@ -42,6 +42,15 @@ export interface OwnerProfile {
 	website?: string;
 	/** When the account or organization was created (ISO). */
 	memberSince: string;
+	/** #146: the owner hides their activity feed. */
+	activityHidden?: boolean;
+}
+
+/** #146: what a user shows on their profile (returned to the user themself only). */
+export interface OwnerPrivacy {
+	privateContributions: boolean;
+	hideActivity: boolean;
+	hideLocation: boolean;
 }
 
 /** What a user or organization owner edits; null or "" clears a field. */
@@ -50,6 +59,9 @@ export interface OwnerProfileUpdate {
 	bio?: string | null;
 	location?: string | null;
 	website?: string | null;
+	privateContributions?: boolean;
+	hideActivity?: boolean;
+	hideLocation?: boolean;
 }
 
 export const AVATAR_LIMITS = { maxBytes: 2 * 1024 * 1024, types: ["image/png", "image/jpeg", "image/webp"] } as const;
@@ -63,12 +75,16 @@ export interface ActivityMonth {
 	/** YYYY-MM */
 	month: string;
 	groups: { kind: ContributionKind; total: number; repos: { fullName: string; name: string; count: number }[] }[];
+	/** #146: contributions in unpublished repos, when the user opted in; never with names. */
+	privateCount?: number;
 }
 
 export interface ActivityPage {
 	months: ActivityMonth[];
 	/** Pass as `before` for older months; null at the end. */
 	next: string | null;
+	/** #146: the user hides their activity. */
+	hidden?: boolean;
 }
 
 /** #144: a user's contributions per UTC day over a year (or the last 12 months). */

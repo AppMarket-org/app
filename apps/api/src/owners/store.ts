@@ -1,4 +1,4 @@
-import { avatarUrl, handleProblem, type OrgMember, type OrgMembership, type OrgRole, type Owner, type OwnerKind, type OwnerProfile } from "@appmarket/shared";
+import { avatarUrl, handleProblem, type OwnerPrivacy, type OrgMember, type OrgMembership, type OrgRole, type Owner, type OwnerKind, type OwnerProfile } from "@appmarket/shared";
 
 interface OwnerRow {
 	id: string;
@@ -75,23 +75,42 @@ export class OwnerStore {
 	}
 
 	/** #139: public profile fields (empty ones left out). */
-	async profile(ownerId: string): Promise<OwnerProfile | null> {
+	async profile(ownerId: string, view: "public" | "self" = "public"): Promise<OwnerProfile | null> {
 		const row = await this.db
-			.prepare(`SELECT o.bio, o.location, o.website, COALESCE(u.createdAt, o.created_at) AS since FROM owners o LEFT JOIN "user" u ON u.id = o.user_id WHERE o.id = ?`)
+			.prepare(`SELECT o.bio, o.location, o.website, o.hide_activity, o.hide_location, COALESCE(u.createdAt, o.created_at) AS since FROM owners o LEFT JOIN "user" u ON u.id = o.user_id WHERE o.id = ?`)
 			.bind(ownerId)
-			.first<{ bio: string | null; location: string | null; website: string | null; since: string | number }>();
+			.first<{ bio: string | null; location: string | null; website: string | null; hide_activity: number; hide_location: number; since: string | number }>();
 		if (!row) return null;
+		// #146: hidden sections are left out of the public profile; the owner still edits them.
+		if (view === "public" && row.hide_location) row.location = null;
 		const since = typeof row.since === "number" || /^\d+$/.test(String(row.since)) ? new Date(Number(row.since)).toISOString() : new Date(row.since).toISOString();
-		return { ...(row.bio ? { bio: row.bio } : {}), ...(row.location ? { location: row.location } : {}), ...(row.website ? { website: row.website } : {}), memberSince: since };
+		return {
+			...(row.bio ? { bio: row.bio } : {}),
+			...(row.location ? { location: row.location } : {}),
+			...(row.website ? { website: row.website } : {}),
+			memberSince: since,
+			...(row.hide_activity ? { activityHidden: true } : {}),
+		};
+	}
+
+	/** #146 */
+	async privacy(ownerId: string): Promise<OwnerPrivacy> {
+		const row = await this.db.prepare("SELECT private_contributions, hide_activity, hide_location FROM owners WHERE id = ?").bind(ownerId).first<{ private_contributions: number; hide_activity: number; hide_location: number }>();
+		return { privateContributions: row?.private_contributions === 1, hideActivity: row?.hide_activity === 1, hideLocation: row?.hide_location === 1 };
 	}
 
 	/** Sets the given fields; null clears one (a user's name then falls back to the sign-in name). */
-	async updateProfile(ownerId: string, update: { name?: string | null; bio?: string | null; location?: string | null; website?: string | null }): Promise<void> {
-		const columns = (["name", "bio", "location", "website"] as const).filter((k) => update[k] !== undefined);
-		if (!columns.length) return;
+	async updateProfile(
+		ownerId: string,
+		update: { name?: string | null; bio?: string | null; location?: string | null; website?: string | null; privateContributions?: boolean; hideActivity?: boolean; hideLocation?: boolean },
+	): Promise<void> {
+		const COLUMNS = { name: "name", bio: "bio", location: "location", website: "website", privateContributions: "private_contributions", hideActivity: "hide_activity", hideLocation: "hide_location" } as const;
+		const keys = (Object.keys(COLUMNS) as (keyof typeof COLUMNS)[]).filter((k) => update[k] !== undefined);
+		if (!keys.length) return;
+		const value = (k: keyof typeof COLUMNS) => (typeof update[k] === "boolean" ? (update[k] ? 1 : 0) : (update[k] ?? null));
 		await this.db
-			.prepare(`UPDATE owners SET ${columns.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`)
-			.bind(...columns.map((k) => update[k] ?? null), ownerId)
+			.prepare(`UPDATE owners SET ${keys.map((k) => `${COLUMNS[k]} = ?`).join(", ")} WHERE id = ?`)
+			.bind(...keys.map(value), ownerId)
 			.run();
 	}
 

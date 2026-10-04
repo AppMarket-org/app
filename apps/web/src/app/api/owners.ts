@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { ActivityPage, ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
+import type { ActivityPage, ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerPrivacy, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** A profile: users list their public organizations, organizations their public members. */
@@ -28,8 +28,8 @@ export class OwnersApi {
   }
 
   /** #139: the profile of the signed-in user, or of an organization (owners only). */
-  profile(org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
-    return this.http.get<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile');
+  profile(org?: string): Observable<{ owner: Owner; profile: OwnerProfile; privacy: OwnerPrivacy }> {
+    return this.http.get<{ owner: Owner; profile: OwnerProfile; privacy: OwnerPrivacy }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile');
   }
 
   /** #144: a user's contribution calendar for a year, or the last 12 months. */
@@ -63,8 +63,8 @@ export class OwnersApi {
     return this.http.delete<{ owner: Owner }>(org ? `/api/orgs/${org}/avatar` : '/api/me/avatar');
   }
 
-  updateProfile(update: OwnerProfileUpdate, org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
-    return this.http.patch<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile', update);
+  updateProfile(update: OwnerProfileUpdate, org?: string): Observable<{ owner: Owner; profile: OwnerProfile; privacy: OwnerPrivacy }> {
+    return this.http.patch<{ owner: Owner; profile: OwnerProfile; privacy: OwnerPrivacy }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile', update);
   }
 
   me(): Observable<{ owner: Owner; orgs: OrgMembership[] }> {

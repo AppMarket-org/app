@@ -70,4 +70,23 @@ describe("contributions (#143)", () => {
 		expect((await store.activity({ ownerId: "dev" }, "2026-10-01", "2026-11-01")).months[0]!.groups[0]!.total).toBe(2);
 		expect(JSON.stringify(first)).not.toContain("secret");
 	});
+
+	it("adds unpublished repos as counts only with the opt-in, never removed ones (#146)", async () => {
+		const { db, store } = setup();
+		db.sqlite.prepare("UPDATE repos SET state = 'published' WHERE id = 'r1'").run();
+		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state, created_at) VALUES ('r2', 'dev', 'dev', 'secret', 'Secret', 'Summary text', 'ai', 'draft', '2025-01-01T00:00:00Z')`).run();
+		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state, created_at) VALUES ('r3', 'dev', 'dev', 'gone', 'Gone', 'Summary text', 'ai', 'removed', '2025-01-01T00:00:00Z')`).run();
+		await store.addCommits("r1", [commit("a", "dev@example.test", "2026-10-02")]);
+		await store.addCommits("r2", [commit("b", "dev@example.test", "2026-10-02"), commit("c", "dev@example.test", "2026-09-05")]);
+		await store.addCommits("r3", [commit("d", "dev@example.test", "2026-10-02")]);
+		expect((await store.calendar("dev", "2026-01-01", "2026-12-31")).total).toBe(1);
+		expect((await store.calendar("dev", "2026-01-01", "2026-12-31", true)).days).toEqual({ "2026-10-02": 2, "2026-09-05": 1 });
+		const page = await store.activity({ userId: "dev" }, "2026-09-01", "2026-11-01", 3, true);
+		expect(page.months.map((m) => [m.month, m.privateCount ?? 0])).toEqual([
+			["2026-10", 1],
+			["2026-09", 1],
+		]);
+		expect(page.months[1]!.groups).toEqual([]);
+		expect(JSON.stringify(page)).not.toMatch(/secret|gone/i);
+	});
 });

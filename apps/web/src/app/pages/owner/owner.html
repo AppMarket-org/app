@@ -83,7 +83,7 @@
       @if (calendar(); as cal) {
         <app-contribution-graph class="contributions" [calendar]="cal" [year]="year()" (yearChange)="showYear($event)" />
       }
-      @if (p.owner.kind === 'user' || p.repos.length) {
+      @if (!p.profile?.activityHidden && (p.owner.kind === 'user' || p.repos.length)) {
         <app-activity-feed class="activity" [handle]="p.owner.handle" [year]="year()" />
       }
 
