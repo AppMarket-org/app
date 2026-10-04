@@ -7,9 +7,11 @@ import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { Auth } from './auth/auth';
 import { Seo } from './seo/seo';
 
+import { Avatar } from './components/avatar/avatar';
+
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule],
+  imports: [Avatar, RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

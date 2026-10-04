@@ -74,6 +74,22 @@ describe("OwnerStore", () => {
 	});
 });
 
+describe("avatars (#140)", () => {
+	it("prefers an upload, falls back to the sign-in picture (https only), and returns the replaced id", async () => {
+		const db = testD1();
+		db.sqlite.prepare(`INSERT INTO "user" (id, name, email, emailVerified, image, createdAt, updatedAt, role) VALUES ('u9', 'Nine', 'nine@example.test', 1, 'https://lh3.example.test/p.png', 0, 0, 'developer')`).run();
+		const store = new OwnerStore(db.d1);
+		const nine = await store.forUser({ id: "u9", email: "nine@example.test" });
+		expect(nine.avatarUrl).toBe("https://lh3.example.test/p.png");
+		expect(await store.setAvatar(nine.id, { id: "11111111-1111-1111-1111-111111111111", contentType: "image/webp" })).toBeNull();
+		expect((await store.byId(nine.id))?.avatarUrl).toBe("/api/media/avatars/11111111-1111-1111-1111-111111111111");
+		expect(await store.avatar("11111111-1111-1111-1111-111111111111")).toEqual({ ownerId: nine.id, contentType: "image/webp" });
+		expect(await store.setAvatar(nine.id, null)).toBe("11111111-1111-1111-1111-111111111111");
+		db.sqlite.prepare(`UPDATE "user" SET image = 'http://insecure.example.test/p.png' WHERE id = 'u9'`).run();
+		expect((await store.byId(nine.id))?.avatarUrl).toBeNull();
+	});
+});
+
 describe("profileUpdateSchema", () => {
 	it("validates lengths and https-only websites, and turns empty strings into null", async () => {
 		const { profileUpdateSchema } = await import("@appmarket/shared/schemas");

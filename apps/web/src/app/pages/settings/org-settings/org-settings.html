@@ -14,6 +14,7 @@
         <mat-card-subtitle>Shown on appmarket.org/{{ o.handle }}. Empty fields are not shown.</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
+        <app-avatar-editor [owner]="o" (changed)="org.set($event)" />
         <app-profile-form kind="org" [name]="o.name" [profile]="p" [saving]="profileSaving()" [errors]="profileFieldErrors()" (save)="saveProfile($event)" />
       </mat-card-content>
     </mat-card>
@@ -31,7 +32,7 @@
       <mat-list aria-label="Members">
         @for (m of members(); track m.userId) {
           <mat-list-item>
-            <mat-icon matListItemIcon aria-hidden="true">{{ m.role === 'owner' ? 'shield_person' : 'person' }}</mat-icon>
+            <app-avatar matListItemAvatar [name]="m.name" [src]="m.avatarUrl" [size]="2.5" [decorative]="true" />
             <span matListItemTitle>{{ m.name }} <span class="handle">{{ m.handle }}</span></span>
             <span matListItemLine>{{ m.role === 'owner' ? 'Owner' : 'Member' }}{{ isMe(m) ? ' · you' : '' }}</span>
             <span matListItemMeta class="member-actions">

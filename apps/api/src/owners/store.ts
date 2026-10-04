@@ -1,4 +1,4 @@
-import { handleProblem, type OrgMember, type OrgMembership, type OrgRole, type Owner, type OwnerKind, type OwnerProfile } from "@appmarket/shared";
+import { avatarUrl, handleProblem, type OrgMember, type OrgMembership, type OrgRole, type Owner, type OwnerKind, type OwnerProfile } from "@appmarket/shared";
 
 interface OwnerRow {
 	id: string;
@@ -6,10 +6,12 @@ interface OwnerRow {
 	kind: OwnerKind;
 	name: string | null;
 	user_name: string | null;
+	avatar_id: string | null;
+	user_image: string | null;
 }
 
-const SELECT = `SELECT o.id, o.handle, o.kind, o.name, u.name AS user_name FROM owners o LEFT JOIN "user" u ON u.id = o.user_id`;
-const toOwner = (r: OwnerRow): Owner => ({ id: r.id, handle: r.handle, kind: r.kind, name: r.name ?? r.user_name ?? r.handle });
+const SELECT = `SELECT o.id, o.handle, o.kind, o.name, o.avatar_id, u.name AS user_name, u.image AS user_image FROM owners o LEFT JOIN "user" u ON u.id = o.user_id`;
+const toOwner = (r: OwnerRow): Owner => ({ id: r.id, handle: r.handle, kind: r.kind, name: r.name ?? r.user_name ?? r.handle, avatarUrl: avatarUrl(r.avatar_id, r.user_image) });
 
 /** Suggested handle from an email address: the part before @, hyphenated. */
 export function handleFromEmail(email: string): string {
@@ -93,11 +95,24 @@ export class OwnerStore {
 			.run();
 	}
 
+	/** #140: the owner's uploaded picture (null: none). */
+	async avatar(avatarId: string): Promise<{ ownerId: string; contentType: string } | null> {
+		const row = await this.db.prepare("SELECT id, avatar_type FROM owners WHERE avatar_id = ?").bind(avatarId).first<{ id: string; avatar_type: string }>();
+		return row ? { ownerId: row.id, contentType: row.avatar_type } : null;
+	}
+
+	/** Sets (or clears) the uploaded picture; returns the previous one's id so its bytes can be deleted. */
+	async setAvatar(ownerId: string, avatar: { id: string; contentType: string } | null): Promise<string | null> {
+		const previous = await this.db.prepare("SELECT avatar_id FROM owners WHERE id = ?").bind(ownerId).first<{ avatar_id: string | null }>();
+		await this.db.prepare("UPDATE owners SET avatar_id = ?, avatar_type = ? WHERE id = ?").bind(avatar?.id ?? null, avatar?.contentType ?? null, ownerId).run();
+		return previous?.avatar_id ?? null;
+	}
+
 	/** Organizations the user belongs to, with their role. */
 	async membershipsOf(userId: string): Promise<OrgMembership[]> {
 		const { results } = await this.db
 			.prepare(
-				`SELECT m.role, o.id, o.handle, o.kind, o.name, NULL AS user_name FROM org_members m JOIN owners o ON o.id = m.org_id
+				`SELECT m.role, o.id, o.handle, o.kind, o.name, o.avatar_id, NULL AS user_name, NULL AS user_image FROM org_members m JOIN owners o ON o.id = m.org_id
 				 WHERE m.user_id = ? ORDER BY o.handle`,
 			)
 			.bind(userId)
@@ -118,12 +133,12 @@ export class OwnerStore {
 	async members(orgId: string): Promise<OrgMember[]> {
 		const { results } = await this.db
 			.prepare(
-				`SELECT m.user_id, m.role, o.handle, u.name FROM org_members m JOIN "user" u ON u.id = m.user_id JOIN owners o ON o.id = m.user_id
+				`SELECT m.user_id, m.role, o.handle, COALESCE(o.name, u.name) AS name, o.avatar_id, u.image FROM org_members m JOIN "user" u ON u.id = m.user_id JOIN owners o ON o.id = m.user_id
 				 WHERE m.org_id = ? ORDER BY m.role DESC, o.handle`,
 			)
 			.bind(orgId)
-			.all<{ user_id: string; role: OrgRole; handle: string; name: string }>();
-		return results.map((r) => ({ userId: r.user_id, handle: r.handle, name: r.name, role: r.role }));
+			.all<{ user_id: string; role: OrgRole; handle: string; name: string; avatar_id: string | null; image: string | null }>();
+		return results.map((r) => ({ userId: r.user_id, handle: r.handle, name: r.name, role: r.role, avatarUrl: avatarUrl(r.avatar_id, r.image) }));
 	}
 
 	/** Adds or updates a member. */

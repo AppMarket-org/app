@@ -13,7 +13,7 @@ import type {
 	TransitionActor,
 	TransitionRequest,
 } from "@appmarket/shared";
-import { slugify, type CheckpointVisibility, type OwnerKind } from "@appmarket/shared";
+import { avatarUrl, slugify, type CheckpointVisibility, type OwnerKind } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 import { transitionUpdate } from "./transition-sql.ts";
 
@@ -36,6 +36,8 @@ interface RepoRow {
 	owner_name: string;
 	owner_handle: string;
 	owner_kind: OwnerKind;
+	owner_avatar_id: string | null;
+	owner_image: string | null;
 	git_repo: string | null;
 	submitted_tag: string | null;
 	submitted_commit: string | null;
@@ -50,7 +52,7 @@ interface RepoRow {
 }
 
 // The owner is a user or an organization (#102); users show their profile name.
-const SELECT = `SELECT l.*, o.handle AS owner_handle, o.kind AS owner_kind, COALESCE(o.name, u.name, o.handle) AS owner_name
+const SELECT = `SELECT l.*, o.handle AS owner_handle, o.kind AS owner_kind, COALESCE(o.name, u.name, o.handle) AS owner_name, o.avatar_id AS owner_avatar_id, u.image AS owner_image
 	FROM repos l JOIN owners o ON o.id = l.owner_id LEFT JOIN "user" u ON u.id = o.user_id`;
 
 function toRepo(row: RepoRow): Repo {
@@ -66,7 +68,7 @@ function toRepo(row: RepoRow): Repo {
 		license: row.license,
 		priceCents: row.price_cents,
 		state: row.state,
-		owner: { id: row.owner_id, handle: row.owner_handle, kind: row.owner_kind, name: row.owner_name },
+		owner: { id: row.owner_id, handle: row.owner_handle, kind: row.owner_kind, name: row.owner_name, avatarUrl: avatarUrl(row.owner_avatar_id, row.owner_image) },
 		fullName: `${row.owner_handle}/${row.slug}`,
 		gitRepo: row.git_repo,
 		submittedTag: row.submitted_tag,

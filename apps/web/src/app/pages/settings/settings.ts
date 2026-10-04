@@ -16,6 +16,7 @@ import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type 
 import { firstValueFrom } from 'rxjs';
 import { OwnersApi } from '../../api/owners';
 import { ProfileForm } from '../../components/profile-form/profile-form';
+import { AvatarEditor } from '../../components/avatar-editor/avatar-editor';
 import { profileErrors } from '../../components/profile-form/profile-errors';
 import { Auth } from '../../auth/auth';
 import { Seo } from '../../seo/seo';
@@ -23,7 +24,7 @@ import { Seo } from '../../seo/seo';
 /** #102, #139: your profile, username and organizations. */
 @Component({
   selector: 'app-settings',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +58,11 @@ export class Settings {
     this.handle.setValue(owner.handle);
     this.profile.set((await firstValueFrom(this.api.profile())).profile);
     this.sessions.set(await firstValueFrom(this.api.sessions()).catch(() => []));
+  }
+
+  protected avatarChanged(owner: Owner): void {
+    this.owner.set(owner);
+    this.auth.refreshOwner();
   }
 
   protected async saveProfile(update: OwnerProfileUpdate): Promise<void> {

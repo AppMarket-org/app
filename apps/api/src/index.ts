@@ -5,6 +5,7 @@ import { auth } from "./auth/auth.ts";
 import { type AuthVariables, deviceAuthGate, requireRole, sessionMiddleware } from "./auth/middleware.ts";
 import { adminRepoRoutes, repoRoutes, mediaRoutes } from "./repos/routes.ts";
 import { checkpointRoutes } from "./checkpoints/routes.ts";
+import { avatarMediaRoutes } from "./owners/avatars.ts";
 import { cloudflareRoutes } from "./cloudflare/routes.ts";
 import { cowbellRoutes, repoCowbellRoutes } from "./cowbells/routes.ts";
 import { deploymentRoutes, repoDeployRoutes } from "./deploy/routes.ts";
@@ -53,6 +54,7 @@ api.use("/admin/*", requireAccess());
 api.route("/admin", adminRepoRoutes);
 api.route("/admin", adminReportRoutes);
 api.route("/media", mediaRoutes);
+api.route("/media", avatarMediaRoutes);
 
 
 api.onError(onError);

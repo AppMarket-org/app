@@ -1,0 +1,5 @@
+@if (src() && !failed()) {
+  <img [src]="src()" [attr.alt]="decorative() ? '' : name()" referrerpolicy="no-referrer" [attr.loading]="eager() ? 'eager' : 'lazy'" [attr.fetchpriority]="eager() ? 'high' : null" decoding="async" (error)="failed.set(true)" />
+} @else {
+  <span class="initial" [attr.aria-hidden]="decorative() ? 'true' : null" [attr.role]="decorative() ? null : 'img'" [attr.aria-label]="decorative() ? null : name()">{{ initial() }}</span>
+}

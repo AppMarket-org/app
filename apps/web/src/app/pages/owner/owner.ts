@@ -6,13 +6,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { RepoCard } from '../../components/repo-card/repo-card';
+import { Avatar } from '../../components/avatar/avatar';
 import { Seo } from '../../seo/seo';
 import type { OwnerPageData } from './owner-resolver';
 
 /** #102, #139: appmarket.org/<handle>: a user's or organization's profile and public repos. */
 @Component({
   selector: 'app-owner',
-  imports: [DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, RepoCard, RouterLink],
+  imports: [Avatar, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, RepoCard, RouterLink],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

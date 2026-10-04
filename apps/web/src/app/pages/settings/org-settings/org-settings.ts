@@ -14,6 +14,8 @@ import { Router, RouterLink } from '@angular/router';
 import type { OrgMember, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { ProfileForm } from '../../../components/profile-form/profile-form';
+import { AvatarEditor } from '../../../components/avatar-editor/avatar-editor';
+import { Avatar } from '../../../components/avatar/avatar';
 import { profileErrors } from '../../../components/profile-form/profile-errors';
 import { OwnersApi } from '../../../api/owners';
 import { Auth } from '../../../auth/auth';
@@ -27,7 +29,7 @@ const ERRORS: Record<string, string> = {
 /** #102: an organization's members. Owners add, remove and promote; members can leave. */
 @Component({
   selector: 'app-org-settings',
-  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, Avatar, AvatarEditor, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './org-settings.html',
   styleUrl: './org-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

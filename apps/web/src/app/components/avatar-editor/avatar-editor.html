@@ -1,0 +1,21 @@
+<div class="editor">
+  <app-avatar [name]="owner().name" [src]="owner().avatarUrl" [size]="5" [kind]="owner().kind" [decorative]="true" />
+  <div class="controls">
+    <div class="buttons">
+      <input #file type="file" hidden [accept]="accept" (change)="pick($event)" />
+      <button mat-stroked-button type="button" [disabled]="busy()" (click)="file.click()">
+        <mat-icon>upload</mat-icon>{{ uploaded() ? 'Replace' : 'Upload' }} {{ owner().kind === 'org' ? 'logo' : 'picture' }}
+      </button>
+      @if (uploaded()) {
+        <button mat-button type="button" [disabled]="busy()" (click)="remove()">Remove</button>
+      }
+    </div>
+    <p class="hint">PNG, JPEG or WebP, up to {{ maxMb }} MB; cropped to a square.{{ owner().kind === 'user' && !uploaded() ? ' Without one, your sign-in picture is used.' : '' }}</p>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Saving picture" />
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </div>
+</div>

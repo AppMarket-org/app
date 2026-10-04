@@ -6,6 +6,7 @@ import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { removeAvatar, replaceAvatar } from "./avatars.ts";
 import { OwnerStore } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
@@ -50,6 +51,9 @@ export const meRoutes = new Hono<Ctx>()
 		await store.updateProfile(self.id, body.data);
 		return c.json({ owner: await store.byId(self.id), profile: await store.profile(self.id) });
 	})
+	// #140: profile picture.
+	.put("/avatar", async (c) => replaceAvatar(c, (await owners().forUser(c.get("session")!.user)).id))
+	.delete("/avatar", async (c) => removeAvatar(c, (await owners().forUser(c.get("session")!.user)).id))
 	.patch("/handle", async (c) => {
 		const body = handleSchema.safeParse(((await c.req.json().catch(() => ({}))) as { handle?: unknown }).handle);
 		if (!body.success) return c.json(invalid(body.error), 400);
@@ -139,6 +143,17 @@ export const orgRoutes = new Hono<Ctx>()
 		const store = owners();
 		await store.updateProfile(org.id, body.data);
 		return c.json({ owner: await store.byId(org.id), profile: await store.profile(org.id) });
+	})
+	// #140: organization logo, owners only.
+	.put("/:handle/avatar", async (c) => {
+		const org = await orgFor(c);
+		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
+		return replaceAvatar(c, org.id);
+	})
+	.delete("/:handle/avatar", async (c) => {
+		const org = await orgFor(c);
+		if (!org || !(await isOrgOwner(c, org.id))) return c.json({ error: "not_found" }, 404);
+		return removeAvatar(c, org.id);
 	})
 	.put("/:handle/members", async (c) => {
 		const org = await orgFor(c);
