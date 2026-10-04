@@ -108,3 +108,13 @@ export function previewWorkerName(slug: string, branch: string): string {
 	const tag = hash.toString(36).slice(0, 6);
 	return `${base.slice(0, 63 - tag.length - 1).replace(/-+$/, "")}-${tag}`;
 }
+
+/** #40 (D10): one runtime log event of a deployed Worker, from Workers Logs in the buyer's account. */
+export interface RuntimeLogEvent {
+	timestamp: string;
+	level: string;
+	message: string;
+	/** e.g. "GET /api/todos" or "cron". */
+	trigger: string | null;
+	outcome: string | null;
+}

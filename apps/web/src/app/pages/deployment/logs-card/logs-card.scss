@@ -1,0 +1,45 @@
+mat-card {
+  margin-top: 1rem;
+}
+
+pre {
+  overflow: auto;
+  max-height: 28rem;
+  margin: 1rem 0 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-small);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.message {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+mat-list-item.error .message {
+  color: var(--mat-sys-error);
+}
+
+mat-list-item.warn .message {
+  color: var(--mat-sys-tertiary);
+}
+
+.hint {
+  margin-top: 1rem;
+  color: var(--mat-sys-on-surface-variant);
+}

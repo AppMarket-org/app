@@ -32,11 +32,19 @@ describe("buildDeployConfig", () => {
 			queues: { producers: [{ binding: "JOBS", queue: "my-todo-jobs" }], consumers: [{ queue: "my-todo-jobs" }] },
 			main: "out/index.js",
 			no_bundle: true,
+			observability: { enabled: true },
 			find_additional_modules: true,
 			base_dir: "out",
 		});
 		expect(d1Migrations).toEqual([{ binding: "DB", dir: "db/migrations" }]);
 		expect(assetsDir).toBeNull();
+	});
+
+	it("turns Workers Logs on unless the app configures observability (#40)", () => {
+		const on = buildDeployConfig(new Map([["wrangler.json", JSON.stringify({ name: "x", main: "src/index.ts", compatibility_date: "2026-01-01" })]]), "w");
+		expect(on.ok && on.deploy.config.observability).toEqual({ enabled: true });
+		const own = buildDeployConfig(new Map([["wrangler.json", JSON.stringify({ name: "x", main: "src/index.ts", compatibility_date: "2026-01-01", observability: { enabled: false } })]]), "w");
+		expect(own.ok && own.deploy.config.observability).toEqual({ enabled: false });
 	});
 
 	it("maps static assets to the copied directory", () => {
