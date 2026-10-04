@@ -12,6 +12,11 @@ export interface DeployConfig {
 	assetsDir: string | null;
 	/** D1 migrations directories relative to the repo root, copied to `migrations/<binding>/`. */
 	d1Migrations: { binding: string; dir: string }[];
+	/**
+	 * #87: Python Workers are not bundled. The directory holding `main` (relative to the repo root,
+	 * "." for the root) is copied as-is with the vendored `python_modules/` from `pywrangler sync`.
+	 */
+	python?: { sourceDir: string };
 }
 
 export type DeployConfigResult = { ok: true; deploy: DeployConfig } | { ok: false; reason: string };
@@ -104,6 +109,14 @@ export function buildDeployConfig(files: Map<string, string>, workerName: string
 		config.assets = { directory: "assets", ...defined({ binding, html_handling, not_found_handling, run_worker_first }) };
 	}
 
+	if (typeof source.main === "string" && /\.py$/.test(source.main)) {
+		// #87: Python Workers upload their .py sources and vendored packages; Wrangler does not bundle them.
+		if (!isRepoPath(source.main)) return { ok: false, reason: "`main` must be a path inside the repo." };
+		const main = normalize(source.main);
+		const slash = main.lastIndexOf("/");
+		config.main = main;
+		return { ok: true, deploy: { config, assetsDir, d1Migrations, python: { sourceDir: slash === -1 ? "." : main.slice(0, slash) } } };
+	}
 	if (typeof source.main === "string") {
 		// `wrangler deploy --dry-run --outdir out` names the bundle after the entry file.
 		const base = source.main.split("/").pop()!.replace(/\.[cm]?[jt]sx?$/, "");

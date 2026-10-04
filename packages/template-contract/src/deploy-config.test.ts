@@ -90,3 +90,15 @@ describe("ejectConfig (#41)", () => {
 		expect(r.d1Bindings).toEqual(["DB"]);
 	});
 });
+
+describe("Python Workers (#87)", () => {
+	it("deploys the entry's directory unbundled", () => {
+		const r = buildDeployConfig(wrangler({ main: "src/entry.py", compatibility_flags: ["python_workers"] }), "py-app");
+		expect(r.ok && r.deploy.python).toEqual({ sourceDir: "src" });
+		expect(r.ok && r.deploy.config).toMatchObject({ main: "src/entry.py", compatibility_flags: ["python_workers"] });
+		expect(r.ok && r.deploy.config).not.toHaveProperty("no_bundle");
+		const root = buildDeployConfig(wrangler({ main: "worker.py" }), "py-app");
+		expect(root.ok && root.deploy.python).toEqual({ sourceDir: "." });
+		expect(buildDeployConfig(wrangler({ main: "../x.py" }), "py-app").ok).toBe(false);
+	});
+});

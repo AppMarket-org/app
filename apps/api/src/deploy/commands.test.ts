@@ -26,6 +26,17 @@ describe("deploy commands", () => {
 		expect(command).not.toMatch(/npm |npx |pnpm |node_modules/);
 	});
 
+	it("vendors Python packages and deploys .py sources without bundling (#87)", () => {
+		const py = { workerName: "py", config: { name: "py", main: "src/entry.py" }, assetsDir: null, d1Migrations: [], python: { sourceDir: "src" } };
+		expect(buildCommand(py)).toContain("if [ -f pyproject.toml ]; then /usr/local/bin/pywrangler sync; fi");
+		expect(buildCommand(py)).not.toContain("--dry-run");
+		const deploy = deployCommand(py);
+		expect(deploy).toContain("mkdir -p /tmp/appmarket-deploy/'src' && cp -R 'src'/. /tmp/appmarket-deploy/'src'/");
+		expect(deploy).toContain("if [ -d python_modules ]; then cp -R python_modules /tmp/appmarket-deploy/python_modules; fi");
+		expect(deploy).not.toContain(".appmarket/out");
+		expect(deployCommand({ ...py, python: { sourceDir: "." } })).toContain("find . -maxdepth 1 -name '*.py' -exec cp {} /tmp/appmarket-deploy/ \\;");
+	});
+
 	it("finds the workers.dev URL for this Worker only", () => {
 		const out = "Uploaded my-todo\nDeployed my-todo triggers\n  https://my-todo.someone.workers.dev\n  https://other.someone.workers.dev";
 		expect(workerUrl(out, "my-todo")).toBe("https://my-todo.someone.workers.dev");
