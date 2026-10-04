@@ -9,6 +9,7 @@ import { logEvent } from "../observability/log.ts";
 import { canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { priceRecord } from "./pricing.ts";
+import { redactRecord } from "./redact.ts";
 import { CheckpointStore, type CheckpointViewer } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
@@ -89,8 +90,11 @@ export const checkpointRoutes = new Hono<Ctx>()
 		}
 		const parsed = checkpointRecordSchema.safeParse(body);
 		if (!parsed.success) return c.json(invalid(parsed.error), 400);
-		// #127: priced before hashing, so an identical retry still matches.
-		const record = priceRecord(parsed.data);
+		// #128: the server's own redaction pass, then #127 pricing, both before hashing so an
+		// identical retry still matches.
+		const redacted = redactRecord(parsed.data);
+		const record = priceRecord(redacted.record);
+		if (redacted.count) logEvent("checkpoint.server_redacted", { repo: repo.fullName, count: redacted.count, cli: c.req.header("user-agent") ?? "" }, "warn");
 		const attached = repo.gitRepo ? await commitExists(repo.gitRepo, record.commit) : false;
 		const device = (session.session as { deviceName?: string | null }).deviceName ?? null;
 		const result = await checkpoints().put({ id: repo.id, path: repo.fullName }, record, {
@@ -99,6 +103,7 @@ export const checkpointRoutes = new Hono<Ctx>()
 			uploadedBy: session.user.id,
 			device,
 			force: c.req.query("force") === "1",
+			serverRedactions: redacted.count,
 		});
 		if (result.status === 409) return c.json({ error: "conflict", message: "A different checkpoint exists for this commit; retry with ?force=1 to replace it.", checkpoint: result.checkpoint }, 409);
 		if (result.status === 201) logEvent("checkpoint.created", { repo: repo.fullName, harness: record.harness, state: result.checkpoint.state, redactions: record.redactions });
@@ -155,3 +160,6 @@ export const checkpointRoutes = new Hono<Ctx>()
 		if (!repo || !ownedBy(c, repo) || !SHA.test(sha)) return c.json({ error: "not_found" }, 404);
 		return (await checkpoints().delete(repo.id, sha)) ? c.json({ deleted: true }) : c.json({ error: "not_found" }, 404);
 	});
+
+/** #128: admin audit: stored checkpoints that still contain a known secret format. Mounted under /api/admin. */
+export const adminCheckpointRoutes = new Hono<Ctx>().use(requireRole("admin")).get("/checkpoints/audit", async (c) => c.json(await checkpoints().audit()));

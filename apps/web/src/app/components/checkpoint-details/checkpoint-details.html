@@ -14,7 +14,7 @@
     <span><mat-icon inline>laptop</mat-icon>{{ c.device }}</span>
   }
   @if (c.redactions) {
-    <span><mat-icon inline>visibility_off</mat-icon>{{ c.redactions }} redacted</span>
+    <span><mat-icon inline>visibility_off</mat-icon>{{ c.redactions }} redacted{{ c.server_redactions ? ' (' + c.server_redactions + ' by appmarket.org)' : '' }}</span>
   }
   @if (c.rewritten_from) {
     <span><mat-icon inline>history</mat-icon>Rewritten from <code>{{ c.rewritten_from.slice(0, 7) }}</code></span>

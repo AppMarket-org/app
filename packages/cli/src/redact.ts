@@ -1,26 +1,9 @@
+import { SECRET_PATTERNS } from "@appmarket/shared";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Checkpoints PRD "Redaction on the machine, before upload" (#115). One way: appmarket.org never
 // receives the original text.
-
-/** Secret formats, most specific first. Each match becomes [redacted:<kind>]. */
-const PATTERNS: [kind: string, pattern: RegExp][] = [
-	["private-key", /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g],
-	["anthropic", /\bsk-ant-[A-Za-z0-9_-]{20,}/g],
-	["openai", /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}/g],
-	["stripe", /\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{16,}/g],
-	["github", /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})/g],
-	["aws", /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g],
-	["aws-secret", /(?<=aws_secret_access_key\s*[=:]\s*["']?)[A-Za-z0-9/+=]{40}/gi],
-	["slack", /\bxox[abposr]-[A-Za-z0-9-]{10,}/g],
-	["cloudflare", /\b(?:cfat|cfut|cfk)_[A-Za-z0-9]{30,}/g],
-	["artifacts", /\bart_v\d+_[A-Za-z0-9]{16,}/g],
-	["jwt", /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g],
-	["bearer", /\bBearer\s+[A-Za-z0-9._~+/-]{16,}=*/g],
-	["connection-string", /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:[^\s@/]+@[^\s]+/gi],
-	["generic", /\b(?:sk|pk|api|key|token|secret)_[A-Za-z0-9]{24,}/gi],
-];
 
 /** Files whose contents never leave the machine: a tool that read them keeps only its name. */
 const SENSITIVE_PATHS = [/(^|[/\\])\.env(\.|$)/, /\.pem$/, /\.key$/, /(^|[/\\])id_(rsa|ed25519|ecdsa)/, /\.p12$/, /(^|[/\\])\.dev\.vars/];
@@ -58,7 +41,7 @@ export function envValues(root: string): string[] {
 /** `ignore` holds extra path patterns (.appmarketignore lines); `extra` holds custom regex sources. */
 export function createRedactor(opts: { envValues?: string[]; extra?: string[]; ignore?: string[] } = {}): Redactor {
 	let count = 0;
-	const patterns: [string, RegExp][] = [...PATTERNS, ...(opts.extra ?? []).map((src) => ["custom", new RegExp(src, "g")] as [string, RegExp])];
+	const patterns: [string, RegExp][] = [...SECRET_PATTERNS, ...(opts.extra ?? []).map((src) => ["custom", new RegExp(src, "g")] as [string, RegExp])];
 	const values = [...new Set(opts.envValues ?? [])].sort((a, b) => b.length - a.length);
 	const ignore = (opts.ignore ?? []).filter(Boolean).map((glob) => new RegExp(glob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*")));
 	return {

@@ -122,3 +122,10 @@ mat-chip.missing {
     gap: 0.5rem;
   }
 }
+
+// #128
+.notice {
+  --mat-card-outlined-outline-color: var(--mat-sys-tertiary);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}

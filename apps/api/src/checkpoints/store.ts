@@ -1,3 +1,5 @@
+import { redactSecrets } from "@appmarket/shared";
+import { redactRecord } from "./redact.ts";
 import type { Checkpoint, CheckpointPage, CheckpointRecord, CheckpointState, CheckpointSummary, CheckpointVisibility, Harness } from "@appmarket/shared";
 
 interface Row {
@@ -9,6 +11,7 @@ interface Row {
 	visibility: CheckpointVisibility;
 	device: string | null;
 	received_at: string;
+	server_redactions: number;
 }
 
 /** Who is reading: owners see everything; everyone else only checkpoints the owner published (listing or public). */
@@ -74,7 +77,15 @@ async function hashOf(record: CheckpointRecord): Promise<string> {
 
 function toCheckpoint(row: Row, repoPath: string, viewer: CheckpointViewer): Checkpoint {
 	const record = JSON.parse(row.record) as CheckpointRecord;
-	const base: Checkpoint = { ...record, repo: repoPath, state: row.state, visibility: row.visibility, device: row.device, received_at: row.received_at };
+	const base: Checkpoint = {
+		...record,
+		repo: repoPath,
+		state: row.state,
+		visibility: row.visibility,
+		device: row.device,
+		received_at: row.received_at,
+		...(row.server_redactions ? { server_redactions: row.server_redactions } : {}),
+	};
 	if (viewer === "owner") return base;
 	// #117: others never see private checkpoints (callers filter them out), the author's email or the device name.
 	return { ...base, author: { name: base.author.name, email: "" }, device: null };
@@ -87,7 +98,7 @@ export class CheckpointStore {
 	async put(
 		repo: { id: string; path: string },
 		record: CheckpointRecord,
-		meta: { state: CheckpointState; visibility: CheckpointVisibility; uploadedBy: string; device: string | null; force: boolean },
+		meta: { state: CheckpointState; visibility: CheckpointVisibility; uploadedBy: string; device: string | null; force: boolean; serverRedactions?: number },
 	): Promise<PutResult> {
 		const hash = await hashOf(record);
 		const existing = await this.row(repo.id, record.commit);
@@ -97,14 +108,14 @@ export class CheckpointStore {
 		if (existing && !meta.force) return { status: 409, checkpoint: toCheckpoint(existing, repo.path, "owner") };
 		await this.db
 			.prepare(
-				`INSERT INTO checkpoints (repo_id, commit_sha, record, record_hash, harness, model, session_id, branch, source, state, visibility, uploaded_by, device, created_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				`INSERT INTO checkpoints (repo_id, commit_sha, record, record_hash, harness, model, session_id, branch, source, state, visibility, uploaded_by, device, created_at, server_redactions)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				 ON CONFLICT (repo_id, commit_sha) DO UPDATE SET record = excluded.record, record_hash = excluded.record_hash, harness = excluded.harness,
 				   model = excluded.model, session_id = excluded.session_id, branch = excluded.branch, source = excluded.source, state = excluded.state,
-				   uploaded_by = excluded.uploaded_by, device = excluded.device, created_at = excluded.created_at,
+				   uploaded_by = excluded.uploaded_by, device = excluded.device, created_at = excluded.created_at, server_redactions = excluded.server_redactions,
 				   received_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
 			)
-			.bind(repo.id, record.commit, JSON.stringify(record), hash, record.harness, record.model, record.session_id, record.branch, record.source, meta.state, meta.visibility, meta.uploadedBy, meta.device, record.created_at)
+			.bind(repo.id, record.commit, JSON.stringify(record), hash, record.harness, record.model, record.session_id, record.branch, record.source, meta.state, meta.visibility, meta.uploadedBy, meta.device, record.created_at, meta.serverRedactions ?? 0)
 			.run();
 		// A replaced record keeps the owner's visibility choice (ON CONFLICT leaves it unchanged).
 		return { status: existing ? 200 : 201, checkpoint: toCheckpoint((await this.row(repo.id, record.commit))!, repo.path, "owner") };
@@ -147,12 +158,53 @@ export class CheckpointStore {
 		return { total: results.reduce((t, r) => t + r.n, 0), harnesses: Object.fromEntries(results.map((r) => [r.harness, r.n])) };
 	}
 
+	/**
+	 * #128: re-runs the server redaction over stored records before they become visible (patterns
+	 * may have grown since upload). Returns how many secrets it found.
+	 */
+	async rescan(repoId: string, where: { sha: string } | { session: string }): Promise<number> {
+		const { results } = await this.db
+			.prepare(`SELECT * FROM checkpoints WHERE repo_id = ? AND ${"sha" in where ? "commit_sha" : "session_id"} = ?`)
+			.bind(repoId, "sha" in where ? where.sha : where.session)
+			.all<Row>();
+		let found = 0;
+		for (const row of results) {
+			const { record, count } = redactRecord(JSON.parse(row.record) as CheckpointRecord);
+			if (!count) continue;
+			found += count;
+			await this.db
+				.prepare("UPDATE checkpoints SET record = ?, record_hash = ?, server_redactions = server_redactions + ? WHERE repo_id = ? AND commit_sha = ?")
+				.bind(JSON.stringify(record), await hashOf(record), count, repoId, row.commit_sha)
+				.run();
+		}
+		return found;
+	}
+
+	/** #128 audit: stored checkpoints that still contain a known secret format. */
+	async audit(): Promise<{ scanned: number; withSecrets: { repoId: string; commit: string }[] }> {
+		const withSecrets: { repoId: string; commit: string }[] = [];
+		let scanned = 0;
+		let after = "";
+		for (;;) {
+			const { results } = await this.db.prepare("SELECT repo_id, commit_sha, record FROM checkpoints WHERE repo_id || commit_sha > ? ORDER BY repo_id || commit_sha LIMIT 500").bind(after).all<{ repo_id: string; commit_sha: string; record: string }>();
+			if (!results.length) break;
+			for (const r of results) {
+				scanned++;
+				if (redactRecord(JSON.parse(r.record) as CheckpointRecord).count) withSecrets.push({ repoId: r.repo_id, commit: r.commit_sha });
+			}
+			after = results.at(-1)!.repo_id + results.at(-1)!.commit_sha;
+		}
+		return { scanned, withSecrets };
+	}
+
 	async setVisibility(repoId: string, sha: string, visibility: CheckpointVisibility): Promise<boolean> {
+		if (visibility !== "private") await this.rescan(repoId, { sha });
 		const result = await this.db.prepare("UPDATE checkpoints SET visibility = ? WHERE repo_id = ? AND commit_sha = ?").bind(visibility, repoId, sha).run();
 		return result.meta.changes > 0;
 	}
 
 	async setSessionVisibility(repoId: string, session: string, visibility: CheckpointVisibility): Promise<number> {
+		if (visibility !== "private") await this.rescan(repoId, { session });
 		const result = await this.db.prepare("UPDATE checkpoints SET visibility = ? WHERE repo_id = ? AND session_id = ?").bind(visibility, repoId, session).run();
 		return result.meta.changes;
 	}
@@ -166,7 +218,10 @@ export class CheckpointStore {
 		const row = await this.row(repoId, sha);
 		if (!row) return false;
 		const record = JSON.parse(row.record) as CheckpointRecord;
-		record.prompts = [...record.prompts, { ts: new Date().toISOString(), text }];
+		// #128: a late prompt gets the server pass too.
+		const clean = redactSecrets(text);
+		record.prompts = [...record.prompts, { ts: new Date().toISOString(), text: clean.text }];
+		record.redactions += clean.count;
 		await this.db.prepare("UPDATE checkpoints SET record = ?, record_hash = ? WHERE repo_id = ? AND commit_sha = ?").bind(JSON.stringify(record), await hashOf(record), repoId, sha).run();
 		return true;
 	}

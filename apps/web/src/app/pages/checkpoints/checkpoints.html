@@ -21,6 +21,15 @@
     <mat-card-content>Could not load the checkpoints for {{ path() }}. It may not exist, or it is not yours.</mat-card-content>
   </mat-card>
 } @else if (repo(); as r) {
+  @if (serverRedactions()) {
+    <mat-card appearance="outlined" class="notice" role="status">
+      <mat-card-header>
+        <mat-icon mat-card-avatar aria-hidden="true">shield</mat-icon>
+        <mat-card-title>appmarket.org redacted {{ serverRedactions() }} secret{{ serverRedactions() === 1 ? '' : 's' }} your CLI missed</mat-card-title>
+        <mat-card-subtitle>They were replaced before being stored. Update the CLI so it catches them on your machine: npm i -g appmarket</mat-card-subtitle>
+      </mat-card-header>
+    </mat-card>
+  }
   <mat-card appearance="outlined" class="settings">
     <mat-card-header>
       <mat-card-title>New checkpoints</mat-card-title>

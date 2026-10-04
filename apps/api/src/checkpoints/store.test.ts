@@ -86,4 +86,20 @@ describe("CheckpointStore", () => {
 		expect(late.status).toBe(200);
 		expect(late.checkpoint).toMatchObject({ state: "attached", prompts: [{ text: "late prompt" }] });
 	});
+
+	it("redacts what the CLI missed, on late prompts and before anything becomes visible (#128)", async () => {
+		const key = "sk-ant-" + "a".repeat(30);
+		const leaky = { ...record(5), prompts: [{ ts: "2026-10-03T10:00:00.000Z", text: `use ${key}` }], tools: [{ name: "Bash", args_summary: `export K=${key}`, outcome: "ok" as const, ts: "2026-10-03T10:00:01.000Z" }] };
+		// An upload stored as-is (as before this change) is caught by the audit and by a visibility change.
+		await store.put(repo, leaky, meta);
+		expect((await store.audit()).withSecrets).toEqual([{ repoId: "r1", commit: sha(5) }]);
+		await store.setVisibility("r1", sha(5), "public");
+		const after = await store.get(repo, sha(5), "owner");
+		expect(after?.prompts?.[0]?.text).toBe("use [redacted:anthropic]");
+		expect(after?.tools?.[0]?.args_summary).toBe("export K=[redacted:anthropic]");
+		expect(after).toMatchObject({ redactions: 2, server_redactions: 2 });
+		expect((await store.audit()).withSecrets).toEqual([]);
+		await store.addPrompt("r1", sha(5), `and ${key}`);
+		expect((await store.get(repo, sha(5), "owner"))?.prompts?.[1]?.text).toBe("and [redacted:anthropic]");
+	});
 });
