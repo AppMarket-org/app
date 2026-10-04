@@ -1,10 +1,10 @@
-# @appmarket/cli
+# appmarket
 
 Checkpoints for agent commits on [appmarket.org](https://appmarket.org): which prompts, harness,
 model and effort produced each commit. Open source (MIT) so you can read exactly what it records.
 
 ```sh
-npx @appmarket/cli login                 # device code sign-in; the token goes in your OS keychain
+npx appmarket login                      # device code sign-in; the token goes in your OS keychain
 appmarket adapter install claude-code    # once per machine: record Claude Code sessions (or: codex)
 cd my-app && appmarket init              # post-commit hook + repo config
 git commit ...                           # every commit gets a checkpoint
