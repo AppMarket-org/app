@@ -1,4 +1,4 @@
-import { bindings, defineConfig, defineContainer, exports } from "cf/config";
+import { bindings, defineConfig, defineContainer, exports, triggers } from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 import { CLOUDFLARE_ACCOUNT_ID, ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } from "./environments.ts";
 
@@ -26,6 +26,8 @@ export default defineConfig(({ mode }) => {
 			// Reached only through the web Worker's service binding (and its Access-protected routes),
 			// never on a public workers.dev or preview URL.
 			workersDev: false,
+			// #143: contributions from new commits (Artifacts sends no push events).
+			triggers: [triggers.scheduled({ schedule: "* * * * *" })],
 			previewUrls: false,
 			// R23: logs, traces and Issues (error tracking) in Workers Observability. Query strings are
 			// stripped from logged URLs: OAuth callbacks and download links carry codes and signatures.
