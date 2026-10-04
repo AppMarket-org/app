@@ -9,7 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CATEGORIES, TARGET_PLATFORMS } from '@appmarket/shared';
+import { CATEGORIES, TARGET_PLATFORMS, type CheckpointSummary } from '@appmarket/shared';
 import { CowbellButton } from '../../components/cowbell-button/cowbell-button';
 import { DeployAction } from '../../components/deploy-action/deploy-action';
 import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
@@ -55,6 +55,13 @@ export class RepoPage {
 
   protected readonly platformName = (p: keyof typeof PLATFORM_NAMES) => PLATFORM_NAMES[p];
   protected readonly builtWith = builtWith;
+  /** #137: "Built with Claude Code · 74% of commits with published prompts" (counts only). */
+  protected badge(history: CheckpointSummary | null): string | null {
+    if (!history?.total) return null;
+    const agents = builtWith(history);
+    const share = history.commits ? Math.round(((history.withPublishedPrompts ?? 0) / history.commits) * 100) : 0;
+    return [agents, share ? `${share}% of commits with published prompts` : null].filter(Boolean).join(' · ') || null;
+  }
   protected readonly summaryLine = summaryLine;
   protected readonly categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
 

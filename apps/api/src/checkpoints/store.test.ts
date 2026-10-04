@@ -38,14 +38,15 @@ describe("CheckpointStore", () => {
 		await store.put(repo, { ...record(2), harness: "none" }, meta);
 		expect(await store.get(repo, sha(1), "public")).toBeNull();
 		expect((await store.list(repo, "public")).items).toEqual([]);
-		expect((await store.list(repo, "public")).summary).toEqual({ total: 0, harnesses: {} });
+		// The badge counts (#137) include private commits as a number only.
+		expect((await store.list(repo, "public")).summary).toEqual({ total: 0, harnesses: {}, commits: 2, withPublishedPrompts: 0 });
 		await store.setVisibility("r1", sha(1), "listing");
 		const pub = await store.get(repo, sha(1), "public");
 		expect(pub?.prompts?.[0]?.text).toBe("Add a todo list");
 		expect(pub?.author).toEqual({ name: "Dev", email: "" });
 		expect(pub?.device).toBeNull();
-		expect((await store.list(repo, "public")).summary).toEqual({ total: 1, harnesses: { "claude-code": 1 } });
-		expect((await store.list(repo, "owner")).summary).toEqual({ total: 2, harnesses: { "claude-code": 1, none: 1 } });
+		expect((await store.list(repo, "public")).summary).toEqual({ total: 1, harnesses: { "claude-code": 1 }, commits: 2, withPublishedPrompts: 1 });
+		expect((await store.list(repo, "owner")).summary).toEqual({ total: 2, harnesses: { "claude-code": 1, none: 1 }, commits: 2, withPublishedPrompts: 1 });
 		await store.setVisibility("r1", sha(1), "private");
 		expect((await store.list(repo, "public")).items).toEqual([]);
 	});

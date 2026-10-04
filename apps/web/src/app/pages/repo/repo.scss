@@ -96,3 +96,9 @@ h2 {
   margin: 0 0 0.5rem;
   color: var(--mat-sys-on-surface-variant);
 }
+
+// #137
+.built {
+  --mat-chip-elevated-container-color: var(--mat-sys-secondary-container);
+  --mat-chip-label-text-color: var(--mat-sys-on-secondary-container);
+}

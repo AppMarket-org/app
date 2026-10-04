@@ -58,6 +58,9 @@ function placeholder(c: PushedCommit, at: string): CheckpointRecord {
 	};
 }
 
+/** #137: the prompts as one searchable text. */
+const promptText = (record: CheckpointRecord) => record.prompts.map((p) => p.text).join(" ");
+
 /** Stable JSON (sorted keys) so the same record always hashes the same. */
 function canonical(value: unknown): string {
 	if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -110,14 +113,14 @@ export class CheckpointStore {
 		if (existing && !meta.force) return { status: 409, checkpoint: toCheckpoint(existing, repo.path, "owner") };
 		await this.db
 			.prepare(
-				`INSERT INTO checkpoints (repo_id, commit_sha, record, record_hash, harness, model, session_id, branch, source, state, visibility, uploaded_by, device, created_at, server_redactions)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				`INSERT INTO checkpoints (repo_id, commit_sha, record, record_hash, harness, model, session_id, branch, source, state, visibility, uploaded_by, device, created_at, server_redactions, prompt_text)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				 ON CONFLICT (repo_id, commit_sha) DO UPDATE SET record = excluded.record, record_hash = excluded.record_hash, harness = excluded.harness,
 				   model = excluded.model, session_id = excluded.session_id, branch = excluded.branch, source = excluded.source, state = excluded.state,
-				   uploaded_by = excluded.uploaded_by, device = excluded.device, created_at = excluded.created_at, server_redactions = excluded.server_redactions,
+				   uploaded_by = excluded.uploaded_by, device = excluded.device, created_at = excluded.created_at, server_redactions = excluded.server_redactions, prompt_text = excluded.prompt_text,
 				   received_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
 			)
-			.bind(repo.id, record.commit, JSON.stringify(record), hash, record.harness, record.model, record.session_id, record.branch, record.source, meta.state, meta.visibility, meta.uploadedBy, meta.device, record.created_at, meta.serverRedactions ?? 0)
+			.bind(repo.id, record.commit, JSON.stringify(record), hash, record.harness, record.model, record.session_id, record.branch, record.source, meta.state, meta.visibility, meta.uploadedBy, meta.device, record.created_at, meta.serverRedactions ?? 0, promptText(record))
 			.run();
 		// A replaced record keeps the owner's visibility choice (ON CONFLICT leaves it unchanged).
 		return { status: existing ? 200 : 201, checkpoint: toCheckpoint((await this.row(repo.id, record.commit))!, repo.path, "owner") };
@@ -153,11 +156,22 @@ export class CheckpointStore {
 	}
 
 	async summary(repoId: string, viewer: CheckpointViewer): Promise<CheckpointSummary> {
+		// #137: counts for the badge, no prompt text: all commits with a checkpoint (any visibility)
+		// and those whose prompts the developer published.
+		const counts = await this.db
+			.prepare(`SELECT COUNT(*) AS commits, SUM(CASE WHEN visibility != 'private' AND prompt_text != '' THEN 1 ELSE 0 END) AS published FROM checkpoints WHERE repo_id = ? AND state != 'missing'`)
+			.bind(repoId)
+			.first<{ commits: number; published: number | null }>();
 		const { results } = await this.db
 			.prepare(`SELECT harness, COUNT(*) AS n FROM checkpoints WHERE repo_id = ?${viewer === "owner" ? "" : " AND visibility != 'private'"} GROUP BY harness`)
 			.bind(repoId)
 			.all<{ harness: Harness; n: number }>();
-		return { total: results.reduce((t, r) => t + r.n, 0), harnesses: Object.fromEntries(results.map((r) => [r.harness, r.n])) };
+		return {
+			total: results.reduce((t, r) => t + r.n, 0),
+			harnesses: Object.fromEntries(results.map((r) => [r.harness, r.n])),
+			commits: counts?.commits ?? 0,
+			withPublishedPrompts: counts?.published ?? 0,
+		};
 	}
 
 	/**
@@ -175,8 +189,8 @@ export class CheckpointStore {
 			if (!count) continue;
 			found += count;
 			await this.db
-				.prepare("UPDATE checkpoints SET record = ?, record_hash = ?, server_redactions = server_redactions + ? WHERE repo_id = ? AND commit_sha = ?")
-				.bind(JSON.stringify(record), await hashOf(record), count, repoId, row.commit_sha)
+				.prepare("UPDATE checkpoints SET record = ?, record_hash = ?, server_redactions = server_redactions + ?, prompt_text = ? WHERE repo_id = ? AND commit_sha = ?")
+				.bind(JSON.stringify(record), await hashOf(record), count, promptText(record), repoId, row.commit_sha)
 				.run();
 		}
 		return found;
@@ -230,7 +244,7 @@ export class CheckpointStore {
 		const clean = redactSecrets(text);
 		record.prompts = [...record.prompts, { ts: new Date().toISOString(), text: clean.text }];
 		record.redactions += clean.count;
-		await this.db.prepare("UPDATE checkpoints SET record = ?, record_hash = ? WHERE repo_id = ? AND commit_sha = ?").bind(JSON.stringify(record), await hashOf(record), repoId, sha).run();
+		await this.db.prepare("UPDATE checkpoints SET record = ?, record_hash = ?, prompt_text = ? WHERE repo_id = ? AND commit_sha = ?").bind(JSON.stringify(record), await hashOf(record), promptText(record), repoId, sha).run();
 		return true;
 	}
 

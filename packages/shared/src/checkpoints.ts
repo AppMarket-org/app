@@ -88,6 +88,9 @@ export interface CheckpointSummary {
 	total: number;
 	/** Commits per harness ("none" = manual). */
 	harnesses: Partial<Record<Harness, number>>;
+	/** #137: every commit with a checkpoint (any visibility), and those with published prompts. */
+	commits?: number;
+	withPublishedPrompts?: number;
 }
 
 /** #135: a moderator viewed private checkpoints while handling a report. */
