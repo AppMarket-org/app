@@ -112,12 +112,39 @@ export class OwnerStore {
 	async membershipsOf(userId: string): Promise<OrgMembership[]> {
 		const { results } = await this.db
 			.prepare(
-				`SELECT m.role, o.id, o.handle, o.kind, o.name, o.avatar_id, NULL AS user_name, NULL AS user_image FROM org_members m JOIN owners o ON o.id = m.org_id
+				`SELECT m.role, m.public, o.id, o.handle, o.kind, o.name, o.avatar_id, NULL AS user_name, NULL AS user_image FROM org_members m JOIN owners o ON o.id = m.org_id
 				 WHERE m.user_id = ? ORDER BY o.handle`,
 			)
 			.bind(userId)
-			.all<OwnerRow & { role: OrgRole }>();
-		return results.map((r) => ({ org: toOwner(r), role: r.role }));
+			.all<OwnerRow & { role: OrgRole; public: number }>();
+		return results.map((r) => ({ org: toOwner(r), role: r.role, public: r.public === 1 }));
+	}
+
+	/** #141: organizations a user shows on their profile. */
+	async publicOrgsOf(userId: string): Promise<Owner[]> {
+		const { results } = await this.db
+			.prepare(`SELECT o.id, o.handle, o.kind, o.name, o.avatar_id, NULL AS user_name, NULL AS user_image FROM org_members m JOIN owners o ON o.id = m.org_id WHERE m.user_id = ? AND m.public = 1 ORDER BY o.handle`)
+			.bind(userId)
+			.all<OwnerRow>();
+		return results.map(toOwner);
+	}
+
+	/** #141: members who show their membership on the organization's profile. */
+	async publicMembers(orgId: string): Promise<Owner[]> {
+		const { results } = await this.db
+			.prepare(`${SELECT} JOIN org_members m ON m.user_id = o.id WHERE m.org_id = ? AND m.public = 1 ORDER BY o.handle`)
+			.bind(orgId)
+			.all<OwnerRow>();
+		return results.map(toOwner);
+	}
+
+	async membershipPublic(orgId: string, userId: string): Promise<boolean> {
+		return (await this.db.prepare("SELECT public FROM org_members WHERE org_id = ? AND user_id = ?").bind(orgId, userId).first<{ public: number }>())?.public === 1;
+	}
+
+	async setMembershipPublic(orgId: string, userId: string, visible: boolean): Promise<boolean> {
+		const result = await this.db.prepare("UPDATE org_members SET public = ? WHERE org_id = ? AND user_id = ?").bind(visible ? 1 : 0, orgId, userId).run();
+		return result.meta.changes > 0;
 	}
 
 	async orgIdsOf(userId: string): Promise<string[]> {

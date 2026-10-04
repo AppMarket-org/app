@@ -3,14 +3,23 @@ import { Injectable, inject } from '@angular/core';
 import type { OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
+/** A profile: users list their public organizations, organizations their public members. */
+export interface OwnerPage {
+  owner: Owner;
+  profile: OwnerProfile | null;
+  repos: Repo[];
+  orgs?: Owner[];
+  people?: Owner[];
+}
+
 /** #102: users and organizations (handles, owner pages, members). */
 @Injectable({ providedIn: 'root' })
 export class OwnersApi {
   private readonly http = inject(HttpClient);
 
   /** Public owner page: the user or org, its profile and its public repos. */
-  page(handle: string): Observable<{ owner: Owner; profile: OwnerProfile | null; repos: Repo[] }> {
-    return this.http.get<{ owner: Owner; profile: OwnerProfile | null; repos: Repo[] }>(`/api/owners/${encodeURIComponent(handle)}`);
+  page(handle: string): Observable<OwnerPage> {
+    return this.http.get<OwnerPage>(`/api/owners/${encodeURIComponent(handle)}`);
   }
 
   /** #139: the profile of the signed-in user, or of an organization (owners only). */
@@ -47,8 +56,13 @@ export class OwnersApi {
     return this.http.patch<Owner>(`/api/orgs/${handle}`, change);
   }
 
-  members(handle: string): Observable<{ org: Owner; role: OrgRole; members: OrgMember[] }> {
-    return this.http.get<{ org: Owner; role: OrgRole; members: OrgMember[] }>(`/api/orgs/${handle}/members`);
+  members(handle: string): Observable<{ org: Owner; role: OrgRole; public: boolean; members: OrgMember[] }> {
+    return this.http.get<{ org: Owner; role: OrgRole; public: boolean; members: OrgMember[] }>(`/api/orgs/${handle}/members`);
+  }
+
+  /** #141: show or hide your membership on the organization's profile and yours. */
+  setMembershipPublic(handle: string, visible: boolean): Observable<{ public: boolean }> {
+    return this.http.put<{ public: boolean }>(`/api/orgs/${handle}/membership`, { public: visible });
   }
 
   setMember(handle: string, member: OrgMemberInput): Observable<{ members: OrgMember[] }> {
