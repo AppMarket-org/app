@@ -51,6 +51,8 @@ interface RepoRow {
 	published_commit: string | null;
 	submitted_checks: string | null;
 	published_manifest: string | null;
+	published_pwa: string | null;
+	demo_url: string | null;
 	cowbell_count: number;
 	checkpoint_visibility: CheckpointVisibility;
 	created_at: string;
@@ -83,6 +85,8 @@ function toRepo(row: RepoRow): Repo {
 		publishedCommit: row.published_commit,
 		submittedChecks: row.submitted_checks ? JSON.parse(row.submitted_checks) : null,
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
+		pwa: row.published_pwa ? JSON.parse(row.published_pwa) : null,
+		demoUrl: row.demo_url,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
 		importedFrom: row.imported_from,
@@ -192,9 +196,9 @@ export class RepoStore {
 	async insert(ids: { id: string; slug: string }, ownerId: string, createdBy: string, input: RepoInput, gitRepo: string): Promise<Repo> {
 		await this.db
 			.prepare(
-				"INSERT INTO repos (id, owner_id, created_by, slug, name, summary, description, category, runtime, platforms, license, git_repo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				"INSERT INTO repos (id, owner_id, created_by, slug, name, summary, description, category, runtime, platforms, license, git_repo, demo_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
-			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo)
+			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo, input.demoUrl ?? null)
 			.run();
 		return (await this.findById(ids.id))!;
 	}
@@ -224,6 +228,7 @@ export class RepoStore {
 			runtime: update.runtime,
 			platforms: update.platforms && JSON.stringify(update.platforms),
 			license: update.license,
+			demo_url: update.demoUrl,
 		};
 		const set = Object.entries(columns).filter(([, value]) => value !== undefined);
 		if (set.length === 0) return;

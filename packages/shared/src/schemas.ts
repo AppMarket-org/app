@@ -36,6 +36,14 @@ const repoFields = {
 		.max(TARGET_PLATFORMS.length)
 		.transform((p) => [...new Set(p)]),
 	license: licenseSchema.nullable(),
+	/** #32: where the app runs live (HTTPS); people try it and install it as a web app from here. */
+	demoUrl: z
+		.string()
+		.trim()
+		.max(300)
+		.regex(/^https:\/\/[^\s/$.?#][^\s]*$/, "Use an https:// address.")
+		.nullable()
+		.or(z.literal("").transform(() => null)),
 };
 
 export const repoInputSchema = z.object({
@@ -60,6 +68,7 @@ export const repoInputSchema = z.object({
 	runtime: repoFields.runtime.default("workers-js"),
 	platforms: repoFields.platforms.default(["workers"]),
 	license: repoFields.license.default(null),
+	demoUrl: repoFields.demoUrl.default(null),
 });
 export type RepoInput = z.infer<typeof repoInputSchema>;
 /** Built from the fields without defaults: Zod 4 applies defaults inside .partial(), which would reset omitted fields. */

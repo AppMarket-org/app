@@ -24,7 +24,7 @@ import {
 } from "../artifacts/git.ts";
 import { purgeRepoPage } from "../routes/seo.ts";
 import { canEdit, canView, isOwner } from "./access.ts";
-import { CONTRACT_FILES, buildRepoMap, checkTemplate, wranglerMain } from "@appmarket/template-contract";
+import { CONTRACT_FILES, buildRepoMap, checkPwa, checkTemplate, pwaManifestCandidates, wranglerMain } from "@appmarket/template-contract";
 import { storeLanguages } from "./languages.ts";
 import { CheckStore } from "../checks/store.ts";
 import { startChecks } from "../checks/start.ts";
@@ -210,7 +210,10 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			// D2/G4: template contract; errors block, warnings and the D3 manifest go to review.
 			const contract = checkTemplate({ runtime: repo.runtime, rootEntries: root.map((e) => e.name), files: await readFiles(repo.gitRepo, commit, CONTRACT_FILES) });
 			if (contract.errors.length > 0) return c.json({ error: "contract_failed", errors: contract.errors, warnings: contract.warnings }, 422);
-			checks = { warnings: contract.warnings, manifest: contract.manifest };
+			// #32: installability as a web app, shown to reviewers and on the app page; never blocks.
+			const paths = (await listTree(repo.gitRepo, commit)).filter((e) => e.type === "blob").map((e) => e.path);
+			const pwa = checkPwa(paths, await readFiles(repo.gitRepo, commit, [...pwaManifestCandidates(paths), "package.json"]));
+			checks = { warnings: contract.warnings, manifest: contract.manifest, pwa };
 		}
 		// #27: a submitted version publishes only when the automated checks of its commit passed.
 		if (request.data.to === "published" && repo.state === "submitted" && repo.submittedCommit) {

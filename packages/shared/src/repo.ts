@@ -1,6 +1,6 @@
 import type { CheckpointVisibility } from "./checkpoints";
 import type { OwnerKind } from "./owners";
-import type { ContractIssue, DeployManifest } from "./manifest";
+import type { ContractIssue, DeployManifest, PwaCheck } from "./manifest";
 
 // Repo lifecycle (PRD R12). A published version pins to a Git tag in the app's Artifacts repo.
 export const REPO_STATES = ["draft", "submitted", "published", "unpublished", "removed"] as const;
@@ -81,8 +81,12 @@ export interface Repo {
 	/** Tag buyers get, set when an admin publishes, pinned to the reviewed commit. */
 	publishedTag: string | null;
 	publishedCommit: string | null;
-	/** D2/G4 warnings and D3 manifest for the version in review. */
-	submittedChecks: { warnings: ContractIssue[]; manifest: DeployManifest | null } | null;
+	/** D2/G4 warnings, D3 manifest and #32 PWA check for the version in review. */
+	submittedChecks: { warnings: ContractIssue[]; manifest: DeployManifest | null; pwa?: PwaCheck } | null;
+	/** #32: live demo URL (also the web app install URL). */
+	demoUrl: string | null;
+	/** #32: installability of the published version. */
+	pwa: PwaCheck | null;
 	/** D3: what deploying the published version creates. */
 	manifest: DeployManifest | null;
 	createdAt: string;

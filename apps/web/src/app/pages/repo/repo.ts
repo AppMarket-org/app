@@ -24,6 +24,7 @@ import { builtWith, summaryLine } from '../../components/checkpoint-details/time
 import { LanguageBar } from '../../components/language-bar/language-bar';
 import { ForkDialog, type ForkDialogData } from '../../components/fork-dialog/fork-dialog';
 import { Auth } from '../../auth/auth';
+import { InstallApp } from '../../components/install-app/install-app';
 import { Seo } from '../../seo/seo';
 import { firstValueFrom } from 'rxjs';
 import type { RepoDetails } from './repo-resolver';
@@ -38,7 +39,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-repo',
-  imports: [LanguageBar, DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, CowbellButton, DeployAction, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
+  imports: [InstallApp, LanguageBar, DatePipe, MatButtonModule, MatDialogModule, MatIconModule, MatSnackBarModule, MatCardModule, MatChipsModule, MatDividerModule, MatListModule, RouterLink, CowbellButton, DeployAction, DeployManifest, DomainGuide, Downloads, GetCode, Markdown, RepoMap, RuntimeBadge],
   templateUrl: './repo.html',
   styleUrl: './repo.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -55,6 +55,7 @@ export class RepoForm {
     runtime: ['workers-js' as Runtime, [Validators.required]],
     platforms: [['workers'] as string[], [Validators.required]],
     license: ['', [Validators.maxLength(64), licenseValidator]],
+    demoUrl: ['', [Validators.maxLength(300), Validators.pattern(/^\s*(https:\/\/\S+)?\s*$/)]],
   });
 
   private readonly runtimeValue = toSignal(this.form.controls.runtime.valueChanges, { initialValue: this.form.controls.runtime.value });
@@ -64,7 +65,7 @@ export class RepoForm {
     effect(() => {
       const l = this.initial();
       if (l) {
-        this.form.reset({ name: l.name, summary: l.summary, description: l.description, category: l.category, runtime: l.runtime, platforms: [...l.platforms], license: l.license ?? '' });
+        this.form.reset({ name: l.name, summary: l.summary, description: l.description, category: l.category, runtime: l.runtime, platforms: [...l.platforms], license: l.license ?? '', demoUrl: l.demoUrl ?? '' });
       }
     });
     effect(() => {
@@ -93,6 +94,7 @@ export class RepoForm {
       category: v.category as RepoInput['category'],
       platforms: v.platforms as RepoInput['platforms'],
       license: v.license.trim() || null,
+      demoUrl: v.demoUrl.trim() || null,
       name: v.name.trim(),
       summary: v.summary.trim(),
     });

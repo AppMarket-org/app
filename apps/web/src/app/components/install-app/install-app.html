@@ -1,0 +1,21 @@
+<section aria-labelledby="try-heading">
+  <h2 id="try-heading">{{ pwa()?.installable ? 'Try it or install it' : 'Try it' }}</h2>
+  <a mat-flat-button [href]="url()" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>Open {{ name() }}</a>
+  @if (pwa()?.installable) {
+    <p class="hint">{{ name() }} is a web app you can install. It opens in its own window and from your home screen, with no app store.</p>
+    <mat-accordion displayMode="flat">
+      <mat-expansion-panel>
+        <mat-expansion-panel-header><mat-panel-title><mat-icon aria-hidden="true">android</mat-icon>Android</mat-panel-title></mat-expansion-panel-header>
+        <p>Open the app in Chrome, then tap <strong>Install</strong> when it is offered, or open the <strong>⋮</strong> menu and choose <strong>Add to Home screen</strong> › <strong>Install</strong>.</p>
+      </mat-expansion-panel>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header><mat-panel-title><mat-icon aria-hidden="true">phone_iphone</mat-icon>iPhone and iPad</mat-panel-title></mat-expansion-panel-header>
+        <p>Open the app in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
+      </mat-expansion-panel>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header><mat-panel-title><mat-icon aria-hidden="true">computer</mat-icon>Desktop</mat-panel-title></mat-expansion-panel-header>
+        <p>Open the app in Chrome or Edge and click the install icon at the right of the address bar, or choose <strong>Install {{ name() }}</strong> from the browser menu.</p>
+      </mat-expansion-panel>
+    </mat-accordion>
+  }
+</section>

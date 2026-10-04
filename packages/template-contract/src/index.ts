@@ -154,3 +154,4 @@ function parseJsonFile(text: string | undefined): Record<string, unknown> | null
 		return null;
 	}
 }
+export { checkPwa, pwaManifestCandidates } from "./pwa";
