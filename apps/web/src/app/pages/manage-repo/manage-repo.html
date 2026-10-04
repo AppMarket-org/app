@@ -207,7 +207,7 @@
       </mat-card>
 
       <app-checks-card [path]="path()" />
-      <app-previews-card [path]="path()" />
+      <app-previews-card [path]="path()" [slug]="slug()" />
       <app-export-card [path]="path()" />
       <app-releases-card class="wide" [path]="l.fullName" [suggestedTag]="l.publishedTag ?? l.submittedTag" />
 

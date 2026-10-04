@@ -1,10 +1,9 @@
-mat-slide-toggle {
-  display: block;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 32rem;
   margin: 0.5rem 0 1rem;
-}
-
-.account {
-  width: min(24rem, 100%);
 }
 
 .branch {

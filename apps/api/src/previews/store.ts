@@ -6,6 +6,8 @@ export interface PreviewSettingsRow {
 	user_id: string;
 	account_id: string;
 	enabled: number;
+	deploy_default: number;
+	worker_name: string | null;
 	checked_at: string | null;
 }
 
@@ -13,15 +15,16 @@ export interface PreviewSettingsRow {
 export const previewStore = {
 	settings: (repoId: string) => env.DB.prepare("SELECT * FROM repo_preview_settings WHERE repo_id = ?").bind(repoId).first<PreviewSettingsRow>(),
 
-	save: (repoId: string, userId: string, accountId: string, enabled: boolean) =>
+	save: (repoId: string, userId: string, accountId: string, s: { enabled: boolean; deployDefault: boolean; workerName: string | null }) =>
 		env.DB.prepare(
-			`INSERT INTO repo_preview_settings (repo_id, user_id, account_id, enabled) VALUES (?, ?, ?, ?)
-			 ON CONFLICT (repo_id) DO UPDATE SET user_id = excluded.user_id, account_id = excluded.account_id, enabled = excluded.enabled, checked_at = NULL`,
+			`INSERT INTO repo_preview_settings (repo_id, user_id, account_id, enabled, deploy_default, worker_name) VALUES (?, ?, ?, ?, ?, ?)
+			 ON CONFLICT (repo_id) DO UPDATE SET user_id = excluded.user_id, account_id = excluded.account_id, enabled = excluded.enabled,
+			   deploy_default = excluded.deploy_default, worker_name = excluded.worker_name, checked_at = NULL`,
 		)
-			.bind(repoId, userId, accountId, enabled ? 1 : 0)
+			.bind(repoId, userId, accountId, s.enabled ? 1 : 0, s.deployDefault ? 1 : 0, s.workerName)
 			.run(),
 
-	disable: (repoId: string) => env.DB.prepare("UPDATE repo_preview_settings SET enabled = 0 WHERE repo_id = ?").bind(repoId).run(),
+	disable: (repoId: string) => env.DB.prepare("UPDATE repo_preview_settings SET enabled = 0, deploy_default = 0 WHERE repo_id = ?").bind(repoId).run(),
 
 	checked: (repoId: string) => env.DB.prepare("UPDATE repo_preview_settings SET checked_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE repo_id = ?").bind(repoId).run(),
 
@@ -30,7 +33,7 @@ export const previewStore = {
 		(
 			await env.DB.prepare(
 				`SELECT s.*, r.git_repo, r.slug FROM repo_preview_settings s JOIN repos r ON r.id = s.repo_id
-				 WHERE s.enabled = 1 AND r.state != 'removed' AND r.git_repo IS NOT NULL ORDER BY s.checked_at IS NOT NULL, s.checked_at LIMIT ?`,
+				 WHERE (s.enabled = 1 OR s.deploy_default = 1) AND r.state != 'removed' AND r.git_repo IS NOT NULL ORDER BY s.checked_at IS NOT NULL, s.checked_at LIMIT ?`,
 			)
 				.bind(limit)
 				.all<PreviewSettingsRow & { git_repo: string; slug: string }>()
