@@ -11,8 +11,11 @@ export function buildSearchWhere(search: Pick<RepoSearch, "q" | "category" | "ru
 	const params: unknown[] = [];
 	if (search.q) {
 		const pattern = `%${escapeLike(search.q)}%`;
-		clauses.push("(l.name LIKE ? ESCAPE '\\' OR l.summary LIKE ? ESCAPE '\\')");
-		params.push(pattern, pattern);
+		// #137: published (non-private) checkpoint prompts are search content too; private never.
+		clauses.push(
+			"(l.name LIKE ? ESCAPE '\\' OR l.summary LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM checkpoints c WHERE c.repo_id = l.id AND c.visibility != 'private' AND c.prompt_text LIKE ? ESCAPE '\\'))",
+		);
+		params.push(pattern, pattern, pattern);
 	}
 	if (search.category) {
 		clauses.push("l.category = ?");

@@ -16,6 +16,7 @@ describe("buildSearchWhere", () => {
 		const { where, params } = buildSearchWhere({ q: "100%", category: "ai" });
 		expect(where).toContain("l.name LIKE ? ESCAPE");
 		expect(where).toContain("l.category = ?");
-		expect(params).toEqual([String.raw`%100\%%`, String.raw`%100\%%`, "ai"]);
+		expect(where).toContain("c.visibility != 'private' AND c.prompt_text LIKE ?");
+		expect(params).toEqual([String.raw`%100\%%`, String.raw`%100\%%`, String.raw`%100\%%`, "ai"]);
 	});
 });

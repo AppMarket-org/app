@@ -22,6 +22,9 @@
           @for (p of d.repo.platforms; track p) {
             <mat-chip>{{ platformName(p) }}</mat-chip>
           }
+          @if (badge(d.history); as b) {
+            <a mat-chip class="built" [routerLink]="'/' + d.repo.fullName + '/history'" [attr.aria-label]="b + '. Open the build history.'"><mat-icon matChipAvatar aria-hidden="true">smart_toy</mat-icon>{{ b }}</a>
+          }
         </mat-chip-set>
       </div>
       @if (d.repo.state !== 'published') {
