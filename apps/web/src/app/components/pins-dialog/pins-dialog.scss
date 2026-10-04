@@ -1,0 +1,49 @@
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+h3 {
+  font: var(--mat-sys-title-small);
+  margin: 1rem 0 0.25rem;
+}
+
+.order mat-list-item {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-small);
+  margin-bottom: 0.25rem;
+}
+
+.handle {
+  cursor: grab;
+}
+
+.moves {
+  display: flex;
+}
+
+.path {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  margin-left: 0.5rem;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+.cdk-drag-preview {
+  box-shadow: var(--mat-sys-level3);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+.sr-only {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

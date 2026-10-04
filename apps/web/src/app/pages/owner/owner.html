@@ -60,6 +60,26 @@
     </aside>
 
     <div class="content">
+      @if (pinned().length || canEdit()) {
+        <section aria-labelledby="pinned-heading" class="pinned">
+          <div class="section-head">
+            <h2 id="pinned-heading">{{ pinnedFallback() ? 'Popular apps' : 'Pinned' }}</h2>
+            @if (canEdit()) {
+              <button mat-button type="button" (click)="customizePins()"><mat-icon>push_pin</mat-icon>Customize your pins</button>
+            }
+          </div>
+          @if (pinned().length) {
+            <div class="cards">
+              @for (r of pinned(); track r.id) {
+                <app-repo-card [repo]="r" />
+              }
+            </div>
+          } @else {
+            <p class="empty">Pin up to six public apps to show them here.</p>
+          }
+        </section>
+      }
+
       <section aria-labelledby="repos-heading">
         <h2 id="repos-heading">Apps</h2>
         @if (p.repos.length) {

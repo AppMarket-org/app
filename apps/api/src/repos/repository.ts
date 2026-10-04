@@ -146,6 +146,32 @@ export class RepoStore {
 		return results.map(toRepo);
 	}
 
+	/** Published repos of any of these owners (pin candidates, #142), most cowbells first. */
+	async listPublicByOwners(ownerIds: string[]): Promise<Repo[]> {
+		if (!ownerIds.length) return [];
+		const { results } = await this.db
+			.prepare(`${SELECT} WHERE l.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND l.state = 'published' ORDER BY l.cowbell_count DESC, l.updated_at DESC LIMIT 500`)
+			.bind(...ownerIds)
+			.all<RepoRow>();
+		return results.map(toRepo);
+	}
+
+	/** #142: an owner's pinned repos that are still published, in order. */
+	async pinned(ownerId: string): Promise<Repo[]> {
+		const { results } = await this.db
+			.prepare(`${SELECT} JOIN owner_pins p ON p.repo_id = l.id WHERE p.owner_id = ? AND l.state = 'published' ORDER BY p.position`)
+			.bind(ownerId)
+			.all<RepoRow>();
+		return results.map(toRepo);
+	}
+
+	async setPins(ownerId: string, repoIds: string[]): Promise<void> {
+		await this.db.batch([
+			this.db.prepare("DELETE FROM owner_pins WHERE owner_id = ?").bind(ownerId),
+			...repoIds.map((id, i) => this.db.prepare("INSERT INTO owner_pins (owner_id, repo_id, position) VALUES (?, ?, ?)").bind(ownerId, id, i)),
+		]);
+	}
+
 	/** A new repo id and a slug not yet used, derived from the name. */
 	/** Names are unique per owner: alice/todo and acme/todo can both exist. */
 	async reserve(ownerId: string, name: string): Promise<{ id: string; slug: string }> {

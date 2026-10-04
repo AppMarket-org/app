@@ -54,6 +54,8 @@ export interface OwnerProfileUpdate {
 
 export const AVATAR_LIMITS = { maxBytes: 2 * 1024 * 1024, types: ["image/png", "image/jpeg", "image/webp"] } as const;
 
+export const MAX_PINS = 6;
+
 export const PROFILE_LIMITS = { name: 80, bio: 160, location: 80, website: 200 } as const;
 
 export interface OrgMembership {
