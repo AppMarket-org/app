@@ -10,6 +10,17 @@ function field(buf: Uint8Array, offset: number, length: number, value: string): 
 
 const octal = (n: number, length: number) => `${n.toString(8).padStart(length - 1, "0")}\0`;
 
+/**
+ * A relative path that cannot leave the extraction folder: no absolute paths, empty, "." or ".."
+ * segments, backslashes or control characters. Git refuses such names, but archives must not rely on
+ * every pushed tree being valid.
+ */
+export function isSafeRelativePath(path: string): boolean {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point
+	if (!path || path.startsWith("/") || /[\\\x00-\x1f]/.test(path)) return false;
+	return path.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
+}
+
 /** Splits a path into ustar name (≤100 bytes) and prefix (≤155 bytes), or null if it cannot fit. */
 export function splitPath(path: string): { name: string; prefix: string } | null {
 	if (encoder.encode(path).length <= 100) return { name: path, prefix: "" };
@@ -22,6 +33,7 @@ export function splitPath(path: string): { name: string; prefix: string } | null
 }
 
 export function tarHeader(path: string, size: number, mtime: number, mode = 0o644): Uint8Array {
+	if (!isSafeRelativePath(path)) throw new Error(`unsafe path for tar: ${JSON.stringify(path)}`);
 	const split = splitPath(path);
 	if (!split) throw new Error(`path too long for tar: ${path}`);
 	const h = new Uint8Array(512);

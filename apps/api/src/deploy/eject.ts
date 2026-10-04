@@ -6,7 +6,7 @@ import { readBlobBytes, readFiles, sourceFiles } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { signDownload, verifyDownload } from "../releases/signing.ts";
-import { tarEnd, tarEntry } from "./tar.ts";
+import { isSafeRelativePath, tarEnd, tarEntry } from "./tar.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -87,7 +87,7 @@ export const ejectDownloadRoutes = new Hono<Ctx>().get("/:id", async (c) => {
 			await put(tarEntry(`${row.slug}/wrangler.json`, encoder.encode(prepared.wranglerJson), now));
 			await put(tarEntry(`${row.slug}/EJECT.md`, encoder.encode(prepared.guide), now));
 			for (const f of files) {
-				if (WRANGLER_FILES.has(f.path) || f.path === "EJECT.md" || f.mode === "120000") continue;
+				if (WRANGLER_FILES.has(f.path) || f.path === "EJECT.md" || f.mode === "120000" || !isSafeRelativePath(f.path)) continue;
 				const bytes = await readBlobBytes(gitRepo, f.hash);
 				if (!bytes) continue;
 				total += bytes.length;

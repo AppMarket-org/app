@@ -86,6 +86,8 @@ export async function sourceFiles(gitRepo: string, commit: string, limits = { ma
 		if (++dirs > limits.maxDirs) return { files, complete: false };
 		const { prefix, hash } = queue.shift()!;
 		for (const e of (await git.readTree(hash)) ?? []) {
+			// Names Git itself refuses never reach an archive (#41).
+			if (!e.name || e.name === "." || e.name === ".." || /[/\\\x00-\x1f]/.test(e.name)) continue;
 			if (e.type === "tree") {
 				if (e.name !== ".git" && e.name !== "node_modules") queue.push({ prefix: `${prefix}${e.name}/`, hash: e.hash });
 			} else if (e.type === "blob") {
