@@ -12,6 +12,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/note-dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -106,7 +107,8 @@ export class Settings {
 
   /** Device logins show their name; browsers a short label from the user agent. */
   protected label(s: SessionInfo): string {
-    return s.device ? `${s.device.name} · ${s.device.clientId === 'appmarket-cli' ? 'appmarket CLI' : s.device.clientId}` : this.device(s.userAgent);
+    const kind = s.device?.clientId === 'appmarket-cli' ? 'appmarket CLI' : s.device?.clientId === 'appmarket-ci' ? 'CI token' : s.device?.clientId;
+    return s.device ? `${s.device.name} · ${kind}` : this.device(s.userAgent);
   }
 
   /** A short label from a user agent: browser and system, or the tool's name. */
@@ -116,6 +118,34 @@ export class Settings {
     const system = /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : null;
     if (browser) return system ? `${browser} on ${system}` : browser;
     return ua.split(/[\s/]/)[0] || 'Unknown device';
+  }
+
+  /** #134: the CI token just created; shown once. */
+  protected readonly ciToken = signal<{ token: string; label: string; expiresAt: string } | null>(null);
+  private readonly clipboard = inject(Clipboard);
+
+  protected async createCiToken(): Promise<void> {
+    const data: NoteDialogData = {
+      title: 'New CI token',
+      message: 'For pipelines that cannot approve a device code. It can upload and read checkpoints, like a CLI login, and is shown once.',
+      label: 'Name, e.g. GitHub Actions',
+      confirm: 'Create token',
+      required: true,
+      maxLength: 64,
+    };
+    const label = await firstValueFrom(this.dialog.open<NoteDialog, NoteDialogData, string>(NoteDialog, { data, width: '30rem' }).afterClosed());
+    if (!label) return;
+    try {
+      this.ciToken.set(await firstValueFrom(this.api.createCiToken(label)));
+      this.sessions.set(await firstValueFrom(this.api.sessions()).catch(() => this.sessions() ?? []));
+    } catch {
+      this.snackBar.open('Could not create the token.', 'OK', { duration: 4000 });
+    }
+  }
+
+  protected copyToken(): void {
+    const t = this.ciToken();
+    if (t) this.snackBar.open(this.clipboard.copy(t.token) ? 'Token copied' : 'Copy failed; select the text instead', undefined, { duration: 2500 });
   }
 
   /** #133: rename a device login (the CLI names itself after the hostname). */

@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import { apiBase, VERSION } from "./config.ts";
 import { log } from "./log.ts";
 import { flush } from "./queue.ts";
-import { login } from "./commands/login.ts";
+import { login, loginWithToken } from "./commands/login.ts";
 import { logout, whoami } from "./commands/account.ts";
 import { init, setEnabled } from "./commands/init.ts";
 import { record } from "./commands/record.ts";
@@ -19,6 +19,7 @@ const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.o
 Usage: appmarket <command> [options]
 
   login [--no-browser] [--device-name <name>] [--no-keychain]   Sign in with a device code
+  login --token <token|->                                        Sign in with a CI token (or set APPMARKET_TOKEN)
   logout                                                         Sign this device out
   whoami                                                         Account, device, scopes, expiry
   init [<owner>/<repo>] [--agents-md]                            Turn on checkpoints in this Git repo
@@ -51,6 +52,7 @@ async function main(argv: string[]): Promise<number> {
 			"no-browser": { type: "boolean" },
 			"device-name": { type: "string" },
 			"no-keychain": { type: "boolean" },
+			token: { type: "string" },
 			hook: { type: "boolean" },
 			force: { type: "boolean" },
 			plugin: { type: "boolean" },
@@ -80,6 +82,11 @@ async function main(argv: string[]): Promise<number> {
 	}
 	switch (command) {
 		case "login":
+			// #134: --token reads the token from the next argument or, with "-", from stdin (keeps it out of shell history).
+			if (values.token !== undefined) {
+				const token = values.token === "-" || values.token === true ? (await readStdin()).trim() : String(values.token);
+				return loginWithToken(api, token, { noKeychain: !!values["no-keychain"] });
+			}
 			return login(api, { noBrowser: !!values["no-browser"], deviceName: values["device-name"] as string | undefined, noKeychain: !!values["no-keychain"] });
 		case "logout":
 			return logout(api);

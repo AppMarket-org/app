@@ -57,3 +57,29 @@ mat-card {
   align-items: center;
   gap: 0.25rem;
 }
+
+// #134
+.ci-token {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+
+  pre {
+    overflow-x: auto;
+    padding: 0.5rem 0.75rem;
+    background: var(--mat-sys-surface);
+    border-radius: var(--mat-sys-corner-small);
+  }
+
+  .hint {
+    font: var(--mat-sys-body-small);
+  }
+
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
