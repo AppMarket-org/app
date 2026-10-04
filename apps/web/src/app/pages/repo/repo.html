@@ -45,7 +45,7 @@
     }
 
     @if (d.releases.length > 0) {
-      <app-downloads [releases]="d.releases" />
+      <app-downloads [releases]="d.releases" [android]="d.repo.android" />
     }
 
     <div class="columns">

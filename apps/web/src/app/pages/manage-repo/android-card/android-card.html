@@ -1,0 +1,28 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Android downloads</mat-card-title>
+    <mat-card-subtitle>Android now requires apps installed outside Google Play to come from a verified developer on certified devices (Brazil, Indonesia, Singapore and Thailand since 30 September 2026; worldwide in 2027). APK downloads open once you confirm your app's package is verified.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (repo().android; as a) {
+      <p>Package <code>{{ a.package }}</code>, confirmed {{ a.verifiedAt | date: 'mediumDate' }}. Buyers can download your APK.</p>
+    } @else {
+      <div class="form">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Package name</mat-label>
+          <input matInput [ngModel]="pkg()" (ngModelChange)="pkg.set($event)" name="package" placeholder="com.example.notes" autocomplete="off" spellcheck="false" />
+          <mat-hint>The application ID in your APK.</mat-hint>
+        </mat-form-field>
+        <mat-checkbox [ngModel]="verified()" (ngModelChange)="verified.set($event)" name="verified">I registered this package name and completed developer verification in the Android Developer Console.</mat-checkbox>
+      </div>
+    }
+  </mat-card-content>
+  <mat-card-actions>
+    @if (repo().android) {
+      <button mat-button type="button" [disabled]="busy()" (click)="save(null)">Close APK downloads</button>
+    } @else {
+      <a mat-button href="https://developer.android.com/developer-verification" target="_blank" rel="noopener">About verification</a>
+      <button mat-flat-button type="button" [disabled]="busy() || !valid()" (click)="save(pkg())">Open APK downloads</button>
+    }
+  </mat-card-actions>
+</mat-card>

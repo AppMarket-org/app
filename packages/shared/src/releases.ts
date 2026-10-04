@@ -42,3 +42,6 @@ export interface DownloadLink {
 	url: string;
 	expiresAt: string;
 }
+
+/** #33: a valid Android application ID, e.g. com.example.notes. */
+export const ANDROID_PACKAGE = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/;

@@ -222,6 +222,9 @@
       }
       <app-export-card [path]="path()" />
       <app-releases-card class="wide" [path]="l.fullName" [suggestedTag]="l.publishedTag ?? l.submittedTag" />
+      @if (l.platforms.includes('android')) {
+        <app-android-card [repo]="l" (changed)="repo.set($event)" />
+      }
 
       <mat-card appearance="outlined" class="wide">
         <mat-card-header>

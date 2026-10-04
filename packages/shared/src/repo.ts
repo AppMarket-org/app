@@ -83,6 +83,8 @@ export interface Repo {
 	publishedCommit: string | null;
 	/** D2/G4 warnings, D3 manifest and #32 PWA check for the version in review. */
 	submittedChecks: { warnings: ContractIssue[]; manifest: DeployManifest | null; pwa?: PwaCheck } | null;
+	/** #33: Android package name the developer declared as verified with Google; APK downloads need it. */
+	android: { package: string; verifiedAt: string } | null;
 	/** #32: live demo URL (also the web app install URL). */
 	demoUrl: string | null;
 	/** #32: installability of the published version. */
