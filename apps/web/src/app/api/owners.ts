@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
+import type { ActivityPage, ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** A profile: users list their public organizations, organizations their public members. */
@@ -35,6 +35,14 @@ export class OwnersApi {
   /** #144: a user's contribution calendar for a year, or the last 12 months. */
   contributions(handle: string, year?: number | null): Observable<ContributionCalendar> {
     return this.http.get<ContributionCalendar>(`/api/owners/${encodeURIComponent(handle)}/contributions`, { params: year ? { year } : {} });
+  }
+
+  /** #145: activity by month (a year, or the last 12 months), older pages with `before`. */
+  activity(handle: string, year?: number | null, before?: string | null): Observable<ActivityPage> {
+    const params: Record<string, string> = {};
+    if (year) params['year'] = String(year);
+    if (before) params['before'] = before;
+    return this.http.get<ActivityPage>(`/api/owners/${encodeURIComponent(handle)}/activity`, { params });
   }
 
   /** #142: current pins and what may be pinned, for the signed-in user or an organization (owners). */

@@ -39,6 +39,20 @@ export const ownerRoutes = new Hono<Ctx>()
 		c.header("Cache-Control", "public, max-age=300");
 		return c.json({ from, to, ...data } satisfies ContributionCalendar);
 	})
+	// #145: activity by month (users: theirs; organizations: on their repos).
+	.get("/:handle/activity", async (c) => {
+		const owner = await owners().byHandle(c.req.param("handle"));
+		if (!owner) return c.json({ error: "not_found" }, 404);
+		const year = c.req.query("year");
+		const today = new Date().toISOString().slice(0, 10);
+		const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+		const [from, end] = year && /^\d{4}$/.test(year) ? [`${year}-01-01`, `${Number(year) + 1}-01-01`] : [new Date(Date.parse(`${today}T00:00:00Z`) - 371 * 86_400_000).toISOString().slice(0, 10), tomorrow];
+		const before = c.req.query("before");
+		const upper = before && /^\d{4}-\d{2}-\d{2}$/.test(before) && before < end ? before : end;
+		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper);
+		c.header("Cache-Control", "public, max-age=300");
+		return c.json(page);
+	})
 	.get("/:handle", async (c) => {
 	const owner = await owners().byHandle(c.req.param("handle"));
 	if (!owner) return c.json({ error: "not_found" }, 404);
