@@ -1,0 +1,15 @@
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 0.5rem 0.75rem;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: var(--mat-sys-corner-small);
+}
+
+.script {
+  max-height: 16rem;
+  font-size: 0.75rem;
+}
