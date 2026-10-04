@@ -127,3 +127,14 @@ export async function commitExists(gitRepo: string, sha: string): Promise<boolea
 	using git = await env.ARTIFACTS.get(gitRepo);
 	return !!(await git.readCommit(sha).catch(() => null));
 }
+
+/**
+ * #124: when the repo last changed (its last push; for repos filled another way, e.g. an import,
+ * its last update) and the newest commits on its default branch.
+ */
+export async function pushedCommits(gitRepo: string, limit = 200): Promise<{ lastPushAt: string | null; commits: ArtifactsCommitMetadata[] }> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const info = await git.info();
+	const changedAt = info.lastPushAt ?? info.updatedAt;
+	return { lastPushAt: changedAt, commits: await git.log({ ref: info.defaultBranch, limit }).catch(() => []) };
+}

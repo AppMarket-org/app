@@ -93,4 +93,22 @@ describe("CheckpointStore", () => {
 		expect(await store.delete("r1", sha(1))).toBe(true);
 		expect(await store.get(repo, sha(1), "owner")).toBeNull();
 	});
+
+	it("reconciles a push: attaches pending, adds missing placeholders after the first checkpoint, idempotently (#124)", async () => {
+		const commit = (n: number, at: string) => ({ hash: sha(n), parents: [], author: { name: "Dev", email: "dev@example.test" }, committedAt: Date.parse(at) / 1000 });
+		// Before any checkpoint exists: no placeholders (old history is not "missing").
+		expect(await store.reconcilePushed({ id: "r1", defaultVisibility: "private" }, [commit(9, "2026-01-01T00:00:00Z")], "2026-01-01T00:00:01Z")).toEqual({ attached: 0, missing: 0 });
+		await store.put(repo, record(1), meta); // created_at 2026-10-03T10:00:30Z, pending
+		const pushed = [commit(1, "2026-10-03T10:00:30Z"), commit(2, "2026-10-03T11:00:00Z"), commit(8, "2026-09-01T00:00:00Z")];
+		expect(await store.reconcilePushed({ id: "r1", defaultVisibility: "private" }, pushed, "2026-10-03T12:00:00Z")).toEqual({ attached: 1, missing: 1 });
+		expect(await store.reconcilePushed({ id: "r1", defaultVisibility: "private" }, pushed, "2026-10-03T12:00:00Z")).toEqual({ attached: 0, missing: 0 });
+		expect(await store.reconciledAt("r1")).toBe("2026-10-03T12:00:00Z");
+		expect((await store.get(repo, sha(1), "owner"))?.state).toBe("attached");
+		expect(await store.get(repo, sha(2), "owner")).toMatchObject({ state: "missing", harness: "none", prompts: [] });
+		expect(await store.get(repo, sha(8), "owner")).toBeNull();
+		// The real checkpoint arriving late replaces the placeholder without a conflict.
+		const late = await store.put(repo, record(2, "late prompt"), { ...meta, state: "attached" });
+		expect(late.status).toBe(200);
+		expect(late.checkpoint).toMatchObject({ state: "attached", prompts: [{ text: "late prompt" }] });
+	});
 });
