@@ -1,4 +1,5 @@
-import { MAX_PINS, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
+import { MAX_PINS, type ContributionCalendar, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
+import { ContributionStore } from "../contributions/store.ts";
 import { handleSchema, orgCreateSchema, orgMemberSchema, profileUpdateSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -14,7 +15,31 @@ const owners = () => new OwnerStore(env.DB);
 const invalid = (error: z.ZodError) => ({ error: "invalid", issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) });
 
 /** Public owner pages: a user or organization and its public repos. Mounted under /api/owners. */
-export const ownerRoutes = new Hono<Ctx>().get("/:handle", async (c) => {
+export const ownerRoutes = new Hono<Ctx>()
+	// #144: the contribution calendar (users), for a year or the last 12 months.
+	.get("/:handle/contributions", async (c) => {
+		const owner = await owners().byHandle(c.req.param("handle"));
+		if (!owner || owner.kind !== "user") return c.json({ error: "not_found" }, 404);
+		const year = c.req.query("year");
+		const today = new Date().toISOString().slice(0, 10);
+		let from: string;
+		let to: string;
+		if (year && /^\d{4}$/.test(year)) {
+			from = `${year}-01-01`;
+			to = `${year}-12-31` < today ? `${year}-12-31` : today;
+		} else {
+			// The last 52 weeks plus the current partial week, starting on a Sunday like GitHub.
+			const start = new Date(Date.parse(`${today}T00:00:00Z`) - 364 * 86_400_000);
+			start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+			from = start.toISOString().slice(0, 10);
+			to = today;
+		}
+		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to);
+		// Same for every visitor (public repos only), so cacheable for a few minutes.
+		c.header("Cache-Control", "public, max-age=300");
+		return c.json({ from, to, ...data } satisfies ContributionCalendar);
+	})
+	.get("/:handle", async (c) => {
 	const owner = await owners().byHandle(c.req.param("handle"));
 	if (!owner) return c.json({ error: "not_found" }, 404);
 	const store = owners();

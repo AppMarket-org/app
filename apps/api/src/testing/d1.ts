@@ -22,9 +22,10 @@ export function testD1(): { d1: D1Database; sqlite: Database.Database } {
 			run: async () => runSync(),
 			runSync,
 		};
+		// Like D1's run() and batch(): reads return their rows, writes their change count.
 		function runSync() {
-			const info = reader ? { changes: 0 } : stmt.run(...params);
-			return { results: [], success: true, meta: { changes: info.changes } };
+			if (reader) return { results: stmt.all(...params), success: true, meta: { changes: 0 } };
+			return { results: [], success: true, meta: { changes: stmt.run(...params).changes } };
 		}
 	};
 

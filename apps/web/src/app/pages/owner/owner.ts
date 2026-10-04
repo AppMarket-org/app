@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -10,8 +10,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { RepoCard } from '../../components/repo-card/repo-card';
 import { Avatar } from '../../components/avatar/avatar';
 import { PinsDialog, type PinsDialogData } from '../../components/pins-dialog/pins-dialog';
+import { ContributionGraph } from '../../components/contribution-graph/contribution-graph';
+import { OwnersApi } from '../../api/owners';
 import { Auth } from '../../auth/auth';
-import type { Repo } from '@appmarket/shared';
+import type { ContributionCalendar, Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Seo } from '../../seo/seo';
 import type { OwnerPageData } from './owner-resolver';
@@ -19,7 +21,7 @@ import type { OwnerPageData } from './owner-resolver';
 /** #102, #139: appmarket.org/<handle>: a user's or organization's profile and public repos. */
 @Component({
   selector: 'app-owner',
-  imports: [Avatar, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
+  imports: [Avatar, ContributionGraph, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +35,18 @@ export class OwnerPage {
   /** #142: shown pins; replaced after "Customize your pins". */
   protected readonly pinned = linkedSignal<Repo[]>(() => this.page()?.pinned ?? []);
   protected readonly pinnedFallback = linkedSignal(() => this.page()?.pinnedFallback ?? false);
+  /** #144: the calendar shown; null year = the last 12 months. */
+  protected readonly calendar = linkedSignal<ContributionCalendar | null>(() => this.page()?.contributions ?? null);
+  protected readonly year = signal<number | null>(null);
+  private readonly owners = inject(OwnersApi);
+
+  protected async showYear(year: number | null): Promise<void> {
+    const handle = this.page()?.owner.handle;
+    if (!handle) return;
+    this.year.set(year);
+    this.calendar.set(await firstValueFrom(this.owners.contributions(handle, year)).catch(() => this.calendar()));
+  }
+
   /** The user themself, or an owner of the organization. */
   protected readonly canEdit = computed(() => {
     const owner = this.page()?.owner;
