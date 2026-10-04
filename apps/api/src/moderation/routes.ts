@@ -5,7 +5,8 @@ import { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { canView } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { clientIp, rateLimit } from "../rate-limit.ts";
+import { clientIp } from "../rate-limit.ts";
+import { strictLimit } from "../strict-limit.ts";
 import { Reports } from "./reports.ts";
 import { verifyTurnstile } from "./turnstile.ts";
 
@@ -15,7 +16,7 @@ const perUserOrIp = (c: Context<Ctx>) => c.get("session")?.user.id ?? `ip:${clie
 /** PRD R18: anyone can report a visible repo (Turnstile + rate limit). Mounted under /api/repos. */
 export const reportRoutes = new Hono<Ctx>().post(
 	"/:owner/:slug/reports",
-	rateLimit<Ctx>(() => env.RL_REPORT, perUserOrIp, env.RATE_LIMIT_CONFIG.REPORT.period),
+	strictLimit<Ctx>("REPORT", perUserOrIp),
 	async (c) => {
 		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
 		if (!repo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);

@@ -2,6 +2,7 @@ import { DEPLOY_UNAVAILABLE, deployAvailability } from "@appmarket/shared";
 import { deploymentRequestSchema } from "@appmarket/shared/schemas";
 import { buildDeployConfig, CONTRACT_FILES } from "@appmarket/template-contract";
 import { env } from "cloudflare:workers";
+import { strictHit } from "../strict-limit.ts";
 import { Hono } from "hono";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { readFiles } from "../artifacts/git.ts";
@@ -39,9 +40,10 @@ export const repoDeployRoutes = new Hono<Ctx>().post("/:owner/:slug/deployments"
 	if (!plan.ok) return c.json({ error: "not_deployable", reason: plan.reason }, 422);
 
 	// R20: each deploy runs a build container. Counted here so fixing form errors is not limited.
-	if (!(await env.RL_DEPLOY.limit({ key: userId })).success) {
-		c.header("Retry-After", String(env.RATE_LIMIT_CONFIG.DEPLOY.period));
-		return c.json({ error: "rate_limited", retryAfter: env.RATE_LIMIT_CONFIG.DEPLOY.period }, 429);
+	const deployLimit = await strictHit("DEPLOY", userId);
+	if (!deployLimit.success) {
+		c.header("Retry-After", String(deployLimit.retryAfter));
+		return c.json({ error: "rate_limited", retryAfter: deployLimit.retryAfter }, 429);
 	}
 	const id = crypto.randomUUID();
 	await insertDeployment({ id, userId, repoId: repo.id, versionTag: repo.publishedTag, commitSha: repo.publishedCommit, accountId, workerName, deploy: plan.deploy, secrets });

@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
-import { rateLimit } from "../rate-limit.ts";
+import { strictLimit } from "../strict-limit.ts";
 import {
 	createGitRepo,
 	deleteGitRepo,
@@ -38,8 +38,8 @@ const screenshots = () => new Screenshots(env.DB, env.MEDIA);
 
 type Ctx = { Variables: AuthVariables };
 const perUser = (c: Context<Ctx>) => c.get("session")!.user.id;
-const limitRepoCreate = rateLimit<Ctx>(() => env.RL_REPO_CREATE, perUser, env.RATE_LIMIT_CONFIG.REPO_CREATE.period);
-const limitTokens = rateLimit<Ctx>(() => env.RL_TOKENS, perUser, env.RATE_LIMIT_CONFIG.TOKENS.period);
+const limitRepoCreate = strictLimit<Ctx>("REPO_CREATE", perUser);
+const limitTokens = strictLimit<Ctx>("TOKENS", perUser);
 
 function invalid(error: z.ZodError) {
 	return { error: "invalid", issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) };
