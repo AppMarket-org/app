@@ -203,6 +203,12 @@ export class CheckpointStore {
 		return result.meta.changes > 0;
 	}
 
+	/** #130: how many checkpoints of a session are private now (they would become visible). */
+	async privateInSession(repoId: string, session: string): Promise<number> {
+		const row = await this.db.prepare("SELECT COUNT(*) AS n FROM checkpoints WHERE repo_id = ? AND session_id = ? AND visibility = 'private'").bind(repoId, session).first<{ n: number }>();
+		return row?.n ?? 0;
+	}
+
 	async setSessionVisibility(repoId: string, session: string, visibility: CheckpointVisibility): Promise<number> {
 		if (visibility !== "private") await this.rescan(repoId, { session });
 		const result = await this.db.prepare("UPDATE checkpoints SET visibility = ? WHERE repo_id = ? AND session_id = ?").bind(visibility, repoId, session).run();

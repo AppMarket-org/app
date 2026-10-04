@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 import type { Checkpoint } from '@appmarket/shared';
 import { CheckpointsPage } from './checkpoints';
 import { effortLine, groupBySession } from '../../components/checkpoint-details/timeline';
@@ -84,6 +86,21 @@ describe('CheckpointsPage', () => {
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ visibility: 'listing' });
     req.flush({ visibility: 'listing' });
+    await done;
+  });
+
+  it('asks before making a private checkpoint visible, and does nothing when cancelled (#130)', async () => {
+    const { fixture, http } = await setup();
+    const dialog = TestBed.inject(MatDialog);
+    const answers = [false, true];
+    const open = vi.spyOn(dialog, 'open').mockImplementation(() => ({ afterClosed: () => of(answers.shift()) }) as never);
+    const cmp = fixture.componentInstance as unknown as { setVisibility(c: Checkpoint, v: string): Promise<void> };
+    await cmp.setVisibility(checkpoint(2), 'public');
+    expect(open).toHaveBeenCalledTimes(1);
+    expect((open.mock.calls[0]![1] as { data: { title: string } }).data.title).toBe('Make 1 checkpoint visible?');
+    http.expectNone((r) => r.method === 'PATCH');
+    const done = cmp.setVisibility(checkpoint(2), 'public');
+    await vi.waitFor(() => http.expectOne((r) => r.method === 'PATCH').flush(checkpoint(2, { visibility: 'public' })));
     await done;
   });
 });
