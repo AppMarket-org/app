@@ -1,0 +1,35 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Versions</mat-card-title>
+    <mat-card-subtitle>Every upload of this Worker in your Cloudflare account, newest first.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (busy() || (!versions() && !error())) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading versions" />
+    }
+    @if (error(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    }
+    @if (versions(); as list) {
+      <mat-list role="list" aria-label="Worker versions">
+        @for (v of list; track v.id) {
+          <mat-list-item role="listitem" lines="2">
+            <span matListItemTitle>Version {{ v.number }} · {{ v.createdAt | date: 'medium' }}</span>
+            <span matListItemLine>{{ v.message ?? v.source ?? '' }}</span>
+            <span matListItemMeta>
+              @if (v.percentage === 100) {
+                <mat-chip-set aria-label="Status"><mat-chip highlighted>Live</mat-chip></mat-chip-set>
+              } @else if (v.percentage > 0) {
+                <mat-chip-set aria-label="Status"><mat-chip>{{ v.percentage }}%</mat-chip></mat-chip-set>
+              } @else {
+                <button mat-stroked-button type="button" [disabled]="busy()" (click)="rollback(v)">Roll back</button>
+              }
+            </span>
+          </mat-list-item>
+        } @empty {
+          <p class="hint">No versions found.</p>
+        }
+      </mat-list>
+    }
+  </mat-card-content>
+</mat-card>

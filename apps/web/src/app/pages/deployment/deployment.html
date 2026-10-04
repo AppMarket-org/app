@@ -47,5 +47,8 @@
         }
       </mat-card-content>
     </mat-card>
+    @if (d.status === 'succeeded') {
+      <app-versions-card [deploymentId]="d.id" />
+    }
   }
 }
