@@ -57,11 +57,12 @@ async function reconcile(repo: Repo, items: Checkpoint[]): Promise<Checkpoint[]>
 	return items.map((i) => (found.includes(i.commit) ? { ...i, state: "attached" } : i));
 }
 
-/** Owners (the user, or members of the owning org) see private checkpoints in full; admins too (moderation, M4 adds the access log). */
+/** Owners (the user, or members of the owning org) see private checkpoints in full. */
 function viewerOf(c: Context<Ctx>, repo: Repo): CheckpointViewer {
 	const session = c.get("session");
 	if (!session) return "public";
-	return isOwner(repo, { id: session.user.id, orgIds: session.orgIds }) || session.user.role === "admin" ? "owner" : "public";
+	// #135: admins see private checkpoints only through the logged admin view (with a report).
+	return isOwner(repo, { id: session.user.id, orgIds: session.orgIds }) ? "owner" : "public";
 }
 
 function ownedBy(c: Context<Ctx>, repo: Repo): boolean {
@@ -144,6 +145,12 @@ export const checkpointRoutes = new Hono<Ctx>()
 		if (!body.success) return c.json(invalid(body.error), 400);
 		return c.json({ updated: await checkpoints().setSessionVisibility(repo.id, body.data.session, body.data.visibility) });
 	})
+	// #135: the developer's view of moderator access to their private checkpoints.
+	.get("/:owner/:slug/checkpoints/access-log", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		if (!repo || !ownedBy(c, repo)) return c.json({ error: "not_found" }, 404);
+		return c.json({ items: await checkpoints().accessLog(repo.id) });
+	})
 	.get("/:owner/:slug/checkpoints/:sha", async (c) => {
 		const repo = await repoFor(c);
 		const sha = c.req.param("sha");
@@ -201,7 +208,25 @@ export const checkpointRoutes = new Hono<Ctx>()
 	});
 
 /** #128: admin audit: stored checkpoints that still contain a known secret format. Mounted under /api/admin. */
-export const adminCheckpointRoutes = new Hono<Ctx>().use(requireRole("admin")).get("/checkpoints/audit", async (c) => c.json(await checkpoints().audit()));
+export const adminCheckpointRoutes = new Hono<Ctx>()
+	.use(requireRole("admin"))
+	.get("/checkpoints/audit", async (c) => c.json(await checkpoints().audit()))
+	// #135: moderators see everything, including private checkpoints, only while handling an open
+	// report on this repo; each page with private checkpoints is logged and shown to the developer.
+	.get("/repos/:owner/:slug/checkpoints", async (c) => {
+		const repo = await repoFor(c);
+		if (!repo) return c.json({ error: "not_found" }, 404);
+		const reportId = c.req.query("report") ?? "";
+		const report = await env.DB.prepare("SELECT id FROM repo_reports WHERE id = ? AND repo_id = ? AND resolved_at IS NULL").bind(reportId, repo.id).first<{ id: string }>();
+		if (!report) return c.json({ error: "report_required", message: "Open a checkpoint view from an open report on this repo." }, 403);
+		const page = await checkpoints().list({ id: repo.id, path: repo.fullName }, "owner", { before: c.req.query("before"), limit: 50 });
+		const privateCount = page.items.filter((i) => i.visibility === "private").length;
+		if (privateCount) {
+			await checkpoints().logAccess(repo.id, c.get("session")!.user.id, report.id, privateCount);
+			logEvent("checkpoints.moderator_access", { repo: repo.fullName, report: report.id, privateCount });
+		}
+		return c.json(page);
+	});
 
 /** #131: download every checkpoint of the account's repos (and organizations it owns) as JSONL. Mounted under /api/me. */
 export const checkpointExportRoutes = new Hono<Ctx>().use(requireRole()).get("/checkpoints/export", async (c) => {

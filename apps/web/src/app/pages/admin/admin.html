@@ -106,6 +106,7 @@
           <mat-card-actions align="end">
             <a mat-button [routerLink]="'/' + r.repo.fullName">Open app page</a>
             @if (!r.resolvedAt) {
+              <a mat-button [routerLink]="'/admin/repos/' + r.repo.fullName + '/checkpoints'" [queryParams]="{ report: r.id }">View checkpoints</a>
               <button mat-button type="button" [disabled]="busy()" (click)="dismiss(r)">Dismiss</button>
               <button mat-button type="button" class="danger" [disabled]="busy() || r.repo.state !== 'published'" (click)="takeDownReported(r)">Take down</button>
             }

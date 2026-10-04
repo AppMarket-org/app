@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { Checkpoint, CheckpointPage, CheckpointVisibility } from '@appmarket/shared';
+import type { Checkpoint, CheckpointAccess, CheckpointPage, CheckpointVisibility } from '@appmarket/shared';
 import type { Observable } from 'rxjs';
 
 /** Checkpoints PRD: the prompts, harness and effort behind each commit of a repo. */
@@ -32,6 +32,11 @@ export class CheckpointsApi {
   /** #130: private checkpoints in a session that a visibility change would expose. */
   previewSession(path: string, session: string): Observable<{ becomingVisible: number }> {
     return this.http.get<{ becomingVisible: number }>(`/api/repos/${path}/checkpoints/visibility-preview`, { params: { session } });
+  }
+
+  /** #135: moderator access to this repo's private checkpoints. */
+  accessLog(path: string): Observable<{ items: CheckpointAccess[] }> {
+    return this.http.get<{ items: CheckpointAccess[] }>(`/api/repos/${path}/checkpoints/access-log`);
   }
 
   setDefault(path: string, visibility: CheckpointVisibility): Observable<{ visibility: CheckpointVisibility }> {

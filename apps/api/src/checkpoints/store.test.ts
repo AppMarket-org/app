@@ -121,4 +121,11 @@ describe("CheckpointStore", () => {
 		expect(await store.purgeRemovedRepos()).toBe(2);
 		expect((await store.list(repo, "owner")).items).toEqual([]);
 	});
+
+	it("logs moderator access against a report and shows it to the developer (#135)", async () => {
+		db.sqlite.prepare("INSERT INTO repo_reports (id, repo_id, reason, details) VALUES ('rep1', 'r1', 'malware', 'x')").run();
+		await store.logAccess("r1", "dev", "rep1", 3);
+		expect(await store.accessLog("r1")).toEqual([{ viewedAt: expect.any(String), reason: "malware", privateCount: 3 }]);
+		expect(await store.accessLog("other")).toEqual([]);
+	});
 });

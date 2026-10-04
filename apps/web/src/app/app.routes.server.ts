@@ -28,6 +28,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'dashboard/deployments/:id', renderMode: RenderMode.Client },
   { path: 'dashboard/cloudflare', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },
+  { path: 'admin/repos/:owner/:slug/checkpoints', renderMode: RenderMode.Client },
   { path: 'admin', renderMode: RenderMode.Client },
   // Owner and repo pages (#102): rendered per request for SEO.
   { path: ':owner/:slug/history', renderMode: RenderMode.Server },

@@ -90,6 +90,14 @@ export interface CheckpointSummary {
 	harnesses: Partial<Record<Harness, number>>;
 }
 
+/** #135: a moderator viewed private checkpoints while handling a report. */
+export interface CheckpointAccess {
+	viewedAt: string;
+	/** The report's reason (spam, malware, …). */
+	reason: string;
+	privateCount: number;
+}
+
 export interface CheckpointPage {
 	items: Checkpoint[];
 	/** On the first page only: counts over every checkpoint the viewer may see. */
