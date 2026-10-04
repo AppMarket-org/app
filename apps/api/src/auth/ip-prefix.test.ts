@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ipPrefix } from "./last-used.ts";
+import { ipPrefix } from "./ip-prefix.ts";
 
 describe("ipPrefix (#133)", () => {
 	it("keeps only the network part", () => {
