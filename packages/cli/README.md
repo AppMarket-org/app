@@ -24,6 +24,14 @@ When an agent runs `git commit`, the hook also makes the checkpoint itself, so c
 even where the git hook is missing. Hook failures never interrupt Claude Code; they go to
 `~/.appmarket/cli.log`.
 
+## Other agents (MCP)
+
+Agents without a hook adapter (Gemini CLI, Aider, and others for now) report their own prompt
+through MCP: add the server `appmarket mcp` (stdio) to the agent, and `appmarket init` adds one line
+to `AGENTS.md` (or `CLAUDE.md`) asking it to call `record_context(prompt, summary)` before each
+commit. These checkpoints are labelled **agent-reported**. When a hook adapter captured the same
+work, its record wins. `appmarket init --agents-md` adds the line even when Claude Code is present.
+
 ## What it records, and where
 
 - A buffer of agent events per repo in `~/.appmarket/sessions/` (written by harness adapters through
@@ -52,7 +60,8 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `login [--no-browser] [--device-name n] [--no-keychain]` | Sign in with a device code |
 | `logout` | Revoke this device's token and forget it |
 | `whoami` | Account, device, scopes, expiry |
-| `init [owner/repo]` | Turn on checkpoints in this Git repo |
+| `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
+| `mcp` | MCP server (stdio) with `record_context`, for agents without hooks |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |

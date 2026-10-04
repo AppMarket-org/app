@@ -69,8 +69,22 @@ function detectHarnesses(): string[] {
 	return found;
 }
 
+export const AGENTS_MARK = "<!-- appmarket:record_context -->";
+const AGENTS_LINE = `${AGENTS_MARK}\nBefore each \`git commit\`, call the \`record_context\` tool (appmarket MCP server, \`appmarket mcp\`) with the user's request and one sentence on what changed.\n`;
+
+/** #121: one instruction for agents without hooks, in AGENTS.md (or CLAUDE.md when only that exists). Idempotent. */
+export function addAgentsLine(root: string): string | null {
+	const agents = join(root, "AGENTS.md");
+	const claude = join(root, "CLAUDE.md");
+	const target = existsSync(agents) || !existsSync(claude) ? agents : claude;
+	const current = existsSync(target) ? readFileSync(target, "utf8") : "";
+	if (current.includes(AGENTS_MARK)) return null;
+	writeFileSync(target, `${current}${current && !current.endsWith("\n") ? "\n" : ""}${current ? "\n" : ""}${AGENTS_LINE}`);
+	return target;
+}
+
 /** C4 (#108): hook, repo config, notes setup, harness detection. */
-export async function init(api: string, explicit?: string): Promise<number> {
+export async function init(api: string, explicit?: string, opts: { agentsMd?: boolean } = {}): Promise<number> {
 	const root = repoRoot();
 	if (!root) {
 		console.error("Not inside a Git repository.");
@@ -94,10 +108,13 @@ export async function init(api: string, explicit?: string): Promise<number> {
 	if (remote) addConfig(root, `remote.${remote}.fetch`, `+refs/notes/appmarket:refs/notes/remotes/${remote}/appmarket`);
 
 	const harnesses = detectHarnesses();
+	// Without a hook adapter (Claude Code today), the agent reports its prompt over MCP.
+	const agentsFile = opts.agentsMd || !harnesses.includes("claude-code") ? addAgentsLine(root) : null;
 	console.log(`Checkpoints on for ${repo}.`);
 	console.log(`  Hook:       ${hook}`);
 	console.log(`  Harnesses:  ${harnesses.length ? harnesses.join(", ") : "none found"}${harnesses.includes("claude-code") ? " (run `appmarket adapter install claude-code` to record prompts)" : ""}`);
 	console.log(`  Notes:      shown in \`git log\`; push them with \`git push ${remote ?? "<remote>"} refs/notes/appmarket\``);
+	if (agentsFile) console.log(`  Agents:     added a record_context line to ${agentsFile.slice(root.length + 1)}; add the MCP server \`appmarket mcp\` to your agent`);
 	console.log("Every commit now gets a checkpoint; agent prompts are added when a harness adapter is installed.");
 	return 0;
 }

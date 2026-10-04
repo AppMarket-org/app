@@ -20,7 +20,9 @@ const truncate = (value: string, max: number) => (value.length > max ? `${value.
  * computed here from the events, never taken from the agent. Everything textual goes through the
  * redactor first (#115).
  */
-export function buildRecord(events: BufferEvent[], commit: CommitInfo, redactor: Redactor, now = new Date()): CheckpointRecord {
+export function buildRecord(all: BufferEvent[], commit: CommitInfo, redactor: Redactor, now = new Date()): CheckpointRecord {
+	// Hook-captured events win: an agent that also calls record_context (MCP) would repeat the prompt.
+	const events = all.some((e) => e.harness !== "mcp" && e.type === "prompt") ? all.filter((e) => e.harness !== "mcp") : all;
 	const harnessOf = (e?: BufferEvent): Harness => ((HARNESSES as readonly string[]).includes(e?.harness ?? "") ? (e!.harness as Harness) : "mcp");
 	const first = events[0];
 	const harness: Harness = events.length ? harnessOf(first) : "none";
