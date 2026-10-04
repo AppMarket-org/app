@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
+import type { ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** A profile: users list their public organizations, organizations their public members. */
@@ -13,6 +13,8 @@ export interface OwnerPage {
   /** #142: pinned repos, or (pinnedFallback) the most-cowbelled public ones. */
   pinned: Repo[];
   pinnedFallback: boolean;
+  /** #144: users only, loaded with the page. */
+  contributions?: ContributionCalendar;
 }
 
 /** #102: users and organizations (handles, owner pages, members). */
@@ -28,6 +30,11 @@ export class OwnersApi {
   /** #139: the profile of the signed-in user, or of an organization (owners only). */
   profile(org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
     return this.http.get<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile');
+  }
+
+  /** #144: a user's contribution calendar for a year, or the last 12 months. */
+  contributions(handle: string, year?: number | null): Observable<ContributionCalendar> {
+    return this.http.get<ContributionCalendar>(`/api/owners/${encodeURIComponent(handle)}/contributions`, { params: year ? { year } : {} });
   }
 
   /** #142: current pins and what may be pinned, for the signed-in user or an organization (owners). */

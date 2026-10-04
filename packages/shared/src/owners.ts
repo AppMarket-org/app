@@ -56,6 +56,18 @@ export const AVATAR_LIMITS = { maxBytes: 2 * 1024 * 1024, types: ["image/png", "
 
 export const MAX_PINS = 6;
 
+/** #144: a user's contributions per UTC day over a year (or the last 12 months). */
+export interface ContributionCalendar {
+	/** First and last day shown (YYYY-MM-DD, inclusive). */
+	from: string;
+	to: string;
+	total: number;
+	/** Days with contributions only. */
+	days: Record<string, number>;
+	/** Years with any contributions, newest first, for the year selector. */
+	years: number[];
+}
+
 export const PROFILE_LIMITS = { name: 80, bio: 160, location: 80, website: 200 } as const;
 
 export interface OrgMembership {

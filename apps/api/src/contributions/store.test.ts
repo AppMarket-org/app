@@ -40,4 +40,14 @@ describe("contributions (#143)", () => {
 			{ kind: "version", day: "2026-10-02" },
 		]);
 	});
+
+	it("counts per day in a range, published repos only, and lists the years (#144)", async () => {
+		const { db, store } = setup();
+		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state) VALUES ('r2', 'dev', 'dev', 'draft-app', 'Draft', 'Summary text', 'ai', 'draft')`).run();
+		db.sqlite.prepare("UPDATE repos SET state = 'published' WHERE id = 'r1'").run();
+		await store.addCommits("r1", [commit("a", "dev@example.test", "2026-10-02"), commit("b", "dev@example.test", "2026-10-02"), commit("c", "dev@example.test", "2025-03-01")]);
+		await store.addCommits("r2", [commit("d", "dev@example.test", "2026-10-02")]);
+		expect(await store.calendar("dev", "2026-01-01", "2026-12-31")).toEqual({ days: { "2026-10-02": 2 }, total: 2, years: [2026, 2025] });
+		expect((await store.calendar("dev", "2026-10-03", "2026-12-31")).total).toBe(0);
+	});
 });

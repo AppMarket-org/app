@@ -12,6 +12,21 @@ export class ContributionStore {
 	constructor(private readonly db: D1Database) {}
 
 	/**
+	 * #144: a user's contributions per day in [from, to], counting only published repos (private
+	 * contributions are #146), plus the years that have any.
+	 */
+	async calendar(userId: string, from: string, to: string): Promise<{ days: Record<string, number>; total: number; years: number[] }> {
+		const [days, years] = await this.db.batch<{ day?: string; n?: number; year?: string }>([
+			this.db
+				.prepare(`SELECT c.day, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND r.state = 'published' AND c.day BETWEEN ? AND ? GROUP BY c.day`)
+				.bind(userId, from, to),
+			this.db.prepare(`SELECT DISTINCT substr(c.day, 1, 4) AS year FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND r.state = 'published' ORDER BY year DESC`).bind(userId),
+		]);
+		const map = Object.fromEntries((days!.results ?? []).map((r) => [r.day!, r.n!]));
+		return { days: map, total: Object.values(map).reduce((a, b) => a + b, 0), years: (years!.results ?? []).map((r) => Number(r.year)) };
+	}
+
+	/**
 	 * Copies repo creations, version submissions, release uploads and checkpoints since `since`
 	 * (ISO; omit for all) into contributions. Idempotent.
 	 */

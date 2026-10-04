@@ -1,0 +1,58 @@
+<section class="graph" aria-labelledby="contrib-heading">
+  <div class="head">
+    <h2 id="contrib-heading">{{ heading() }}</h2>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="year">
+      <mat-label>Period</mat-label>
+      <mat-select [value]="year() ?? 0" (selectionChange)="yearChange.emit($event.value || null)">
+        <mat-option [value]="0">Last 12 months</mat-option>
+        @for (y of years(); track y) {
+          <mat-option [value]="y">{{ y }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="frame">
+    <div class="scroll" tabindex="0" role="region" aria-label="Contribution calendar (scrolls sideways)">
+      <!-- The calendar is visual; screen readers get the summary below. -->
+      <div class="calendar" aria-hidden="true" [style.--weeks]="weeks().length">
+        <div class="months">
+          @for (m of months(); track m.column) {
+            <span [style.grid-column]="m.column + 1">{{ m.label }}</span>
+          }
+        </div>
+        <div class="weekdays">
+          @for (d of weekdays; track $index) {
+            <span>{{ d }}</span>
+          }
+        </div>
+        <div class="days">
+          @for (week of weeks(); track week[0]!.date) {
+            @for (cell of week; track cell.date) {
+              @if (cell.outside) {
+                <div class="day outside"></div>
+              } @else {
+                <div class="day" [class]="'l' + cell.level" [matTooltip]="tooltip(cell)" matTooltipPosition="above"></div>
+              }
+            }
+          }
+        </div>
+      </div>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span>Less</span>
+      @for (l of levels; track l) {
+        <div class="day" [class]="'l' + l"></div>
+      }
+      <span>More</span>
+    </div>
+  </div>
+
+  <mat-list class="sr-only" aria-label="Contributions by month">
+    @for (t of totals(); track t.month) {
+      <mat-list-item>{{ t.month }}: {{ t.count }} contribution{{ t.count === 1 ? '' : 's' }}</mat-list-item>
+    } @empty {
+      <mat-list-item>No contributions in this period.</mat-list-item>
+    }
+  </mat-list>
+</section>
