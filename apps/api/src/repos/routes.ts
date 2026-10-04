@@ -25,6 +25,8 @@ import { purgeRepoPage } from "../routes/seo.ts";
 import { canEdit, canView, isOwner } from "./access.ts";
 import { CONTRACT_FILES, buildRepoMap, checkTemplate, wranglerMain } from "@appmarket/template-contract";
 import { storeLanguages } from "./languages.ts";
+import { CheckStore } from "../checks/store.ts";
+import { startChecks } from "../checks/start.ts";
 import { type RepoCheckSummary, RepoStore } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
 import { Screenshots } from "./screenshots.ts";
@@ -97,6 +99,13 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			if (String(error).includes("UNIQUE")) return c.json({ error: "conflict", message: "Name just taken; retry." }, 409);
 			throw error;
 		}
+	})
+	// #27: the latest check runs (owners, org members and admins).
+	.get("/:owner/:slug/checks", requireRole(), async (c) => {
+		const repo = await repos().findByPath(c.req.param("owner"), c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!repo || (!canEdit(repo, session) && session.user.role !== "admin")) return c.json({ error: "not_found" }, 404);
+		return c.json({ items: await new CheckStore(env.DB).recent(repo.id) });
 	})
 	// #26 (R6): "use this template": fork a published free app into a repo of your own.
 	.post("/:owner/:slug/fork", requireRole(), limitRepoCreate, async (c) => {
@@ -178,10 +187,18 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			if (contract.errors.length > 0) return c.json({ error: "contract_failed", errors: contract.errors, warnings: contract.warnings }, 422);
 			checks = { warnings: contract.warnings, manifest: contract.manifest };
 		}
+		// #27: a submitted version publishes only when the automated checks of its commit passed.
+		if (request.data.to === "published" && repo.state === "submitted" && repo.submittedCommit) {
+			const run = await new CheckStore(env.DB).latestFor(repo.id, repo.submittedCommit);
+			if (!run || run.status === "queued" || run.status === "running") return c.json({ error: "checks_pending", message: "The checks for this version are still running." }, 409);
+			if (run.status !== "passed") return c.json({ error: "checks_failed", message: "The checks for this version failed; send it back to the owner." }, 422);
+		}
 		if (!(await store.transition(repo, request.data, { id: session.user.id, role: actor }, commit, checks))) {
 			return c.json({ error: "conflict", message: "Repo changed; reload and retry." }, 409);
 		}
 		logEvent("repo.transition", { repo: repo.fullName, from: repo.state, to: request.data.to, actor });
+		// #27: run the checks on the submitted version (review waits for them).
+		if (request.data.to === "submitted" && commit) c.executionCtx.waitUntil(startChecks(repo, commit, "submit", `refs/tags/${request.data.tag}`).catch((e) => logEvent("checks.start_failed", { repo: repo.fullName, error: e }, "error")));
 		if (["published", "unpublished", "removed"].includes(request.data.to)) c.executionCtx.waitUntil(purgeRepoPage(repo.fullName));
 		// G4: generate the repo map for the newly published version (stored beside it, not committed).
 		if (request.data.to === "published" && repo.gitRepo && repo.submittedCommit) {

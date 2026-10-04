@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
 				// #182: exact rate limits for sensitive actions.
 				RateLimiter: exports.durableObject({ storage: "sqlite" }),
 				DeployWorkflow: exports.workflow({ name: `${workerName}-deploy`, concurrency: { limit: 5 } }),
+				ChecksWorkflow: exports.workflow({ name: `${workerName}-checks`, concurrency: { limit: 5 } }),
 			},
 			env: {
 				APP_ENV: bindings.text(environment),
@@ -81,6 +82,7 @@ export default defineConfig(({ mode }) => {
 				// Checkpoint uploads per device (approximate is fine at 60/min); deploys use the exact RateLimiter.
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
+				CHECKS_WORKFLOW: bindings.workflow({ name: `${workerName}-checks`, worker: workerName, exportName: "ChecksWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
 				RATE_LIMITER: bindings.durableObject({ worker: workerName, exportName: "RateLimiter" }),
 				CLOUDFLARE_ACCOUNT_ID: bindings.text(CLOUDFLARE_ACCOUNT_ID),

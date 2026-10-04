@@ -49,6 +49,8 @@
                 </mat-expansion-panel>
               }
             </mat-accordion>
+            <!-- #27: publishing needs passing checks on the submitted commit. -->
+            <app-checks-card [path]="l.fullName" />
           </mat-card-content>
           <mat-card-actions align="end">
             <a mat-button [routerLink]="'/' + l.fullName">Open app page</a>

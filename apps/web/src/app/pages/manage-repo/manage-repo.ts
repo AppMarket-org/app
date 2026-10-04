@@ -22,6 +22,7 @@ import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-
 import { RepoForm } from '../../components/repo-form/repo-form';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { ReleasesCard } from './releases-card/releases-card';
+import { ChecksCard } from './checks-card/checks-card';
 import { Seo } from '../../seo/seo';
 import { describeRepoError } from '../repo-errors';
 import { STATE_LABELS } from '../state-labels';
@@ -45,6 +46,7 @@ import { STATE_LABELS } from '../state-labels';
     MatSnackBarModule,
     MatTableModule,
     RepoForm,
+    ChecksCard,
     ReleasesCard,
     RuntimeBadge,
   ],
