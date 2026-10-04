@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { Deployment, DeploymentStatus } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
+import { EjectCard } from './eject-card/eject-card';
 import { LogsCard } from './logs-card/logs-card';
 import { VersionsCard } from './versions-card/versions-card';
 import { DeploymentsApi } from '../../api/deployments';
@@ -27,7 +28,7 @@ const POLL_MS = 3000;
 /** PRD D6: progress and result of one deploy; polls until it finishes. */
 @Component({
   selector: 'app-deployment',
-  imports: [LogsCard, VersionsCard, DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
+  imports: [EjectCard, LogsCard, VersionsCard, DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
   templateUrl: './deployment.html',
   styleUrl: './deployment.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

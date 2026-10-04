@@ -4,7 +4,7 @@ import type { ContractIssue, ContractResult, DeployManifest, ManifestResourceTyp
 import { readWrangler } from "./wrangler";
 
 export { buildRepoMap, type RepoMapInput } from "./repo-map";
-export { buildDeployConfig, type DeployConfig, type DeployConfigResult } from "./deploy-config";
+export { buildDeployConfig, ejectConfig, type DeployConfig, type DeployConfigResult } from "./deploy-config";
 
 /** Files the contract reads, by path relative to the repo root. */
 export const CONTRACT_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml", "package.json", ".dev.vars.example", ".env.example", "AGENTS.md"] as const;

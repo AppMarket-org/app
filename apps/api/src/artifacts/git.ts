@@ -71,6 +71,39 @@ export async function listBranches(gitRepo: string): Promise<{ defaultBranch: st
 	}
 }
 
+/**
+ * #41: every file of a commit (except .git and node_modules) with its Git mode, or complete:false
+ * when the repo is larger than the limits.
+ */
+export async function sourceFiles(gitRepo: string, commit: string, limits = { maxFiles: 5000, maxDirs: 2000 }): Promise<{ files: { path: string; hash: string; mode: string }[]; complete: boolean }> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const meta = await git.readCommit(commit);
+	if (!meta) return { files: [], complete: false };
+	const files: { path: string; hash: string; mode: string }[] = [];
+	const queue = [{ prefix: "", hash: meta.treeHash }];
+	let dirs = 0;
+	while (queue.length > 0) {
+		if (++dirs > limits.maxDirs) return { files, complete: false };
+		const { prefix, hash } = queue.shift()!;
+		for (const e of (await git.readTree(hash)) ?? []) {
+			if (e.type === "tree") {
+				if (e.name !== ".git" && e.name !== "node_modules") queue.push({ prefix: `${prefix}${e.name}/`, hash: e.hash });
+			} else if (e.type === "blob") {
+				files.push({ path: prefix + e.name, hash: e.hash, mode: e.mode });
+				if (files.length > limits.maxFiles) return { files, complete: false };
+			}
+		}
+	}
+	return { files: files.sort((a, b) => a.path.localeCompare(b.path)), complete: true };
+}
+
+/** #41: one blob's bytes. */
+export async function readBlobBytes(gitRepo: string, hash: string): Promise<Uint8Array | null> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const blob = await git.readBlob(hash);
+	return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+}
+
 /** PRD R19: live token metadata for a repo (no plaintext). */
 export async function listGitTokens(gitRepo: string) {
 	using git = await env.ARTIFACTS.get(gitRepo);

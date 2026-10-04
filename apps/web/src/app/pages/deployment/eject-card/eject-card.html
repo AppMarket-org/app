@@ -1,0 +1,33 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-icon mat-card-avatar aria-hidden="true">eject</mat-icon>
+    <mat-card-title>Eject</mat-card-title>
+    <mat-card-subtitle>Take this app's code and deploy it yourself with Wrangler. You keep the same Worker and data, and no longer depend on appmarket.org. Updates from the developer stop reaching you.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Preparing the eject" />
+    }
+    @if (eject(); as e) {
+      <p>{{ e.repo }} {{ e.version }}, commit <code>{{ e.commit.slice(0, 12) }}</code>. The download link works for an hour.</p>
+      <mat-accordion multi displayMode="flat">
+        <mat-expansion-panel expanded>
+          <mat-expansion-panel-header><mat-panel-title>Steps (EJECT.md)</mat-panel-title></mat-expansion-panel-header>
+          <pre tabindex="0"><code>{{ e.guide }}</code></pre>
+        </mat-expansion-panel>
+        <mat-expansion-panel>
+          <mat-expansion-panel-header><mat-panel-title>wrangler.json</mat-panel-title></mat-expansion-panel-header>
+          <pre tabindex="0"><code>{{ e.wranglerJson }}</code></pre>
+          <button mat-button type="button" (click)="copy(e.wranglerJson, 'wrangler.json')"><mat-icon>content_copy</mat-icon>Copy</button>
+        </mat-expansion-panel>
+      </mat-accordion>
+    }
+  </mat-card-content>
+  <mat-card-actions>
+    @if (eject(); as e) {
+      <a mat-flat-button [href]="e.downloadUrl" download><mat-icon>download</mat-icon>Download source (.tar.gz)</a>
+    } @else {
+      <button mat-stroked-button type="button" [disabled]="busy()" (click)="prepare()">Eject this app</button>
+    }
+  </mat-card-actions>
+</mat-card>

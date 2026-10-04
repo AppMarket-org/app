@@ -15,6 +15,7 @@ import { cloudflareRoutes } from "./cloudflare/routes.ts";
 import { cowbellRoutes, repoCowbellRoutes } from "./cowbells/routes.ts";
 import { deploymentRoutes, repoDeployRoutes } from "./deploy/routes.ts";
 import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
+import { ejectDownloadRoutes, ejectRoutes } from "./deploy/eject.ts";
 import { previewRoutes } from "./previews/routes.ts";
 import { scanPreviews } from "./previews/scan.ts";
 import { downloadRoutes, repoExportRoutes, repoReleaseRoutes, releaseLinkRoutes } from "./releases/routes.ts";
@@ -69,6 +70,8 @@ api.route("/legacy", legacyRoutes);
 api.route("/deployments", deploymentRoutes);
 api.route("/releases", releaseLinkRoutes);
 api.route("/downloads", downloadRoutes);
+api.route("/deployments", ejectRoutes);
+api.route("/eject", ejectDownloadRoutes);
 api.route("/cloudflare", cloudflareRoutes);
 // R18/R22: /admin is behind Cloudflare Access when deployed; the API checks Access's token too.
 // Registered before the admin routes so it runs first.
