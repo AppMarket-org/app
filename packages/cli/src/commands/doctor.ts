@@ -189,14 +189,14 @@ export async function updateNotice(): Promise<void> {
 	if (!state.updateCheckedAt || Date.now() - Date.parse(state.updateCheckedAt) > 86_400_000) {
 		writeState({ updateCheckedAt: new Date().toISOString() });
 		try {
-			const res = await fetch("https://registry.npmjs.org/@appmarket/cli/latest", { signal: AbortSignal.timeout(2000) });
+			const res = await fetch("https://registry.npmjs.org/appmarket/latest", { signal: AbortSignal.timeout(2000) });
 			if (res.ok) latest = ((await res.json()) as { version?: string }).version;
 			writeState({ latestVersion: latest });
 		} catch {
 			return;
 		}
 	}
-	if (latest && newer(latest, VERSION)) console.error(`appmarket ${latest} is available (you have ${VERSION}): npm i -g @appmarket/cli`);
+	if (latest && newer(latest, VERSION)) console.error(`appmarket ${latest} is available (you have ${VERSION}): npm i -g appmarket`);
 }
 
 export function newer(a: string, b: string): boolean {

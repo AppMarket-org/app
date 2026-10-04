@@ -9,8 +9,8 @@
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm --parallel --filter @appmarket/api --filter @appmarket/web dev",
     "check:secrets": "node scripts/check-no-secrets.mjs",
-    "build": "pnpm --filter @appmarket/web --filter @appmarket/cli build",
-    "test": "pnpm --filter @appmarket/shared --filter @appmarket/template-contract --filter @appmarket/api --filter @appmarket/cli test && pnpm --filter @appmarket/web exec ng test --watch=false",
+    "build": "pnpm --filter @appmarket/web --filter appmarket build",
+    "test": "pnpm --filter @appmarket/shared --filter @appmarket/template-contract --filter @appmarket/api --filter appmarket test && pnpm --filter @appmarket/web exec ng test --watch=false",
     "check:ui": "node scripts/check-ui.mjs"
   },
   "devDependencies": {

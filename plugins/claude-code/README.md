@@ -6,11 +6,11 @@ Records the prompt, model, effort and tools behind every commit Claude Code make
 ```sh
 claude plugin marketplace add AppMarket-org/claude-plugin
 claude plugin install appmarket@appmarket
-npx @appmarket/cli login
+npx appmarket login
 cd my-app && appmarket init
 ```
 
-The plugin only adds hooks and a skill; the open-source [`@appmarket/cli`](https://www.npmjs.com/package/@appmarket/cli)
+The plugin only adds hooks and a skill; the open-source [`appmarket`](https://www.npmjs.com/package/appmarket)
 does the recording, redaction (on your machine, before upload) and upload. Without the CLI the hooks
 do nothing. New checkpoints are private until you publish them.
 

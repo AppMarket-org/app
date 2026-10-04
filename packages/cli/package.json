@@ -1,5 +1,5 @@
 {
-	"name": "@appmarket/cli",
+	"name": "appmarket",
 	"version": "0.1.0",
 	"description": "appmarket.org CLI: device login and checkpoints for agent commits.",
 	"license": "MIT",

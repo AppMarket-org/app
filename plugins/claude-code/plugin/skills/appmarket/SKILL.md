@@ -12,7 +12,7 @@ files changed. This plugin's hooks feed that record; the `appmarket` CLI does th
 ## Set up (the user runs these; they need a browser for sign-in)
 
 ```sh
-npx @appmarket/cli login          # device code: open the URL, enter the code
+npx appmarket login          # device code: open the URL, enter the code
 cd <repo> && appmarket init       # or: appmarket init <owner>/<repo>
 ```
 
