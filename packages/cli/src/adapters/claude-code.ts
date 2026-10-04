@@ -128,6 +128,8 @@ export function transcriptEvents(path: string, offset: number, until: string, si
 			input_tokens: (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0),
 			output_tokens: usage.output_tokens ?? 0,
 			reasoning_tokens: usage.output_tokens_details?.thinking_tokens,
+			cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+			cache_write_tokens: usage.cache_creation_input_tokens ?? 0,
 		});
 	}
 	if (last) events.push({ v: 1, ts: last.timestamp!, type: "settings", harness: "claude-code", model: last.message?.model, effort: last.effort, harness_version: last.version });

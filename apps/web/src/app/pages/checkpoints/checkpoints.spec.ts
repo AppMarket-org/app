@@ -40,6 +40,7 @@ describe('timeline', () => {
   it('writes the PRD effort line', () => {
     expect(effortLine(checkpoint(1))).toBe('3 prompts, 14 min, 41 tool calls, 212k tokens');
     expect(effortLine(checkpoint(1, { harness: 'none' }))).toBe('');
+    expect(effortLine(checkpoint(1, { usage: { input_tokens: 200_000, output_tokens: 12_000, cost_usd: 1.04, cost_priced: '2026-10-04' } }))).toBe('3 prompts, 14 min, 41 tool calls, 212k tokens, ~$1.04');
   });
 
   it('groups consecutive checkpoints of one session', () => {

@@ -22,6 +22,9 @@ export interface BufferEvent {
 	output_tokens?: number;
 	reasoning_tokens?: number;
 	cost_usd?: number;
+	/** Of input_tokens: read from / written to the provider's prompt cache. */
+	cache_read_tokens?: number;
+	cache_write_tokens?: number;
 	/** Claude Code: the session transcript, and its size when this event was written (where to start reading). */
 	transcript_path?: string;
 	transcript_offset?: number;

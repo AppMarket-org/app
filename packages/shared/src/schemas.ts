@@ -162,7 +162,15 @@ export const checkpointRecordSchema = z.object({
 	prompts: z.array(z.object({ ts: iso, text: z.string().max(100_000) })).max(CHECKPOINT_LIMITS.prompts),
 	assistant_summary: z.string().max(CHECKPOINT_LIMITS.assistantSummaryChars),
 	tools: z.array(z.object({ name: z.string().max(128), args_summary: z.string().max(1024), outcome: z.enum(["ok", "error"]), ts: iso })).max(CHECKPOINT_LIMITS.tools),
-	usage: z.object({ input_tokens: count.nullable(), output_tokens: count.nullable(), cost_usd: z.number().nonnegative().nullable() }),
+	usage: z.object({
+		input_tokens: count.nullable(),
+		output_tokens: count.nullable(),
+		cost_usd: z.number().nonnegative().nullable(),
+		cache_read_tokens: count.nullable().optional(),
+		cache_write_tokens: count.nullable().optional(),
+		// Set by appmarket.org only; an upload cannot claim it.
+		cost_priced: z.undefined().optional(),
+	}),
 	files: z.array(z.object({ path: z.string().max(1024), added: count, removed: count })).max(CHECKPOINT_LIMITS.files),
 	redactions: count,
 	source: z.enum(["harness", "agent-reported"]),
