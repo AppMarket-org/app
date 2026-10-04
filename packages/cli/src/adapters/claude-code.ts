@@ -31,7 +31,10 @@ function sizeOf(path?: string): number | undefined {
  */
 export function argsSummary(tool: string, input: Record<string, unknown> = {}, root?: string): string {
 	const pick = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : undefined);
-	const value = pick("command") ?? pick("file_path") ?? pick("notebook_path") ?? pick("pattern") ?? pick("url") ?? pick("query") ?? pick("description");
+	// Codex apply_patch: the command is the whole patch; keep only the files it touches.
+	const patch = pick("command") ?? "";
+	const patched = patch.startsWith("*** Begin Patch") ? [...patch.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)].map((m) => m[1]!.trim()).join(", ") : undefined;
+	const value = patched ?? pick("command") ?? pick("file_path") ?? pick("notebook_path") ?? pick("pattern") ?? pick("url") ?? pick("query") ?? pick("description");
 	let out = (value ?? (tool.startsWith("mcp__") ? Object.keys(input).join(",") : "")).replace(/\s+/g, " ");
 	if (root) out = out.split(`${root}/`).join("").split(root).join(".");
 	const home = homedir();
@@ -46,8 +49,8 @@ function failed(response: unknown): boolean {
 }
 
 /** Hook input → buffer events (#112). Model, effort and usage come later from the transcript. */
-export function eventsFor(input: HookInput, now = new Date().toISOString(), root?: string): BufferEvent[] {
-	const base = { v: 1 as const, ts: now, harness: "claude-code", session_id: input.session_id, transcript_path: input.transcript_path };
+export function eventsFor(input: HookInput, now = new Date().toISOString(), root?: string, harness: "claude-code" | "codex" = "claude-code"): BufferEvent[] {
+	const base = { v: 1 as const, ts: now, harness, session_id: input.session_id, transcript_path: input.transcript_path };
 	const model = typeof input.model === "string" ? input.model : input.model?.id;
 	switch (input.hook_event_name) {
 		case "SessionStart":
