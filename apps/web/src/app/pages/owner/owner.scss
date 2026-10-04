@@ -1,6 +1,6 @@
 .head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
 
@@ -38,4 +38,31 @@ h2 {
 
 .empty {
   color: var(--mat-sys-on-surface-variant);
+}
+
+.bio {
+  margin: 0.75rem 0 0.5rem;
+  max-width: 40rem;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  padding: 0;
+  max-width: 30rem;
+  --mat-list-list-item-one-line-container-height: 2.25rem;
+  --mdc-list-list-item-one-line-container-height: 2.25rem;
+  --mat-list-list-item-label-text-color: var(--mat-sys-on-surface-variant);
+
+  .mat-mdc-list-item {
+    padding-left: 0;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

@@ -7,6 +7,18 @@
     <a mat-stroked-button [routerLink]="'/' + o.handle">View public page</a>
   </header>
 
+  @if (profile(); as p) {
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Profile</mat-card-title>
+        <mat-card-subtitle>Shown on appmarket.org/{{ o.handle }}. Empty fields are not shown.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <app-profile-form kind="org" [name]="o.name" [profile]="p" [saving]="profileSaving()" [errors]="profileFieldErrors()" (save)="saveProfile($event)" />
+      </mat-card-content>
+    </mat-card>
+  }
+
   <mat-card appearance="outlined">
     <mat-card-header>
       <mat-card-title>Members</mat-card-title>

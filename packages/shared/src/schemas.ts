@@ -140,6 +140,25 @@ export const handleSchema = z
 export const orgCreateSchema = z.object({ handle: handleSchema, name: z.string().trim().min(1).max(80) });
 export type OrgCreate = z.infer<typeof orgCreateSchema>;
 
+/** #139: "" and null clear a field; the website must be an https URL. */
+const optionalText = (max: number) =>
+	z
+		.string()
+		.trim()
+		.max(max, `At most ${max} characters.`)
+		.nullable()
+		.optional()
+		.transform((v) => (v === "" ? null : v));
+export const profileUpdateSchema = z
+	.object({
+		name: optionalText(80),
+		bio: optionalText(160),
+		location: optionalText(80),
+		website: optionalText(200).refine((v) => v == null || /^https:\/\/[^\s/$.?#][^\s]*$/i.test(v), "Use a full https:// address."),
+	})
+	.strict();
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
+
 export const orgMemberSchema = z.object({ handle: z.string().trim().toLowerCase().min(1).max(39), role: z.enum(ORG_ROLES).default("member") });
 export type OrgMemberInput = z.infer<typeof orgMemberSchema>;
 

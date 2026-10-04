@@ -9,6 +9,29 @@
           <mat-chip-set aria-label="Account type"><mat-chip>Organization</mat-chip></mat-chip-set>
         }
       </p>
+      @if (p.profile; as profile) {
+        @if (profile.bio) {
+          <p class="bio">{{ profile.bio }}</p>
+        }
+        <mat-list class="facts" aria-label="Profile details">
+          @if (profile.location) {
+            <mat-list-item>
+              <mat-icon matListItemIcon aria-hidden="true">location_on</mat-icon>
+              <span matListItemTitle><span class="sr-only">Location: </span>{{ profile.location }}</span>
+            </mat-list-item>
+          }
+          @if (profile.website) {
+            <a mat-list-item [href]="profile.website" rel="nofollow noopener ugc" target="_blank">
+              <mat-icon matListItemIcon aria-hidden="true">link</mat-icon>
+              <span matListItemTitle>{{ profile.website.replace('https://', '') }}</span>
+            </a>
+          }
+          <mat-list-item>
+            <mat-icon matListItemIcon aria-hidden="true">event</mat-icon>
+            <span matListItemTitle>{{ p.owner.kind === 'org' ? 'Since' : 'Joined' }} {{ profile.memberSince | date: 'MMMM y' }}</span>
+          </mat-list-item>
+        </mat-list>
+      }
     </div>
   </header>
 

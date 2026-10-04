@@ -1,0 +1,29 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate class="profile">
+  <mat-form-field appearance="outline">
+    <mat-label>{{ kind() === 'org' ? 'Organization name' : 'Name' }}</mat-label>
+    <input matInput formControlName="name" autocomplete="name" [maxlength]="limits.name" />
+    @if (kind() === 'user') {
+      <mat-hint>Leave empty to use the name from your sign-in.</mat-hint>
+    }
+    <mat-error>{{ errors()['name'] ?? (kind() === 'org' ? 'An organization needs a name.' : 'At most ' + limits.name + ' characters.') }}</mat-error>
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>{{ kind() === 'org' ? 'Description' : 'Bio' }}</mat-label>
+    <textarea matInput formControlName="bio" rows="3" [maxlength]="limits.bio"></textarea>
+    <mat-hint align="end">{{ form.controls.bio.value.length }} / {{ limits.bio }}</mat-hint>
+    <mat-error>{{ errors()['bio'] ?? 'At most ' + limits.bio + ' characters.' }}</mat-error>
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Location</mat-label>
+    <input matInput formControlName="location" autocomplete="address-level2" [maxlength]="limits.location" />
+    <mat-error>{{ errors()['location'] ?? 'At most ' + limits.location + ' characters.' }}</mat-error>
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Website</mat-label>
+    <input matInput formControlName="website" type="url" inputmode="url" autocomplete="url" placeholder="https://" [maxlength]="limits.website" />
+    <mat-error>{{ errors()['website'] ?? 'Use a full https:// address.' }}</mat-error>
+  </mat-form-field>
+  <div class="actions">
+    <button mat-flat-button type="submit" [disabled]="saving() || form.pristine">Save profile</button>
+  </div>
+</form>
