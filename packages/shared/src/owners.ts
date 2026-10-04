@@ -29,6 +29,8 @@ export interface Owner {
 	kind: OwnerKind;
 	/** Profile name for users, display name for organizations. */
 	name: string;
+	/** #140: uploaded picture, else the sign-in provider's picture (users), else null (show an initial). */
+	avatarUrl: string | null;
 }
 
 /** #139: public profile fields; empty ones are left out. */
@@ -50,6 +52,8 @@ export interface OwnerProfileUpdate {
 	website?: string | null;
 }
 
+export const AVATAR_LIMITS = { maxBytes: 2 * 1024 * 1024, types: ["image/png", "image/jpeg", "image/webp"] } as const;
+
 export const PROFILE_LIMITS = { name: 80, bio: 160, location: 80, website: 200 } as const;
 
 export interface OrgMembership {
@@ -62,6 +66,13 @@ export interface OrgMember {
 	handle: string;
 	name: string;
 	role: OrgRole;
+	avatarUrl: string | null;
+}
+
+/** #140: the URL for an owner's picture: an upload, else (users) the sign-in provider's picture. */
+export function avatarUrl(avatarId: string | null | undefined, providerImage?: string | null): string | null {
+	if (avatarId) return `/api/media/avatars/${avatarId}`;
+	return providerImage && /^https:\/\//.test(providerImage) ? providerImage : null;
 }
 
 /** #104: one signed-in browser or device (no token). */

@@ -1,6 +1,7 @@
 <mat-card appearance="outlined">
   <mat-card-header>
     <mat-card-title>{{ repo().name }}</mat-card-title>
+    <app-avatar mat-card-avatar [name]="repo().owner.name" [src]="repo().owner.avatarUrl" [kind]="repo().owner.kind" [size]="2.5" [decorative]="true" />
     <mat-card-subtitle>{{ categoryName(repo().category) }} · by {{ repo().owner.name }}</mat-card-subtitle>
   </mat-card-header>
   <mat-card-content>

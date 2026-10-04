@@ -1,6 +1,6 @@
 @if (page(); as p) {
   <header class="head">
-    <mat-icon class="avatar" aria-hidden="true">{{ p.owner.kind === 'org' ? 'corporate_fare' : 'person' }}</mat-icon>
+    <app-avatar [name]="p.owner.name" [src]="p.owner.avatarUrl" [size]="6" [kind]="p.owner.kind" [decorative]="true" [eager]="true" />
     <div>
       <h1>{{ p.owner.name }}</h1>
       <p class="handle">

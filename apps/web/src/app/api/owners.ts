@@ -18,6 +18,15 @@ export class OwnersApi {
     return this.http.get<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile');
   }
 
+  /** #140: upload (already cropped) or remove the picture of the signed-in user, or of an organization. */
+  setAvatar(image: Blob, org?: string): Observable<{ owner: Owner }> {
+    return this.http.put<{ owner: Owner }>(org ? `/api/orgs/${org}/avatar` : '/api/me/avatar', image, { headers: { 'Content-Type': image.type || 'application/octet-stream' } });
+  }
+
+  removeAvatar(org?: string): Observable<{ owner: Owner }> {
+    return this.http.delete<{ owner: Owner }>(org ? `/api/orgs/${org}/avatar` : '/api/me/avatar');
+  }
+
   updateProfile(update: OwnerProfileUpdate, org?: string): Observable<{ owner: Owner; profile: OwnerProfile }> {
     return this.http.patch<{ owner: Owner; profile: OwnerProfile }>(org ? `/api/orgs/${org}/profile` : '/api/me/profile', update);
   }

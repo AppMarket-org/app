@@ -71,7 +71,7 @@ export interface Repo {
 	priceCents: number;
 	state: RepoState;
 	/** The user or organization the repo lives under: appmarket.org/<owner.handle>/<slug>. */
-	owner: { id: string; handle: string; kind: OwnerKind; name: string };
+	owner: { id: string; handle: string; kind: OwnerKind; name: string; avatarUrl: string | null };
 	/** `owner/slug`, the repo's path on the site and in the API. */
 	fullName: string;
 	gitRepo: string | null;

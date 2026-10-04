@@ -6,9 +6,11 @@ import { RouterLink } from '@angular/router';
 import { CATEGORIES, type Repo } from '@appmarket/shared';
 import { RuntimeBadge } from '../runtime-badge/runtime-badge';
 
+import { Avatar } from '../avatar/avatar';
+
 @Component({
   selector: 'app-repo-card',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, RouterLink, RuntimeBadge],
+  imports: [Avatar, MatButtonModule, MatCardModule, MatIconModule, RouterLink, RuntimeBadge],
   templateUrl: './repo-card.html',
   styleUrl: './repo-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

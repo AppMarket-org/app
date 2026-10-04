@@ -7,6 +7,7 @@
   </mat-card-header>
   <mat-card-content>
     @if (owner() && profile(); as p) {
+      <app-avatar-editor [owner]="owner()!" (changed)="avatarChanged($event)" />
       <app-profile-form kind="user" [name]="owner()!.name" [profile]="p" [saving]="profileSaving()" [errors]="profileFieldErrors()" (save)="saveProfile($event)" />
     } @else {
       <mat-progress-bar mode="indeterminate" aria-label="Loading profile" />

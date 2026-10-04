@@ -1,0 +1,29 @@
+.editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.controls {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  margin: 0.5rem 0 0;
+  color: var(--mat-sys-error);
+}

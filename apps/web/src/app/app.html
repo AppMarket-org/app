@@ -18,7 +18,7 @@
   @if (auth.user(); as user) {
     <a mat-button routerLink="/dashboard">Dashboard</a>
     <button mat-icon-button type="button" [matMenuTriggerFor]="account" aria-label="Account menu">
-      <mat-icon>account_circle</mat-icon>
+      <app-avatar [name]="auth.owner()?.name ?? user.name" [src]="auth.owner()?.avatarUrl ?? user.image" [size]="2" [decorative]="true" />
     </button>
     <mat-menu #account="matMenu">
       <div class="account" mat-menu-item disabled>{{ user.name }}@if (auth.owner(); as me) { <span class="me">{{ me.handle }}</span>}</div>
