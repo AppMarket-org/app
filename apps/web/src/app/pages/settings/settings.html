@@ -115,13 +115,16 @@
             <mat-list-item>
               <mat-icon matListItemIcon aria-hidden="true">{{ s.device ? 'terminal' : s.current ? 'computer' : 'devices' }}</mat-icon>
               <span matListItemTitle>{{ label(s) }}{{ s.current ? ' · this browser' : '' }}</span>
-              <span matListItemLine>Signed in {{ s.createdAt | date: 'medium' }} · expires {{ s.expiresAt | date: 'mediumDate' }}</span>
-              @if (s.device) {
-                <span matListItemLine>Can: {{ s.device.scopes.join(', ') }}</span>
-              }
-              @if (!s.current) {
-                <button matListItemMeta mat-button type="button" class="danger" (click)="signOut(s)">Sign out</button>
-              }
+              <span matListItemLine>{{ s.lastUsedAt ? 'Last used ' + (s.lastUsedAt | date: 'medium') : 'Signed in ' + (s.createdAt | date: 'medium') }}{{ s.ipPrefix ? ' · ' + s.ipPrefix : '' }}</span>
+              <span matListItemLine>Signed in {{ s.createdAt | date: 'mediumDate' }} · expires {{ s.expiresAt | date: 'mediumDate' }}{{ s.device ? ' · can ' + s.device.scopes.join(', ') : '' }}</span>
+              <span matListItemMeta class="session-actions">
+                @if (s.device) {
+                  <button mat-icon-button type="button" (click)="rename(s)" [attr.aria-label]="'Rename ' + s.device.name" matTooltip="Rename"><mat-icon>edit</mat-icon></button>
+                }
+                @if (!s.current) {
+                  <button mat-button type="button" class="danger" (click)="signOut(s)">Sign out</button>
+                }
+              </span>
             </mat-list-item>
           }
         </mat-list>

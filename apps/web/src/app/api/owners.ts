@@ -101,6 +101,11 @@ export class OwnersApi {
   }
 
   /** #104: browsers and device logins signed in to this account. */
+  /** #133 */
+  renameSession(id: string, name: string): Observable<{ name: string }> {
+    return this.http.patch<{ name: string }>(`/api/me/sessions/${id}`, { name });
+  }
+
   sessions(): Observable<SessionInfo[]> {
     return this.http.get<{ items: SessionInfo[] }>('/api/me/sessions').pipe(map((r) => r.items));
   }

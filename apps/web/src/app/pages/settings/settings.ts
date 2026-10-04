@@ -11,6 +11,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/note-dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type OwnerPrivacy, type OwnerProfile, type OwnerProfileUpdate, type SessionInfo } from '@appmarket/shared';
@@ -25,7 +28,7 @@ import { Seo } from '../../seo/seo';
 /** #102, #139: your profile, username and organizations. */
 @Component({
   selector: 'app-settings',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, MatTooltipModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +37,7 @@ export class Settings {
   private readonly api = inject(OwnersApi);
   private readonly auth = inject(Auth);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly owner = signal<Owner | null>(null);
   protected readonly orgs = signal<OrgMembership[] | undefined>(undefined);
@@ -112,6 +116,19 @@ export class Settings {
     const system = /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : null;
     if (browser) return system ? `${browser} on ${system}` : browser;
     return ua.split(/[\s/]/)[0] || 'Unknown device';
+  }
+
+  /** #133: rename a device login (the CLI names itself after the hostname). */
+  protected async rename(session: SessionInfo): Promise<void> {
+    const data: NoteDialogData = { title: 'Rename device', message: `Currently "${session.device?.name}".`, label: 'Device name', confirm: 'Rename', required: true, maxLength: 64 };
+    const name = await firstValueFrom(this.dialog.open<NoteDialog, NoteDialogData, string>(NoteDialog, { data, width: '28rem' }).afterClosed());
+    if (!name) return;
+    try {
+      await firstValueFrom(this.api.renameSession(session.id, name));
+      this.sessions.update((list) => list?.map((s) => (s.id === session.id && s.device ? { ...s, device: { ...s.device, name } } : s)));
+    } catch {
+      this.snackBar.open('Could not rename the device.', 'OK', { duration: 4000 });
+    }
   }
 
   protected async signOut(session: SessionInfo): Promise<void> {

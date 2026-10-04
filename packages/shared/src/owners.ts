@@ -132,4 +132,7 @@ export interface SessionInfo {
 	current: boolean;
 	/** #107: set for device logins (CLIs, agents): client, name and granted scopes. */
 	device: { clientId: string; name: string; scopes: string[] } | null;
+	/** #133: last request with this session, and its network prefix (/24 or /48). */
+	lastUsedAt: string | null;
+	ipPrefix: string | null;
 }

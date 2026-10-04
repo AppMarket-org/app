@@ -50,3 +50,10 @@ mat-card {
     color: var(--mat-sys-on-surface-variant);
   }
 }
+
+// #133
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
