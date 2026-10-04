@@ -1,0 +1,50 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Branch previews</mat-card-title>
+    <mat-card-subtitle>Every branch you push, other than the default one, is deployed to its own Worker in your Cloudflare account with its own database and storage. Previews run without secrets; set them on the preview Worker in Cloudflare if it needs them.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (settings() !== undefined) {
+      @let s = settings();
+      <mat-slide-toggle [checked]="!!s?.enabled" [disabled]="busy()" (change)="toggle($event.checked)">Deploy previews of branches</mat-slide-toggle>
+
+      @if (accounts() === null) {
+        <p class="hint">Connect your Cloudflare account to deploy previews into it.</p>
+        <a mat-stroked-button [href]="connectUrl"><mat-icon>link</mat-icon>Connect Cloudflare</a>
+      } @else if (s && !s.enabled && accounts()?.length) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="account">
+          <mat-label>Cloudflare account for previews</mat-label>
+          <mat-select [ngModel]="accountId()" (ngModelChange)="chooseAccount($event)" [disabled]="busy()">
+            @for (a of accounts(); track a.id) {
+              <mat-option [value]="a.id">{{ a.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+      @if (s?.enabled && !s?.mine) {
+        <p class="hint">Previews deploy with {{ s!.connectedBy }}'s Cloudflare connection.</p>
+      }
+
+      @if (previews().length) {
+        <mat-list role="list" aria-label="Branch previews">
+          @for (p of previews(); track p.branch) {
+            <mat-list-item role="listitem" lines="2">
+              <mat-icon matListItemIcon aria-hidden="true">{{ p.status === 'succeeded' ? 'check_circle' : p.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
+              <span matListItemTitle class="branch">{{ p.branch }}</span>
+              <span matListItemLine><code>{{ short(p.commit) }}</code> · {{ p.status }} · {{ p.updatedAt | date: 'short' }}</span>
+              <span matListItemMeta class="actions">
+                @if (p.status === 'succeeded' && p.url) {
+                  <a mat-button [href]="p.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>Open</a>
+                } @else {
+                  <a mat-button [routerLink]="['/dashboard/deployments', p.deploymentId]">Details</a>
+                }
+              </span>
+            </mat-list-item>
+          }
+        </mat-list>
+      } @else if (s?.enabled) {
+        <p class="hint">No previews yet. Push a branch: <code>git push origin my-branch</code></p>
+      }
+    }
+  </mat-card-content>
+</mat-card>

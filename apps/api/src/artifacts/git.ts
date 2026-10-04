@@ -1,5 +1,6 @@
 import { languageOf } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
+import { parseBranches } from "../previews/refs.ts";
 
 /** Repo name for a repo: readable slug plus a short id, within Artifacts' 63-character limit. */
 export function gitRepoNameFor(slug: string, repoId: string): string {
@@ -52,6 +53,22 @@ export async function mintGitToken(gitRepo: string, scope: "read" | "write", ttl
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const [token, info] = await Promise.all([git.createToken(scope, ttl), git.info()]);
 	return { id: token.id, token: token.plaintext, expiresAt: token.expiresAt, remote: info.remote };
+}
+
+/**
+ * #28: the repo's branches with their head commits, read from Git's ref advertisement with a
+ * short-lived read token that is revoked right after.
+ */
+export async function listBranches(gitRepo: string): Promise<{ defaultBranch: string; branches: { name: string; sha: string }[] }> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const [info, token] = await Promise.all([git.info(), git.createToken("read", 300)]);
+	try {
+		const response = await fetch(`${info.remote}/info/refs?service=git-upload-pack`, { headers: { Authorization: `Bearer ${token.plaintext}` } });
+		if (!response.ok) throw new Error(`info/refs: HTTP ${response.status}`);
+		return { defaultBranch: info.defaultBranch, branches: parseBranches(await response.text()) };
+	} finally {
+		await git.revokeToken(token.id).catch(() => false);
+	}
 }
 
 /** PRD R19: live token metadata for a repo (no plaintext). */

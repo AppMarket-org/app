@@ -14,7 +14,7 @@
           <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
             <mat-icon matListItemIcon aria-hidden="true">{{ d.status === 'succeeded' ? 'check_circle' : d.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
             <span matListItemTitle>{{ d.repoName }} → {{ d.workerName }}</span>
-            <span matListItemLine>{{ deployStatus[d.status] }} · {{ d.versionTag }} · {{ d.createdAt | date: 'medium' }}</span>
+            <span matListItemLine>{{ deployStatus[d.status] }} · {{ d.previewBranch ? 'preview of ' + d.previewBranch : d.versionTag }} · {{ d.createdAt | date: 'medium' }}</span>
           </a>
         }
       </mat-nav-list>
