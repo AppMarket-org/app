@@ -1,0 +1,35 @@
+<section class="activity" aria-labelledby="activity-heading">
+  <h2 id="activity-heading">Activity</h2>
+  @for (m of months(); track m.month) {
+    <h3>{{ monthName(m.month) }}</h3>
+    <mat-accordion multi displayMode="flat">
+      @for (g of m.groups; track g.kind) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon aria-hidden="true">{{ icons[g.kind] }}</mat-icon>
+              {{ describe(g.kind, g.total, g.repos.length) }}
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+          <mat-nav-list [attr.aria-label]="describe(g.kind, g.total, g.repos.length)">
+            @for (r of g.repos; track r.fullName) {
+              <a mat-list-item [routerLink]="'/' + r.fullName">
+                <span matListItemTitle>{{ r.fullName }}</span>
+                <span matListItemMeta class="count">{{ r.count }}</span>
+              </a>
+            }
+          </mat-nav-list>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+  } @empty {
+    @if (!loading()) {
+      <p class="empty">No public activity {{ year() ? 'in ' + year() : 'in the last year' }}.</p>
+    }
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading activity" />
+  } @else if (next()) {
+    <button mat-stroked-button type="button" class="more" (click)="more()">Show more activity</button>
+  }
+</section>

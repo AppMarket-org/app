@@ -56,6 +56,21 @@ export const AVATAR_LIMITS = { maxBytes: 2 * 1024 * 1024, types: ["image/png", "
 
 export const MAX_PINS = 6;
 
+export type ContributionKind = "commit" | "repo" | "version" | "release" | "checkpoint";
+
+/** #145: a month of activity, grouped by kind, each broken down by repo. */
+export interface ActivityMonth {
+	/** YYYY-MM */
+	month: string;
+	groups: { kind: ContributionKind; total: number; repos: { fullName: string; name: string; count: number }[] }[];
+}
+
+export interface ActivityPage {
+	months: ActivityMonth[];
+	/** Pass as `before` for older months; null at the end. */
+	next: string | null;
+}
+
 /** #144: a user's contributions per UTC day over a year (or the last 12 months). */
 export interface ContributionCalendar {
 	/** First and last day shown (YYYY-MM-DD, inclusive). */

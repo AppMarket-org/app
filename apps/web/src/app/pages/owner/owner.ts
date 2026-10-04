@@ -11,6 +11,7 @@ import { RepoCard } from '../../components/repo-card/repo-card';
 import { Avatar } from '../../components/avatar/avatar';
 import { PinsDialog, type PinsDialogData } from '../../components/pins-dialog/pins-dialog';
 import { ContributionGraph } from '../../components/contribution-graph/contribution-graph';
+import { ActivityFeed } from '../../components/activity-feed/activity-feed';
 import { OwnersApi } from '../../api/owners';
 import { Auth } from '../../auth/auth';
 import type { ContributionCalendar, Repo } from '@appmarket/shared';
@@ -21,7 +22,7 @@ import type { OwnerPageData } from './owner-resolver';
 /** #102, #139: appmarket.org/<handle>: a user's or organization's profile and public repos. */
 @Component({
   selector: 'app-owner',
-  imports: [Avatar, ContributionGraph, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
+  imports: [ActivityFeed, Avatar, ContributionGraph, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -50,4 +50,24 @@ describe("contributions (#143)", () => {
 		expect(await store.calendar("dev", "2026-01-01", "2026-12-31")).toEqual({ days: { "2026-10-02": 2 }, total: 2, years: [2026, 2025] });
 		expect((await store.calendar("dev", "2026-10-03", "2026-12-31")).total).toBe(0);
 	});
+
+	it("groups activity by month, kind and repo, pages by month, and leaves out unpublished repos (#145)", async () => {
+		const { db, store } = setup();
+		db.sqlite.prepare("UPDATE repos SET state = 'published' WHERE id = 'r1'").run();
+		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state, created_at) VALUES ('r2', 'dev', 'dev', 'secret', 'Secret', 'Summary text', 'ai', 'draft', '2026-10-01T00:00:00Z')`).run();
+		await store.addCommits("r1", [commit("a", "dev@example.test", "2026-10-02"), commit("b", "dev@example.test", "2026-10-03"), commit("c", "dev@example.test", "2026-08-01"), commit("e", "dev@example.test", "2026-06-01"), commit("f", "dev@example.test", "2026-05-01")]);
+		await store.addCommits("r2", [commit("d", "dev@example.test", "2026-10-02")]);
+		await store.syncEvents();
+		const first = await store.activity({ userId: "dev" }, "2026-01-01", "2027-01-01");
+		expect(first.months.map((m) => m.month)).toEqual(["2026-10", "2026-08", "2026-06"]);
+		expect(first.months[0]!.groups).toEqual([
+			{ kind: "commit", total: 2, repos: [{ fullName: "dev/app", name: "App", count: 2 }] },
+			{ kind: "repo", total: 1, repos: [{ fullName: "dev/app", name: "App", count: 1 }] },
+		]);
+		expect(first.next).toBe("2026-06-01");
+		const second = await store.activity({ userId: "dev" }, "2026-01-01", first.next!);
+		expect(second).toEqual({ months: [{ month: "2026-05", groups: [{ kind: "commit", total: 1, repos: [{ fullName: "dev/app", name: "App", count: 1 }] }] }], next: null });
+		expect((await store.activity({ ownerId: "dev" }, "2026-10-01", "2026-11-01")).months[0]!.groups[0]!.total).toBe(2);
+		expect(JSON.stringify(first)).not.toContain("secret");
+	});
 });

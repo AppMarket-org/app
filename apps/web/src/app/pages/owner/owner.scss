@@ -93,7 +93,9 @@
   }
 }
 
-.contributions {
+.contributions,
+.activity {
+  display: block;
   margin-bottom: 2rem;
 }
 
