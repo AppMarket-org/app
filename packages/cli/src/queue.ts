@@ -14,16 +14,18 @@ interface QueueItem {
 	attempts: number;
 	firstAt: string;
 	nextAt: string;
+	/** Replace whatever the server has for this commit (a rewritten commit's record). */
+	force?: boolean;
 }
 
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 const fileFor = (repo: string, commit: string) => join(QUEUE_DIR, `${repo.replace(/[^A-Za-z0-9_-]+/g, "__")}-${commit}.json`);
 
-export function enqueue(api: string, repo: string, record: CheckpointRecord): void {
+export function enqueue(api: string, repo: string, record: CheckpointRecord, opts: { force?: boolean } = {}): void {
 	ensureDirs();
 	const now = new Date().toISOString();
 	// Idempotent on (repo, commit): a newer record for the same commit replaces the queued one.
-	writeFileSync(fileFor(repo, record.commit), JSON.stringify({ api, repo, record, attempts: 0, firstAt: now, nextAt: now } satisfies QueueItem), { mode: 0o600 });
+	writeFileSync(fileFor(repo, record.commit), JSON.stringify({ api, repo, record, attempts: 0, firstAt: now, nextAt: now, ...(opts.force ? { force: true } : {}) } satisfies QueueItem), { mode: 0o600 });
 }
 
 export function queued(): QueueItem[] {
@@ -60,7 +62,7 @@ export async function flush(opts: { all?: boolean } = {}): Promise<SyncResult> {
 			continue;
 		}
 		try {
-			await call(item.api, `/api/repos/${item.repo}/checkpoints`, { token: creds.token, body: item.record, timeoutMs: 20_000 });
+			await call(item.api, `/api/repos/${item.repo}/checkpoints${item.force ? "?force=1" : ""}`, { token: creds.token, body: item.record, timeoutMs: 20_000 });
 			rmSync(file, { force: true });
 			result.sent++;
 		} catch (error) {

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { advanceMarker, bufferKey, readSinceMarker, type BufferEvent } from "../buffer.ts";
 import { transcriptEvents } from "../adapters/claude-code.ts";
 import { buildRecord, type CommitInfo } from "../build-record.ts";
@@ -11,7 +11,7 @@ import { enqueue } from "../queue.ts";
 import { createRedactor, envValues } from "../redact.ts";
 
 /** The commit being checkpointed: HEAD, its parents, branch, author and diff stat. */
-function commitInfo(root: string, sha: string): CommitInfo {
+export function commitInfo(root: string, sha: string): CommitInfo {
 	const [name = "", email = "", committedAt = new Date().toISOString()] = git(["log", "-1", "--format=%an%x00%ae%x00%cI", sha], { cwd: root }).split("\0");
 	const parents = gitOr(["rev-list", "--parents", "-n", "1", sha], sha, { cwd: root }).split(" ").slice(1).filter(Boolean);
 	// Root commits diff against nothing; merges against their first parent.
@@ -28,7 +28,7 @@ function commitInfo(root: string, sha: string): CommitInfo {
 }
 
 /** User and repo redaction settings: ~/.appmarket/config.json and .appmarket.json ({"redact": [regex, ...]}), .appmarketignore. */
-function redactionSettings(root: string): { extra: string[]; ignore: string[] } {
+export function redactionSettings(root: string): { extra: string[]; ignore: string[] } {
 	const read = (path: string) => {
 		try {
 			return JSON.parse(readFileSync(path, "utf8")) as { redact?: string[] };
@@ -46,8 +46,15 @@ function redactionSettings(root: string): { extra: string[]; ignore: string[] } 
 	return { extra: [...(read(join(HOME, "config.json")).redact ?? []), ...(read(join(root, ".appmarket.json")).redact ?? [])], ignore };
 }
 
+/** A rebase in progress, or HEAD just made by `git commit --amend`. */
+function rewriting(root: string): boolean {
+	const gitDir = resolve(root, git(["rev-parse", "--git-dir"], { cwd: root }));
+	if (existsSync(join(gitDir, "rebase-merge")) || existsSync(join(gitDir, "rebase-apply"))) return true;
+	return gitOr(["reflog", "-1", "--format=%gs", "HEAD"], "", { cwd: root }).startsWith("commit (amend)");
+}
+
 /** Claude Code: adds model, effort, usage and the assistant's last text from each session transcript in the window. */
-function withTranscripts(events: BufferEvent[], committedAt: string): BufferEvent[] {
+export function withTranscripts(events: BufferEvent[], committedAt: string): BufferEvent[] {
 	const until = new Date(Date.parse(committedAt) + 2000).toISOString();
 	// Per transcript: where to start reading (an optimisation) and the earliest event of this window
 	// (the bound: a session that ended before this window contributes nothing).
@@ -79,6 +86,8 @@ export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: bo
 		}
 		const api = gitOr(["config", "--get", "appmarket.api"], apiBase(), { cwd: root });
 		const sha = git(["rev-parse", flags.commit ?? "HEAD"], { cwd: root });
+		// Rebases and amends are handled by post-rewrite (rewritten.ts), which keeps the original record.
+		if (flags.hook && !flags.commit && rewriting(root)) return 0;
 		// One checkpoint per commit: the git hook and the Claude Code fast path both land here.
 		if (!flags.force && gitOr(["notes", "--ref=appmarket", "list", sha], "", { cwd: root })) return 0;
 		const key = bufferKey(root);

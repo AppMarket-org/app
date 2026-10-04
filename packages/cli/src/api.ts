@@ -1,11 +1,13 @@
 import { VERSION } from "./config.ts";
 
 export class ApiError extends Error {
-	constructor(
-		readonly status: number,
-		readonly body: unknown,
-	) {
+	readonly status: number;
+	readonly body: unknown;
+
+	constructor(status: number, body: unknown) {
 		super(`HTTP ${status}`);
+		this.status = status;
+		this.body = body;
 	}
 }
 
