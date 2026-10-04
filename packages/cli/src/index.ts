@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { apiBase, VERSION } from "./config.ts";
 import { log } from "./log.ts";
-import { flush, queued } from "./queue.ts";
+import { flush } from "./queue.ts";
 import { login } from "./commands/login.ts";
 import { logout, whoami } from "./commands/account.ts";
 import { init, setEnabled } from "./commands/init.ts";
@@ -11,6 +11,7 @@ import { adapter } from "./commands/adapter.ts";
 import { hook } from "./commands/hook.ts";
 import { mcp } from "./commands/mcp.ts";
 import { rewritten } from "./commands/rewritten.ts";
+import { doctor, status, updateNotice } from "./commands/doctor.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
 
@@ -26,7 +27,8 @@ Usage: appmarket <command> [options]
   mcp                                                            MCP server (stdio) with record_context, for agents without hooks
   adapter install|uninstall claude-code|codex                    Record agent sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
-  status                                                         Queue and sign-in state
+  status                                                         Queue, last upload, checkpoints waiting for a push
+  doctor                                                         Check hooks, sign-in, connection and adapters
 
 Options: --api <url> (default https://appmarket.org, or APPMARKET_API)`;
 
@@ -70,7 +72,10 @@ async function main(argv: string[]): Promise<number> {
 	if (values.version) return (console.log(VERSION), 0);
 	if (!command || values.help) return (console.log(HELP), 0);
 	// C8: queued uploads go out at the start of every interactive command.
-	if (!["checkpoint", "record", "sync", "hook", "mcp", "rewritten"].includes(command)) await flush().catch(() => undefined);
+	if (!["checkpoint", "record", "sync", "hook", "mcp", "rewritten"].includes(command)) {
+		await flush().catch(() => undefined);
+		await updateNotice().catch(() => undefined);
+	}
 	switch (command) {
 		case "login":
 			return login(api, { noBrowser: !!values["no-browser"], deviceName: values["device-name"] as string | undefined, noKeychain: !!values["no-keychain"] });
@@ -101,11 +106,10 @@ async function main(argv: string[]): Promise<number> {
 			if (!values.quiet) console.log(`Uploaded ${r.sent}, waiting ${r.pending}, dropped ${r.failed}.`);
 			return 0;
 		}
-		case "status": {
-			const items = queued();
-			console.log(`Server: ${api}\nQueued checkpoints: ${items.length}${items.length ? ` (oldest ${items.map((i) => i.firstAt).sort()[0]})` : ""}`);
-			return whoami(api);
-		}
+		case "status":
+			return status(api);
+		case "doctor":
+			return doctor(api);
 		default:
 			console.error(`Unknown command: ${command}\n\n${HELP}`);
 			return 1;
