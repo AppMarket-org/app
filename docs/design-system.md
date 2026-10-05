@@ -44,6 +44,8 @@ At narrow widths, navigation switches to labelled search/dashboard icon buttons.
 
 Repository workspaces group tools into Code & agents, Deployment, Marketplace, and Access & history, with in-page navigation. Use a two-column grid that aligns cards at the top and stacks on phones. Git credentials use the dark olive surface; destructive repository controls come last. Keep card descriptions at body weight, and use dynamic Material field subscripts so wrapped hints reserve their own space. Workspace-specific Material presentation lives in `apps/web/src/repo-workspace.scss`.
 
+Interior pages replace the header brand with the current page or repository breadcrumb. Dashboard and workspace forms show their page heading once in the toolbar. Dashboard repositories use compact rows with the Git path, status, and management action; hide summaries that repeat the repository name. Running apps and cowbelled apps share a responsive two-column area beneath the repositories.
+
 ## Verification
 
 Run `pnpm check:ui`, `pnpm --filter @appmarket/web typecheck`, `pnpm --filter @appmarket/web build`, and `pnpm --filter @appmarket/web exec ng test --watch=false`. Check the homepage and search at desktop, tablet, and phone widths, including horizontal overflow, filter submission, category links, in-page anchors, and protected-route sign-in destinations. Signed-in or external OAuth/deployment behavior requires a configured backend and account.

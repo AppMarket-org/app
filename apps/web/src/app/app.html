@@ -1,24 +1,42 @@
 <a mat-button class="skip-link" href="#main-content">Skip to content</a>
 <mat-toolbar>
-  <a mat-button class="brand" routerLink="/" aria-label="appmarket.org home"
-    ><img class="logo" src="/brand/logo.png" alt="" /><span class="wordmark"
-      >appmarket<span class="domain">.org</span></span
-    ></a
-  >
-  <nav class="heading" aria-label="Current page">
-    @for (part of seo.heading(); track $index; let last = $last) {
-      @if (part.link) {
-        <a mat-button [routerLink]="part.link" [class.current]="last">{{ part.label }}</a>
-      } @else {
-        <span [class.current]="last" [attr.aria-current]="last ? 'page' : null">{{
-          part.label
-        }}</span>
+  @if (seo.heading().length === 0) {
+    <a mat-button class="brand" routerLink="/" aria-label="appmarket.org home"
+      ><img class="logo" src="/brand/logo.png" alt="" /><span class="wordmark"
+        >appmarket<span class="domain">.org</span></span
+      ></a
+    >
+  } @else {
+    <nav class="heading" aria-label="Current page">
+      @for (part of seo.heading(); track $index; let last = $last) {
+        @if (part.link) {
+          <a mat-button [routerLink]="part.link" [class.current]="last">{{ part.label }}</a>
+        } @else {
+          @if (
+            seo.heading().length === 1 &&
+            [
+              'Dashboard',
+              'Settings',
+              'New repo',
+              'New organization',
+              'Cloudflare account',
+              'Moderation',
+              'Page not found',
+            ].includes(part.label)
+          ) {
+            <h1 class="current">{{ part.label }}</h1>
+          } @else {
+            <span [class.current]="last" [attr.aria-current]="last ? 'page' : null">{{
+              part.label
+            }}</span>
+          }
+        }
+        @if (!last) {
+          <span class="separator" aria-hidden="true">/</span>
+        }
       }
-      @if (!last) {
-        <span class="separator" aria-hidden="true">/</span>
-      }
-    }
-  </nav>
+    </nav>
+  }
   <span class="spacer"></span>
   <!-- Narrow windows (and side panels) get icon buttons so the header never overflows. -->
   <a mat-button class="wide product-link" href="/#workflow">How it works</a>
@@ -28,15 +46,17 @@
   >
 
   @if (auth.user(); as user) {
-    <a mat-button class="wide" routerLink="/dashboard">Dashboard</a>
-    <a
-      mat-icon-button
-      class="narrow"
-      routerLink="/dashboard"
-      aria-label="Dashboard"
-      matTooltip="Dashboard"
-      ><mat-icon>space_dashboard</mat-icon></a
-    >
+    @if (seo.heading().length !== 1 || seo.heading()[0].label !== 'Dashboard') {
+      <a mat-button class="wide" routerLink="/dashboard">Dashboard</a>
+      <a
+        mat-icon-button
+        class="narrow"
+        routerLink="/dashboard"
+        aria-label="Dashboard"
+        matTooltip="Dashboard"
+        ><mat-icon>space_dashboard</mat-icon></a
+      >
+    }
     <button
       mat-icon-button
       class="account-trigger"
