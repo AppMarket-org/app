@@ -5,7 +5,8 @@ const angularApp = new AngularAppEngine({
 	allowedHosts: ['localhost', 'appmarket.org', 'www.appmarket.org', 'staging.appmarket.org'],
 });
 
-const API_PATHS = /^\/(api\/|sitemap\.xml$|sitemaps\/)/;
+// Git over HTTPS (appmarket.org/<owner>/<repo>.git) is served by the API Worker too.
+const API_PATHS = /^\/(api\/|sitemap\.xml$|sitemaps\/|[^/]+\/[^/]+\.git\/(info\/refs|git-upload-pack|git-receive-pack)$)/;
 
 /**
  * Public catalog pages cached at the edge for anonymous visitors (#45): home, categories, search,

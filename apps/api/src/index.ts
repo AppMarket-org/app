@@ -23,6 +23,7 @@ import { emailImpacts } from "./email/impacts.ts";
 import { emailPreferenceRoutes, unsubscribeRoutes } from "./email/routes.ts";
 import { a2aRoutes, planeRoutes } from "./plane/routes.ts";
 import { codeGraphRoutes } from "./codegraph/routes.ts";
+import { gitProxy } from "./git/proxy.ts";
 import { memoryRoutes } from "./memory/routes.ts";
 import { pullRoutes } from "./pulls/routes.ts";
 import { purgeRemovedRepoMemory } from "./memory/store.ts";
@@ -128,6 +129,10 @@ api.onError(onError);
 const app = new Hono();
 app.onError(onError);
 app.route("/api", api);
+// Git over HTTPS at appmarket.org/<owner>/<repo>.git, proxied to Artifacts (git/proxy.ts).
+app.get("/:owner/:repo/info/refs", gitProxy);
+app.post("/:owner/:repo/git-upload-pack", gitProxy);
+app.post("/:owner/:repo/git-receive-pack", gitProxy);
 app.get("/sitemap.xml", sitemap);
 app.get("/sitemaps/:name", sitemapPage);
 

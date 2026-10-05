@@ -16,7 +16,6 @@ import {
 	readFiles,
 	readReadme,
 	readRootEntries,
-	gitRemote,
 	gitRepoNameFor,
 	resolveTag,
 	revokeAllGitTokens,
@@ -36,6 +35,7 @@ import { detectAtHead, runtimeAt, saveRuntime } from "./detect.ts";
 import { Screenshots } from "./screenshots.ts";
 import { TokenAudit } from "./token-audit.ts";
 import { tokenPolicy } from "./token-policy.ts";
+import { publicRemote } from "../git/remote.ts";
 import { logEvent } from "../observability/log.ts";
 import { OwnerStore } from "../owners/store.ts";
 
@@ -290,7 +290,7 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		await tokenAudit().recordMint({ repoId: repo.id, userId: user.id, tokenId, scope: request.data.scope, expiresAt: minted.expiresAt });
 		logEvent("token.minted", { repo: repo.fullName, scope: request.data.scope, ttl, user: user.id, auditId: tokenId });
 		c.header("Cache-Control", "no-store");
-		return c.json({ scope: request.data.scope, ...minted } satisfies GitToken, 201);
+		return c.json({ scope: request.data.scope, ...minted, remote: publicRemote(repo.fullName) } satisfies GitToken, 201);
 	})
 	// PRD R19: owners and admins see every token minted for the repo and can revoke them.
 	.get("/:owner/:slug/tokens", requireRole(), async (c) => {
@@ -331,7 +331,7 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		const repo = await repos().findByPath(c.req.param("owner"), c.req.param("slug"));
 		if (!repo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
 		if (!repo.gitRepo) return c.json({ error: "no_repo" }, 409);
-		return c.json({ name: repo.gitRepo, remote: await gitRemote(repo.gitRepo) });
+		return c.json({ name: repo.gitRepo, remote: publicRemote(repo.fullName) });
 	})
 	// R24: changelog (published versions) and README of the published commit.
 	.get("/:owner/:slug/versions", async (c) => {

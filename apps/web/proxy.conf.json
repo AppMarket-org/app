@@ -1,5 +1,6 @@
 {
   "/api": { "target": "http://localhost:5173", "secure": false, "ws": true },
   "/sitemap.xml": { "target": "http://localhost:5173", "secure": false },
-  "/sitemaps": { "target": "http://localhost:5173", "secure": false }
+  "/sitemaps": { "target": "http://localhost:5173", "secure": false },
+  "^/[^/]+/[^/]+\\.git/(info/refs|git-upload-pack|git-receive-pack)": { "target": "http://localhost:5173", "secure": false }
 }

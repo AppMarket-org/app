@@ -19,7 +19,11 @@ interface MineRepo {
 	gitRepo: string | null;
 }
 
-/** Finds which appmarket repo this checkout is: an explicit owner/slug, or a remote that points at its Artifacts repo. */
+/** A remote of this repo: appmarket.org/<owner>/<repo>.git, or (older checkouts) its Artifacts remote. */
+export const pointsAt = (url: string, repo: { fullName: string; gitRepo: string | null }) =>
+	url.replace(/\/+$/, "").endsWith(`/${repo.fullName}.git`) || (!!repo.gitRepo && url.includes(`/${repo.gitRepo}.git`));
+
+/** Finds which appmarket repo this checkout is: an explicit owner/slug, or a remote that points at it. */
 export async function resolveRepo(api: string, token: string, root: string, explicit?: string): Promise<{ repo: string; remote: string | null }> {
 	const remotes = gitOr(["remote", "-v"], "", { cwd: root })
 		.split("\n")
@@ -30,11 +34,11 @@ export async function resolveRepo(api: string, token: string, root: string, expl
 	if (explicit) {
 		const match = items.find((r) => r.fullName === explicit);
 		if (!match) throw new Error(`${explicit} is not one of your repos (or your organizations').`);
-		const remote = remotes.find((r) => match.gitRepo && r.url.includes(`/${match.gitRepo}.git`));
+		const remote = remotes.find((r) => pointsAt(r.url, match));
 		return { repo: match.fullName, remote: remote?.name ?? null };
 	}
 	for (const r of remotes) {
-		const match = items.find((m) => m.gitRepo && r.url.includes(`/${m.gitRepo}.git`));
+		const match = items.find((m) => pointsAt(r.url, m));
 		if (match) return { repo: match.fullName, remote: r.name };
 	}
 	throw new Error("No remote of this checkout points at one of your appmarket.org repos. Run `appmarket init <owner>/<repo>`.");
