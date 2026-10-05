@@ -1,0 +1,43 @@
+@if (graph(); as g) {
+  @if (g.ancestors.length || g.descendants || g.dependencies.length) {
+    <section aria-labelledby="graph-heading">
+      <h2 id="graph-heading">Lineage and dependencies</h2>
+      @if (g.ancestors.length) {
+        <p>
+          Built from
+          @for (a of g.ancestors; track a.fullName; let last = $last) {
+            <a mat-button [routerLink]="'/' + a.fullName">{{ a.fullName }}</a>@if (!last) { ← }
+          }
+        </p>
+      }
+      @if (g.descendants) {
+        <p>
+          {{ g.descendants }} app{{ g.descendants === 1 ? '' : 's' }} built from this one
+          @if (g.children.length) {
+            , including
+            @for (c of g.children.slice(0, 5); track c.fullName) {
+              <a mat-button [routerLink]="'/' + c.fullName">{{ c.fullName }}</a>
+            }
+          }
+        </p>
+      }
+      @if (runtimeDeps().length) {
+        <mat-chip-set aria-label="Dependencies">
+          @for (d of runtimeDeps().slice(0, 30); track d.name) {
+            <mat-chip>{{ d.name }}{{ d.range ? ' ' + d.range : '' }}</mat-chip>
+          }
+        </mat-chip-set>
+      }
+      @if (devDeps().length) {
+        <mat-expansion-panel class="dev">
+          <mat-expansion-panel-header><mat-panel-title>{{ devDeps().length }} development dependencies</mat-panel-title></mat-expansion-panel-header>
+          <mat-chip-set aria-label="Development dependencies">
+            @for (d of devDeps(); track d.name) {
+              <mat-chip>{{ d.name }}{{ d.range ? ' ' + d.range : '' }}</mat-chip>
+            }
+          </mat-chip-set>
+        </mat-expansion-panel>
+      }
+    </section>
+  }
+}

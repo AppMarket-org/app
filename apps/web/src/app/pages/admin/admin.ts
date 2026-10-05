@@ -13,6 +13,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { FormsModule } from '@angular/forms';
 import { ChecksCard } from '../manage-repo/checks-card/checks-card';
 import { REPORT_REASONS, type Repo, type RepoReport, type Sale, type TransitionRequest } from '@appmarket/shared';
 import { HttpClient } from '@angular/common/http';
@@ -30,6 +33,9 @@ import { Seo } from '../../seo/seo';
   selector: 'app-admin',
   imports: [
     ChecksCard,
+    MatInputModule,
+    MatFormFieldModule,
+    FormsModule,
     DatePipe,
     RouterLink,
     MatButtonModule,
@@ -63,6 +69,11 @@ export class Admin {
   protected readonly reportStatus = signal<'open' | 'resolved'>('open');
   protected readonly readmes = signal<Record<string, string | null>>({});
   protected readonly busy = signal(false);
+  /** #67 */
+  protected readonly graphKind = signal<'packages' | 'bindings'>('packages');
+  protected readonly graphQuery = signal('');
+  protected readonly graphVersion = signal('');
+  protected readonly graphResults = signal<{ repo: string; state: string; kind: string; detail: string | null; forkedFrom: string | null }[] | null>(null);
   /** #214: null until loaded. */
   protected readonly sales = signal<Sale[] | null>(null);
   protected readonly money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
@@ -126,6 +137,11 @@ export class Admin {
         await firstValueFrom(this.api.resolveReport(report.id, 'taken_down'));
       });
     }
+  }
+
+  protected async searchGraph(): Promise<void> {
+    const params: Record<string, string> = this.graphKind() === 'packages' ? { name: this.graphQuery().trim(), ...(this.graphVersion().trim() ? { version: this.graphVersion().trim() } : {}) } : { type: this.graphQuery().trim() };
+    this.graphResults.set((await firstValueFrom(this.http.get<{ items: never[] }>(`/api/admin/graph/${this.graphKind()}`, { params })).catch(() => ({ items: [] }))).items);
   }
 
   protected async loadSales(): Promise<void> {

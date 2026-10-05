@@ -1,0 +1,18 @@
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+h2 {
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+p {
+  margin: 0;
+}
+
+.dev {
+  margin-top: 0.5rem;
+}

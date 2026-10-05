@@ -60,6 +60,7 @@
 
       <aside>
         <app-deploy-action [repo]="d.repo" [hasReleases]="d.releases.length > 0" />
+        <app-repo-graph [path]="d.repo.fullName" />
         @if (d.repo.demoUrl) {
           <app-install-app [url]="d.repo.demoUrl" [name]="d.repo.name" [pwa]="d.repo.pwa" />
         }
