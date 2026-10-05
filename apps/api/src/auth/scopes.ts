@@ -4,10 +4,11 @@
 /** Scopes each device client may request; also its default when it asks for none. */
 export const DEVICE_CLIENT_SCOPES: Readonly<Record<string, readonly string[]>> = {
 	// #29: sessions:write lets `appmarket session` start agent sessions in forks. CI tokens cannot.
-	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read", "sessions:write"],
+	// #194: memory:read and memory:write let agents recall and keep repo notes.
+	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read", "sessions:write", "memory:read", "memory:write"],
 	// #134: CI tokens created in Settings, for pipelines that cannot approve a device code.
 	// #34: CI pipelines upload release builds (releases:write).
-	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read", "releases:write"],
+	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read", "releases:write", "memory:read"],
 };
 
 /** The granted scopes: the request (or the client's default), refused if it asks for more. */
@@ -35,6 +36,10 @@ const RULES: readonly Rule[] = [
 	{ scope: "sessions:write", methods: ["GET", "POST"], path: new RegExp(`^/api/repos/${REPO}/sessions$`) },
 	{ scope: "sessions:write", methods: ["POST"], path: /^\/api\/sessions\/[0-9a-f-]{36}\/(token|end)$/ },
 	{ scope: "sessions:write", methods: ["DELETE"], path: /^\/api\/sessions\/[0-9a-f-]{36}$/ },
+	// #194: repo memory. CI tokens read only.
+	{ scope: "memory:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/memory(/[0-9a-f-]{36}(/history)?)?$`) },
+	{ scope: "memory:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/memory$`) },
+	{ scope: "memory:write", methods: ["PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/memory/[0-9a-f-]{36}$`) },
 	// #240: the code graph, for agents (definitions, importers, impact).
 	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/code-graph(/(symbols|references|impact))?$`) },
 	// #239: the board over A2A (Agent Card readable like the repo; JSON-RPC like the plane routes).
