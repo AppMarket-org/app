@@ -244,23 +244,40 @@ export const stripeWebhookRoutes = new Hono<Ctx>().post("/webhook", async (c) =>
 	return c.json({ received: true });
 });
 
-/** #212: creates appmarket's two Stripe webhook endpoints and stores their signing secrets encrypted. Mounted under /api/admin. */
+/**
+ * #212: creates appmarket's two Stripe webhook endpoints (platform and Connect) at
+ * PUBLIC_ORIGIN/api/stripe/webhook, replacing ones with that URL, and stores their signing
+ * secrets encrypted. Needs a public https origin.
+ */
+async function createWebhookEndpoints(sk: string): Promise<{ url: string; endpoints: string[] }> {
+	const url = `${env.PUBLIC_ORIGIN}/api/stripe/webhook`;
+	const existing = await stripe<{ data: { id: string; url: string }[] }>(sk, "GET", "/webhook_endpoints", { limit: 100 });
+	for (const e of existing.data.filter((e) => e.url === url)) await stripe(sk, "DELETE", `/webhook_endpoints/${e.id}`);
+	const made: string[] = [];
+	for (const [name, events, connect] of [[WEBHOOK_SECRETS[0], PLATFORM_EVENTS, false], [WEBHOOK_SECRETS[1], CONNECT_EVENTS, true]] as const) {
+		const endpoint = await stripe<{ id: string; secret: string }>(sk, "POST", "/webhook_endpoints", { url, enabled_events: [...events], connect, description: `appmarket.org ${connect ? "Connect" : "platform"} events` });
+		await payments.setSecret(name, await encryptToken(env.CF_TOKEN_ENCRYPTION_KEY, endpoint.secret, name));
+		made.push(endpoint.id);
+	}
+	logEvent("payments.webhooks_configured", { endpoints: made.length });
+	return { url, endpoints: made };
+}
+
+/** Cron: once a key is configured on a public origin, register the endpoints if none are stored. */
+export async function ensureWebhookEndpoints(): Promise<void> {
+	const sk = env.STRIPE_SECRET_KEY;
+	if (!stripeConfigured(sk) || !env.PUBLIC_ORIGIN.startsWith("https://")) return;
+	if ((await Promise.all(WEBHOOK_SECRETS.map((n) => payments.secret(n)))).every(Boolean)) return;
+	await createWebhookEndpoints(sk);
+}
+
+/** #212: re-creates the webhook endpoints (e.g. after rotating them in Stripe). Mounted under /api/admin. */
 export const paymentsAdminRoutes = new Hono<Ctx>().use(requireRole("admin")).post("/payments/webhook-endpoints", async (c) => {
 	const sk = key(c);
 	if (sk instanceof Response) return sk;
-	const url = `${env.PUBLIC_ORIGIN}/api/stripe/webhook`;
-	if (!url.startsWith("https://")) return c.json({ error: "invalid", message: "Stripe needs a public https URL; set up webhooks on staging or production." }, 400);
+	if (!env.PUBLIC_ORIGIN.startsWith("https://")) return c.json({ error: "invalid", message: "Stripe needs a public https URL; set up webhooks on staging or production." }, 400);
 	try {
-		const existing = await stripe<{ data: { id: string; url: string }[] }>(sk, "GET", "/webhook_endpoints", { limit: 100 });
-		for (const e of existing.data.filter((e) => e.url === url)) await stripe(sk, "DELETE", `/webhook_endpoints/${e.id}`);
-		const made: string[] = [];
-		for (const [name, events, connect] of [[WEBHOOK_SECRETS[0], PLATFORM_EVENTS, false], [WEBHOOK_SECRETS[1], CONNECT_EVENTS, true]] as const) {
-			const endpoint = await stripe<{ id: string; secret: string }>(sk, "POST", "/webhook_endpoints", { url, enabled_events: [...events], connect, description: `appmarket.org ${connect ? "Connect" : "platform"} events` });
-			await payments.setSecret(name, await encryptToken(env.CF_TOKEN_ENCRYPTION_KEY, endpoint.secret, name));
-			made.push(endpoint.id);
-		}
-		logEvent("payments.webhooks_configured", { endpoints: made.length });
-		return c.json({ url, endpoints: made });
+		return c.json(await createWebhookEndpoints(sk));
 	} catch (error) {
 		return stripeFailure(c, error);
 	}

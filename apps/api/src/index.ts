@@ -17,7 +17,7 @@ import { deploymentRoutes, repoDeployRoutes } from "./deploy/routes.ts";
 import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
 import { ejectDownloadRoutes, ejectRoutes } from "./deploy/eject.ts";
 import { ogRoutes } from "./og/routes.ts";
-import { checkoutRoutes, myPurchaseRoutes, paymentsAdminRoutes, payoutRoutes, stripeWebhookRoutes } from "./payments/routes.ts";
+import { checkoutRoutes, ensureWebhookEndpoints, myPurchaseRoutes, paymentsAdminRoutes, payoutRoutes, stripeWebhookRoutes } from "./payments/routes.ts";
 import { scanWebhooks, webhookRoutes } from "./webhooks/routes.ts";
 import { agentSessionRoutes, repoSessionRoutes } from "./sessions/routes.ts";
 import { previewRoutes } from "./previews/routes.ts";
@@ -114,6 +114,8 @@ export default {
 		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		// #28: branch previews into developers' own Cloudflare accounts.
 		ctx.waitUntil(scanPreviews().catch((error: unknown) => logEvent("previews.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
+		// #212: register Stripe webhook endpoints once a key is configured.
+		ctx.waitUntil(ensureWebhookEndpoints().catch((error: unknown) => logEvent("payments.webhook_setup_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		// #34: push webhooks to developers' CI.
 		ctx.waitUntil(scanWebhooks().catch((error: unknown) => logEvent("webhooks.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(scanContributions().catch((error: unknown) => logEvent("contributions.scan_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
