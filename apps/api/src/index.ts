@@ -19,6 +19,8 @@ import { ejectDownloadRoutes, ejectRoutes } from "./deploy/eject.ts";
 import { ogRoutes } from "./og/routes.ts";
 import { conformanceRoutes } from "./conformance/routes.ts";
 import { codeRoutes } from "./repos/code.ts";
+import { emailImpacts } from "./email/impacts.ts";
+import { emailPreferenceRoutes, unsubscribeRoutes } from "./email/routes.ts";
 import { planeRoutes } from "./plane/routes.ts";
 import { adminImpactRoutes, myImpactRoutes } from "./impacts/routes.ts";
 import { syncOpenImpacts } from "./impacts/store.ts";
@@ -83,6 +85,8 @@ api.route("/owners", payoutRoutes);
 api.route("/stripe", stripeWebhookRoutes);
 api.route("/me", myPurchaseRoutes);
 api.route("/me", myImpactRoutes);
+api.route("/me", emailPreferenceRoutes);
+api.route("/email", unsubscribeRoutes);
 api.route("/sessions", agentSessionRoutes);
 api.route("/cowbells", cowbellRoutes);
 api.route("/owners", ownerRoutes);
@@ -126,7 +130,12 @@ export default {
 		// #131: checkpoints of removed repos are deleted (well within the 24 h promise).
 		ctx.waitUntil(new CheckpointStore(env.DB).purgeRemovedRepos(deleteTranscript).then((n) => n && logEvent("checkpoints.purged", { count: n })).catch(() => undefined));
 		// #69: keep open impacts current (new matches, resolved repos).
-		ctx.waitUntil(syncOpenImpacts().catch((error: unknown) => logEvent("impacts.sync_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
+		// #230: then email owners about repos newly affected.
+		ctx.waitUntil(
+			syncOpenImpacts()
+				.then(() => emailImpacts())
+				.catch((error: unknown) => logEvent("impacts.sync_error", { error: error instanceof Error ? error.message : String(error) }, "error")),
+		);
 		// #67: graph edges of published versions (new publishes and older repos).
 		ctx.waitUntil(backfillGraph().catch((error: unknown) => logEvent("graph.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));

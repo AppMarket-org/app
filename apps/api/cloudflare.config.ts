@@ -4,7 +4,7 @@ import { CLOUDFLARE_ACCOUNT_ID, ENVIRONMENTS, RATE_LIMITS, resolveEnvironment } 
 
 export default defineConfig(({ mode }) => {
 	const environment = resolveEnvironment(mode);
-	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket, releasesBucket, buildsBucket, access } = ENVIRONMENTS[environment];
+	const { workerName, artifactsNamespace, database, publicOrigin, rateLimitBase, mediaBucket, releasesBucket, buildsBucket, access, emailFrom, emailRemote } = ENVIRONMENTS[environment];
 	const rateLimit = ({ offset, limit, period }: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) =>
 		bindings.rateLimit({ namespace: String(rateLimitBase + offset), simple: { limit, period } });
 
@@ -53,6 +53,9 @@ export default defineConfig(({ mode }) => {
 			env: {
 				APP_ENV: bindings.text(environment),
 				PUBLIC_ORIGIN: bindings.text(publicOrigin),
+				// #230: notification email through Cloudflare Email Service; sending is off while EMAIL_FROM is empty.
+				EMAIL: bindings.sendEmail({ ...(emailFrom ? { allowedSenderAddresses: [emailFrom] } : {}), dev: { remote: emailRemote } }),
+				EMAIL_FROM: bindings.text(emailFrom),
 				// R22: Access JWT check on /api/admin (src/auth/access.ts).
 				ACCESS_TEAM_DOMAIN: bindings.text(access.teamDomain),
 				ACCESS_AUD: bindings.text(access.aud),

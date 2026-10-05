@@ -1,0 +1,17 @@
+@if (prefs(); as p) {
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Email</mat-card-title>
+      <mat-card-subtitle>Sent to the address of your sign-in account.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content class="email">
+      <mat-slide-toggle [checked]="p.impacts" (change)="setImpacts($event.checked)">
+        Security notices for my repos
+        <span class="hint">When a vulnerable package or a rule change affects a repo you own, with what to do about it.</span>
+      </mat-slide-toggle>
+      @if (!p.sending) {
+        <p class="hint">appmarket.org does not send email yet; your choice applies once it does.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+}

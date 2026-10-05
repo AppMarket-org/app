@@ -1,0 +1,28 @@
+<mat-card appearance="outlined" class="box">
+  <mat-card-header>
+    <mat-card-title>Security notice emails</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @switch (state()) {
+      @case ('done') {
+        <p><mat-icon aria-hidden="true">check_circle</mat-icon>You will not get these emails anymore. Notices still appear on your dashboard.</p>
+      }
+      @case ('invalid') {
+        <p>This link is not valid. You can change your email settings in Settings.</p>
+      }
+      @default {
+        <p>Stop emails about security notices for your repos? Notices still appear on your dashboard, and you can turn the emails back on in Settings.</p>
+      }
+    }
+  </mat-card-content>
+  @if (state() === 'invalid' || state() === 'done') {
+    <mat-card-actions align="end">
+      <a mat-button routerLink="/settings">Email settings</a>
+    </mat-card-actions>
+  }
+  @if (state() === 'ready' || state() === 'working') {
+    <mat-card-actions align="end">
+      <button mat-flat-button type="button" [disabled]="state() === 'working'" (click)="unsubscribe()">Unsubscribe</button>
+    </mat-card-actions>
+  }
+</mat-card>
