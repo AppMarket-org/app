@@ -23,6 +23,12 @@ describe("deviceMayCall", () => {
 		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/acme/todo/checkpoints")).toBe(false);
 	});
 
+	it("lets device tokens read the code graph (#240)", () => {
+		for (const sub of ["", "/symbols", "/references", "/impact"]) expect(deviceMayCall(["repos:read"], "GET", `/api/repos/dev/app/code-graph${sub}`)).toBe(true);
+		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/dev/app/code-graph")).toBe(false);
+		expect(deviceMayCall(["checkpoints:write"], "GET", "/api/repos/dev/app/code-graph/symbols")).toBe(false);
+	});
+
 	it("lets device tokens read the Agent Card and call the board over A2A (#239)", () => {
 		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/.well-known/agent-card.json")).toBe(true);
 		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/a2a")).toBe(true);

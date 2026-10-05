@@ -70,3 +70,29 @@ export function claimProblem(task: PlaneTask | undefined, agent: PlaneAgent | un
 
 export const cleanTags = (tags: unknown): string[] =>
 	Array.isArray(tags) ? [...new Set(tags.filter((t): t is string => typeof t === "string").map((t) => t.trim().toLowerCase()).filter((t) => /^[a-z0-9][a-z0-9.+#-]{0,39}$/.test(t)))].slice(0, 20) : [];
+
+export interface LeaseHint {
+	/** The file being leased. */
+	path: string;
+	/** The related file another agent holds (through its lease). */
+	related: string;
+	relation: "imports" | "imported by";
+	agentId: string;
+	lease: string;
+}
+
+/**
+ * #240: soft conflicts. A file being leased imports, or is imported by, a file inside another
+ * agent's lease: the change may break their work (or theirs this one). Never blocks a lease.
+ */
+export function leaseHints(neighbours: Map<string, { other: string; relation: "imports" | "imported by" }[]>, leases: PlaneLease[], agentId: string, now: number): LeaseHint[] {
+	const hints: LeaseHint[] = [];
+	const others = leases.filter((l) => l.agentId !== agentId && l.expiresAt > now);
+	for (const [path, list] of neighbours) {
+		for (const n of list) {
+			const held = others.find((l) => pathsOverlap(l.path, n.other));
+			if (held && !hints.some((h) => h.path === path && h.related === n.other)) hints.push({ path, related: n.other, relation: n.relation, agentId: held.agentId, lease: held.path });
+		}
+	}
+	return hints.slice(0, 50);
+}
