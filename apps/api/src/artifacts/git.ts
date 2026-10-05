@@ -103,7 +103,7 @@ export async function sourceFiles(gitRepo: string, commit: string, limits: { max
 			if (!e.name || e.name === "." || e.name === ".." || /[/\\\x00-\x1f]/.test(e.name)) continue;
 			if (e.type === "tree") {
 				if (e.name !== ".git" && (e.name !== "node_modules" || limits.includeDependencies)) queue.push({ prefix: `${prefix}${e.name}/`, hash: e.hash });
-			} else if (e.type === "blob") {
+			} else if (e.type === "blob" || e.type === "exec" || e.type === "symlink") {
 				files.push({ path: prefix + e.name, hash: e.hash, mode: e.mode });
 				if (files.length > limits.maxFiles) return { files, complete: false };
 			}
