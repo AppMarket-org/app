@@ -1,0 +1,44 @@
+<div class="diff" role="table" [attr.aria-label]="'Changes in ' + path()">
+  @for (row of rows(); track $index) {
+    @if (row.kind === 'hunk') {
+      <div class="row hunk" role="row"><span class="code" role="cell">{{ row.text }}</span></div>
+    } @else {
+      <div class="row" role="row" [class.add]="row.kind === 'add'" [class.del]="row.kind === 'del'">
+        <span class="num" role="cell">{{ row.oldLine ?? '' }}</span>
+        <span class="num" role="cell">{{ row.newLine ?? '' }}</span>
+        @if (canComment()) {
+          <button mat-icon-button type="button" class="add-comment" (click)="start(row)" [attr.aria-label]="'Comment on line ' + (row.newLine ?? row.oldLine)" matTooltip="Comment">
+            <mat-icon>add_comment</mat-icon>
+          </button>
+        }
+        <span class="sign" role="cell" aria-hidden="true">{{ row.kind === 'add' ? '+' : row.kind === 'del' ? '-' : ' ' }}</span>
+        <code class="code" role="cell"
+          >@if (row.tokens) {@for (t of row.tokens; track $index) {<span [style.color]="t.color">{{ t.content }}</span>}} @else {{{ row.text }}}</code
+        >
+      </div>
+      @let k = key(row);
+      @if (k && byLine().get(k); as list) {
+        <div class="thread">
+          @for (c of list; track c.id) {
+            <div class="comment">
+              <span class="who">{{ c.author }}</span>
+              <app-markdown [source]="c.body" [shiftHeadings]="false" />
+            </div>
+          }
+        </div>
+      }
+      @if (k && open() === k) {
+        <div class="thread">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="box">
+            <mat-label>Comment on this line</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="draft" maxlength="10000"></textarea>
+          </mat-form-field>
+          <div class="actions">
+            <button mat-button type="button" (click)="open.set(null)">Cancel</button>
+            <button mat-flat-button type="button" [disabled]="!draft.trim()" (click)="send(row)">Comment</button>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>

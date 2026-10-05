@@ -1,0 +1,43 @@
+<header class="head">
+  <a mat-button [routerLink]="'/' + path"><mat-icon>arrow_back</mat-icon>{{ path }}</a>
+  <div class="title">
+    <h1>Pull requests</h1>
+    @if (auth.user()) {
+      <a mat-flat-button [routerLink]="['/', owner(), slug(), 'pulls', 'new']"><mat-icon>add</mat-icon>New pull request</a>
+    }
+  </div>
+  <mat-button-toggle-group [value]="state()" (change)="show($event.value)" aria-label="Show" hideSingleSelectionIndicator>
+    <mat-button-toggle value="open">Open {{ counts().open ?? 0 }}</mat-button-toggle>
+    <mat-button-toggle value="merged">Merged {{ counts().merged ?? 0 }}</mat-button-toggle>
+    <mat-button-toggle value="closed">Closed {{ counts().closed ?? 0 }}</mat-button-toggle>
+  </mat-button-toggle-group>
+</header>
+
+@switch (items()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">Pull requests are not available for this repo.</p>
+  }
+  @default {
+    <mat-nav-list aria-label="Pull requests">
+      @for (p of items()!; track p.number) {
+        <a mat-list-item [routerLink]="['/', owner(), slug(), 'pulls', p.number]">
+          <mat-icon matListItemIcon aria-hidden="true" [class]="p.state">{{ p.state === 'merged' ? 'merge' : p.state === 'closed' ? 'block' : 'call_split' }}</mat-icon>
+          <span matListItemTitle>{{ p.title }} <span class="number">#{{ p.number }}</span></span>
+          <span matListItemLine>
+            {{ p.author }} · {{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }} → {{ p.target.branch }} · {{ p.updatedAt | date: 'mediumDate' }}
+            @if (p.review.decision === 'approved') {
+              · approved
+            } @else if (p.review.decision === 'changes_requested') {
+              · changes requested
+            }
+          </span>
+        </a>
+      } @empty {
+        <p class="empty">No {{ state() === 'all' ? '' : state() }} pull requests.</p>
+      }
+    </mat-nav-list>
+  }
+}

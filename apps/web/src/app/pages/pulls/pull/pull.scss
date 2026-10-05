@@ -1,0 +1,79 @@
+:host {
+  display: block;
+  padding: 1rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.head {
+  margin-bottom: 1rem;
+
+  h1 {
+    font: var(--mat-sys-headline-small);
+    margin: 0.5rem 0;
+  }
+
+  .number {
+    color: var(--mat-sys-on-surface-variant);
+    font-weight: 400;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  max-width: 52rem;
+}
+
+.review.approved {
+  border-color: var(--mat-sys-primary);
+}
+
+.review.changes_requested {
+  border-color: var(--mat-sys-error);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+  font: var(--mat-sys-title-small);
+
+  &.bad {
+    color: var(--mat-sys-error);
+  }
+}
+
+.hint,
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.empty {
+  padding: 1rem;
+}
+
+.box {
+  width: 100%;
+}
+
+.files {
+  display: block;
+  padding: 1rem 0;
+}
+
+mat-panel-title code {
+  font-size: 0.875rem;
+}

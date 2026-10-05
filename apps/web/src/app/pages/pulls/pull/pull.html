@@ -1,0 +1,198 @@
+@switch (pull()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">This pull request does not exist, or you cannot see it.</p>
+  }
+  @default {
+    @let p = pull()!;
+    <header class="head">
+      <a mat-button [routerLink]="['/', owner(), slug(), 'pulls']"><mat-icon>arrow_back</mat-icon>Pull requests</a>
+      <h1>{{ p.title }} <span class="number">#{{ p.number }}</span></h1>
+      <div class="meta">
+        <mat-chip-set aria-label="State">
+          <mat-chip [class]="p.state" [highlighted]="p.state !== 'closed'">
+            <mat-icon matChipAvatar aria-hidden="true">{{ p.state === 'merged' ? 'merge' : p.state === 'closed' ? 'block' : 'call_split' }}</mat-icon>
+            {{ p.state === 'merged' ? 'Merged' : p.state === 'closed' ? 'Closed' : 'Open' }}
+          </mat-chip>
+        </mat-chip-set>
+        <span>
+          {{ p.author }} {{ p.state === 'merged' ? 'merged' : p.state === 'closed' ? 'wanted to merge' : 'wants to merge' }} <code>{{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }}</code> into
+          <code>{{ p.target.branch }}</code> · {{ p.createdAt | date: 'medium' }}
+        </span>
+      </div>
+    </header>
+
+    <mat-tab-group mat-stretch-tabs="false" (selectedIndexChange)="$event > 0 && loadFiles()">
+      <mat-tab label="Conversation">
+        <div class="conversation">
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              @if (p.body) {
+                <app-markdown [source]="p.body" [shiftHeadings]="false" />
+              } @else {
+                <p class="empty">No description.</p>
+              }
+            </mat-card-content>
+          </mat-card>
+
+          @for (item of timeline(); track item.at + $index) {
+            @if (item.kind === 'comment') {
+              @let c = item.comment;
+              <mat-card appearance="outlined" class="entry">
+                <mat-card-header>
+                  <mat-card-title>{{ c.author }}</mat-card-title>
+                  <mat-card-subtitle>{{ c.path ? 'on ' + c.path + ':' + c.line + ' · ' : '' }}{{ c.createdAt | date: 'medium' }}</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content><app-markdown [source]="c.body" [shiftHeadings]="false" /></mat-card-content>
+                @if (c.canDelete) {
+                  <mat-card-actions align="end"><button mat-button type="button" (click)="remove(c)" [disabled]="busy()">Delete</button></mat-card-actions>
+                }
+              </mat-card>
+            } @else {
+              @let r = item.review;
+              <mat-card appearance="outlined" class="entry review" [class]="r.state">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar aria-hidden="true">{{ r.state === 'approved' ? 'check_circle' : r.state === 'changes_requested' ? 'feedback' : 'rate_review' }}</mat-icon>
+                  <mat-card-title>{{ r.reviewer }} {{ reviewLabel(r) }}</mat-card-title>
+                  <mat-card-subtitle>{{ r.createdAt | date: 'medium' }}{{ r.counts ? '' : ' · does not count toward approval' }}</mat-card-subtitle>
+                </mat-card-header>
+                @if (r.body) {
+                  <mat-card-content><app-markdown [source]="r.body" [shiftHeadings]="false" /></mat-card-content>
+                }
+              </mat-card>
+            }
+          }
+
+          <mat-card appearance="outlined" class="merge-box" [class]="p.state">
+            <mat-card-content>
+              <p class="status">
+                <mat-icon aria-hidden="true">{{ p.review.decision === 'approved' ? 'check_circle' : p.review.decision === 'changes_requested' ? 'feedback' : 'pending' }}</mat-icon>
+                {{
+                  p.review.decision === 'approved'
+                    ? 'Approved (' + p.review.approvals + ')'
+                    : p.review.decision === 'changes_requested'
+                      ? 'Changes requested'
+                      : p.requireApproval
+                        ? 'Waiting for an approval'
+                        : 'No reviews yet'
+                }}
+              </p>
+              @if (p.merge; as m) {
+                <p class="status" [class.bad]="m.status === 'conflict' || m.status === 'failed'">
+                  <mat-icon aria-hidden="true">{{ m.status === 'merged' ? 'merge' : merging() ? 'sync' : 'error_outline' }}</mat-icon>
+                  {{ mergeLabel(m.status) }}{{ m.sha ? ' · ' + m.sha.slice(0, 7) : '' }}
+                </p>
+                @if (merging()) {
+                  <mat-progress-bar mode="indeterminate" aria-label="Merging" />
+                }
+                @if (m.error && p.state === 'open') {
+                  <p class="hint">{{ m.error }}</p>
+                }
+              }
+              @if (p.state === 'open' && p.mergeBlocked) {
+                <p class="hint">{{ p.mergeBlocked }}</p>
+              }
+              <p class="hint">Merging rebases the branch onto {{ p.target.branch }}, runs the checks and conformance, then fast-forwards {{ p.target.branch }} to the checked commit.</p>
+            </mat-card-content>
+            <mat-card-actions align="end">
+              @if (p.canEdit && p.state === 'open') {
+                <button mat-button type="button" (click)="setState('closed')" [disabled]="busy() || merging()">Close</button>
+              }
+              @if (p.canEdit && p.state === 'closed') {
+                <button mat-button type="button" (click)="setState('open')" [disabled]="busy()">Reopen</button>
+              }
+              @if (p.canMerge) {
+                <button mat-flat-button type="button" (click)="merge()" [disabled]="busy() || merging() || !!p.mergeBlocked">
+                  <mat-icon>merge</mat-icon>{{ p.merge && !merging() ? 'Merge again' : 'Merge' }}
+                </button>
+              }
+            </mat-card-actions>
+          </mat-card>
+
+          @if (auth.user() && p.state === 'open') {
+            <mat-card appearance="outlined">
+              <mat-card-content>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="box">
+                  <mat-label>Comment or review (Markdown)</mat-label>
+                  <textarea matInput rows="4" [(ngModel)]="draft" maxlength="10000"></textarea>
+                </mat-form-field>
+              </mat-card-content>
+              <mat-card-actions align="end">
+                @if (p.canMerge) {
+                  <button mat-button type="button" (click)="reviewDraft = draft; draft = ''; review('request_changes')" [disabled]="busy() || !draft.trim()">Request changes</button>
+                  <button mat-stroked-button type="button" (click)="reviewDraft = draft; draft = ''; review('approve')" [disabled]="busy()"><mat-icon>check</mat-icon>Approve</button>
+                }
+                <button mat-flat-button type="button" (click)="comment()" [disabled]="busy() || !draft.trim()">Comment</button>
+              </mat-card-actions>
+            </mat-card>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Commits">
+        @switch (files()) {
+          @case (undefined) {
+            <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+          }
+          @case (null) {
+            <p class="empty">The commits of this pull request are not available.</p>
+          }
+          @default {
+            <mat-list>
+              @for (c of files()!.commits; track c.sha) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon aria-hidden="true">commit</mat-icon>
+                  <span matListItemTitle>{{ c.message }}</span>
+                  <span matListItemLine><code>{{ c.sha.slice(0, 7) }}</code> · {{ c.author }} · {{ c.date | date: 'medium' }}</span>
+                </mat-list-item>
+              }
+            </mat-list>
+          }
+        }
+      </mat-tab>
+
+      <mat-tab [label]="'Files changed' + (files()?.files?.length ? ' (' + files()!.files.length + ')' : '')">
+        @switch (files()) {
+          @case (undefined) {
+            <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+          }
+          @case (null) {
+            <p class="empty">The changes of this pull request are not available.</p>
+          }
+          @default {
+            <mat-accordion multi displayMode="flat" class="files">
+              @for (f of files()!.files; track f.path) {
+                <mat-expansion-panel (opened)="loadDiff(f.path)">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title><code>{{ f.path }}</code></mat-panel-title>
+                    <mat-panel-description>
+                      {{ f.status }}{{ f.binary ? ' · binary' : f.additions !== null ? ' · +' + f.additions + ' −' + f.deletions : '' }}
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  @if (diffs()[f.path]; as d) {
+                    @if (d.binary) {
+                      <p class="empty">Binary file.</p>
+                    } @else if (d.tooLarge) {
+                      <p class="empty">This file is too large to show.</p>
+                    } @else {
+                      <app-diff-view [path]="f.path" [hunks]="d.hunks" [comments]="comments()" [canComment]="!!auth.user() && p.state === 'open'" (addComment)="lineComment($event)" />
+                    }
+                  } @else if (f.path in diffs()) {
+                    <p class="empty">This diff is not available.</p>
+                  } @else {
+                    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+                  }
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+            @if (files()!.truncated) {
+              <p class="empty">Only the first 1,000 files are listed.</p>
+            }
+          }
+        }
+      </mat-tab>
+    </mat-tab-group>
+  }
+}

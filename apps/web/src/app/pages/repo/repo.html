@@ -163,6 +163,7 @@
           <a mat-stroked-button [routerLink]="['/', d.repo.owner.handle, d.repo.slug, 'code']"
             ><mat-icon>code</mat-icon>Browse code</a
           >
+          <a mat-stroked-button [routerLink]="['/', d.repo.owner.handle, d.repo.slug, 'pulls']"><mat-icon>call_split</mat-icon>Pull requests</a>
         }
         @if (d.repo.state === 'published') {
           <app-get-code [path]="d.repo.fullName" />

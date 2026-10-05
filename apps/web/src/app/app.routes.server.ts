@@ -33,6 +33,9 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'admin/repos/:owner/:slug/checkpoints', renderMode: RenderMode.Client },
   { path: 'admin', renderMode: RenderMode.Client },
   // Owner and repo pages (#102): rendered per request for SEO.
+  { path: ':owner/:slug/pulls/new', renderMode: RenderMode.Client },
+  { path: ':owner/:slug/pulls/:number', renderMode: RenderMode.Client },
+  { path: ':owner/:slug/pulls', renderMode: RenderMode.Client },
   { path: ':owner/:slug/code', renderMode: RenderMode.Client },
   { path: ':owner/:slug/history', renderMode: RenderMode.Server },
   { path: ':owner/:slug', renderMode: RenderMode.Server },
