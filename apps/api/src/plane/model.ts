@@ -15,6 +15,8 @@ export interface PlaneTask {
 	claimedBy: string | null;
 	branch: string | null;
 	note: string | null;
+	/** #238: the latest merge of the task's branch. */
+	merge: { id: string; status: string; sha: string | null; error: string | null; conflicts?: string[] } | null;
 	createdAt: string;
 	updatedAt: string;
 }

@@ -103,7 +103,29 @@
                 @if (t.note) {
                   <p class="description">{{ t.note }}</p>
                 }
+                @if (t.merge; as m) {
+                  <div class="merge" [class]="'merge ' + m.status" role="status">
+                    <mat-icon aria-hidden="true">{{ m.status === 'merged' ? 'merge' : inFlight(m) ? 'pending' : 'error_outline' }}</mat-icon>
+                    <span>
+                      {{ mergeLabels[m.status] }}
+                      @if (m.sha) {
+                        <code>{{ m.sha.slice(0, 7) }}</code>
+                      }
+                    </span>
+                  </div>
+                  @if (inFlight(m)) {
+                    <mat-progress-bar mode="indeterminate" aria-label="Merging" />
+                  }
+                  @if (m.error) {
+                    <p class="merge-error">{{ m.error }}</p>
+                  }
+                }
               </mat-card-content>
+            }
+            @if (t.status === 'done' && t.branch && (!t.merge || t.merge.status === 'conflict' || t.merge.status === 'failed')) {
+              <mat-card-actions align="end">
+                <button mat-stroked-button type="button" [disabled]="merging() === t.id" (click)="merge(t)"><mat-icon>merge</mat-icon>{{ t.merge ? 'Merge again' : 'Merge' }}</button>
+              </mat-card-actions>
             }
           </mat-card>
         } @empty {

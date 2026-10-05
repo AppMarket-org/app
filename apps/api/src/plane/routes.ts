@@ -2,7 +2,9 @@ import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { canEdit } from "../repos/access.ts";
+import { logEvent } from "../observability/log.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { startMerge } from "./merge.ts";
 import type { PlaneResult, RepoPlane } from "./coordinator.ts";
 import { cleanTags, normalizePath } from "./model.ts";
 
@@ -88,7 +90,23 @@ export const planeRoutes = new Hono<Ctx>()
 		const status = body.status === "failed" ? "failed" : "done";
 		const branch = text(body.branch, 200);
 		if (branch && !/^[A-Za-z0-9._/-]+$/.test(branch)) return c.json({ error: "invalid_branch" }, 400);
-		return reply(c, await p.stub.finish(c.req.param("id"), s.id, status, branch || null, text(body.note, 2000) || null));
+		const result = await p.stub.finish(c.req.param("id"), s.id, status, branch || null, text(body.note, 2000) || null);
+		// #238: a finished task with a branch is merged (rebase, checks, conformance, fast-forward).
+		if (result.ok && status === "done" && branch) {
+			await startMerge(p.repo, c.req.param("id"), s.id, branch).catch((error: unknown) => logEvent("plane.merge_start_failed", { repo: p.repo.fullName, error: String(error) }, "error"));
+			return c.json(await p.stub.state());
+		}
+		return reply(c, result);
+	})
+	// #238: merge again (after a conflict was resolved, the base moved, or checks were fixed). Owners only.
+	.post("/:owner/:slug/plane/tasks/:id/merge", async (c) => {
+		const p = await plane(c);
+		if (!p || c.get("session")!.deviceScopes) return c.json({ error: "not_found" }, 404);
+		const task = (await p.stub.state()).tasks.find((t) => t.id === c.req.param("id"));
+		if (!task || task.status !== "done" || !task.branch || !task.claimedBy) return c.json({ error: "Only finished tasks with a branch can be merged." }, 400);
+		if (task.merge?.status === "merged") return c.json({ error: "Already merged." }, 409);
+		await startMerge(p.repo, task.id, task.claimedBy, task.branch);
+		return c.json(await p.stub.state());
 	})
 	.post("/:owner/:slug/plane/leases", async (c) => {
 		const p = await plane(c);

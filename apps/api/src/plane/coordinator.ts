@@ -9,6 +9,7 @@ import {
 	type PlaneTask,
 	type TaskStatus,
 } from "./model.ts";
+import type { TaskMerge } from "./merge-store.ts";
 
 export interface PlaneState {
 	tasks: PlaneTask[];
@@ -38,6 +39,8 @@ export class RepoPlane extends DurableObject {
 			this.sql.exec(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT NOT NULL, capabilities TEXT NOT NULL,
 				status TEXT NOT NULL, claimed_by TEXT, branch TEXT, note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`);
 			this.sql.exec(`CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, name TEXT NOT NULL, vendor TEXT NOT NULL, capabilities TEXT NOT NULL, last_seen TEXT NOT NULL)`);
+			// #238: the task's latest merge (JSON), added after the table first shipped.
+			if (!this.sql.exec("SELECT name FROM pragma_table_info('tasks') WHERE name = 'merge'").toArray().length) this.sql.exec("ALTER TABLE tasks ADD COLUMN merge TEXT");
 			this.sql.exec(`CREATE TABLE IF NOT EXISTS leases (agent_id TEXT NOT NULL, task_id TEXT, path TEXT NOT NULL, expires_at INTEGER NOT NULL, PRIMARY KEY (agent_id, path))`);
 		});
 	}
@@ -138,6 +141,12 @@ export class RepoPlane extends DurableObject {
 		return this.changed();
 	}
 
+	/** #238: the merge Workflow reports each stage of the task's merge. */
+	setMerge(taskId: string, merge: TaskMerge): PlaneResult {
+		this.sql.exec("UPDATE tasks SET merge = ? WHERE id = ?", JSON.stringify(merge), taskId);
+		return this.changed();
+	}
+
 	/** Dashboards watching the board (the Worker checks access before forwarding the upgrade). */
 	override async fetch(request: Request): Promise<Response> {
 		if (request.headers.get("Upgrade") !== "websocket") return new Response("Expected a WebSocket", { status: 426 });
@@ -211,6 +220,7 @@ function toTask(r: Record<string, string | null>): PlaneTask {
 		claimedBy: r.claimed_by ?? null,
 		branch: r.branch ?? null,
 		note: r.note ?? null,
+		merge: r.merge ? (JSON.parse(r.merge) as TaskMerge) : null,
 		createdAt: r.created_at!,
 		updatedAt: r.updated_at!,
 	};

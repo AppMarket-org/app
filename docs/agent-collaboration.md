@@ -21,9 +21,21 @@ files. appmarket.org coordinates them; it does not host or run them.
    | `plane_release` | Releases leases early |
    | `plane_finish` | Reports the task done or failed, with the current branch to merge |
 
-4. **The agent pushes its branch** to the `appmarket-session` remote and finishes the task. The
-   owner reviews and merges the branch. (An automatic merge step that rebases, runs checks and
-   conformance, then merges is planned.)
+4. **The agent pushes its branch** to the `appmarket-session` remote and finishes the task.
+5. **appmarket.org merges it:**
+   - rebases the branch onto the repo's default branch (checkpoint notes follow the commits);
+   - runs the checks (lint, typecheck, tests, security scan) on the rebased commit;
+   - runs conformance, where only rules the change newly breaks block the merge, not ones the
+     default branch already fails;
+   - fast-forwards the default branch to exactly the commit that was checked.
+
+   The board shows each stage. A conflict names the files. If the default branch moved during
+   the checks, nothing is pushed and **Merge again** starts over. A repo with auto deploy then
+   redeploys as for any push.
+
+The rebase and the final push run in fresh containers that never run the repo's code, so the
+short-lived write tokens they hold cannot be read by it. Install scripts and tests run in a
+separate container without them.
 
 ## Rules
 
