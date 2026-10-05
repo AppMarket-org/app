@@ -235,11 +235,15 @@ export async function commitExists(gitRepo: string, sha: string): Promise<boolea
  * #124: when the repo last changed (its last push; for repos filled another way, e.g. an import,
  * its last update) and the newest commits on its default branch.
  */
-export async function pushedCommits(gitRepo: string, limit = 200): Promise<{ lastPushAt: string | null; commits: ArtifactsCommitMetadata[]; defaultBranch: string }> {
+/**
+ * The default branch's recent commits, newest first. Callers detect pushes by comparing the head
+ * with the last one they processed: Artifacts does not report push times (lastPushAt and updatedAt
+ * stay at the repo's creation).
+ */
+export async function pushedCommits(gitRepo: string, limit = 200): Promise<{ commits: ArtifactsCommitMetadata[]; defaultBranch: string }> {
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const info = await git.info();
-	const changedAt = info.lastPushAt ?? info.updatedAt;
-	return { lastPushAt: changedAt, commits: await git.log({ ref: info.defaultBranch, limit }).catch(() => []), defaultBranch: info.defaultBranch };
+	return { commits: await git.log({ ref: info.defaultBranch, limit }).catch(() => []), defaultBranch: info.defaultBranch };
 }
 
 /** Code browser: a ref (branch, tag or commit) resolved to its commit, or null. */

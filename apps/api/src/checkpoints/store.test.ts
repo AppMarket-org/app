@@ -81,7 +81,7 @@ describe("CheckpointStore", () => {
 		const pushed = [commit(1, "2026-10-03T10:00:30Z"), commit(2, "2026-10-03T11:00:00Z"), commit(8, "2026-09-01T00:00:00Z")];
 		expect(await store.reconcilePushed({ id: "r1", defaultVisibility: "private" }, pushed, "2026-10-03T12:00:00Z")).toEqual({ attached: 1, missing: 1 });
 		expect(await store.reconcilePushed({ id: "r1", defaultVisibility: "private" }, pushed, "2026-10-03T12:00:00Z")).toEqual({ attached: 0, missing: 0 });
-		expect(await store.reconciledAt("r1")).toBe("2026-10-03T12:00:00Z");
+		expect(await store.reconciledHead("r1")).toBe(sha(1));
 		expect((await store.get(repo, sha(1), "owner"))?.state).toBe("attached");
 		expect(await store.get(repo, sha(2), "owner")).toMatchObject({ state: "missing", harness: "none", prompts: [] });
 		expect(await store.get(repo, sha(8), "owner")).toBeNull();
