@@ -1,158 +1,204 @@
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Profile</mat-card-title>
-    <mat-card-subtitle>Shown on your public page{{ owner() ? ', appmarket.org/' + owner()!.handle : '' }}. Empty fields are not shown.</mat-card-subtitle>
-  </mat-card-header>
-  <mat-card-content>
-    @if (owner() && profile(); as p) {
-      <app-avatar-editor [owner]="owner()!" (changed)="avatarChanged($event)" />
-      <app-profile-form kind="user" [name]="owner()!.name" [profile]="p" [saving]="profileSaving()" [errors]="profileFieldErrors()" (save)="saveProfile($event)" />
-    } @else {
-      <mat-progress-bar mode="indeterminate" aria-label="Loading profile" />
-    }
-  </mat-card-content>
-</mat-card>
-
-@if (privacy(); as pv) {
-  <mat-card appearance="outlined">
-    <mat-card-header>
-      <mat-card-title>Profile privacy</mat-card-title>
-      <mat-card-subtitle>Names of unpublished repos never appear on your profile.</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content class="privacy">
-      <mat-slide-toggle [checked]="pv.privateContributions" (change)="setPrivacy({ privateContributions: $event.checked })">
-        Include private contributions
-        <span class="hint">Count your work in unpublished repos on the graph and in activity, as numbers only.</span>
-      </mat-slide-toggle>
-      <mat-slide-toggle [checked]="pv.hideActivity" (change)="setPrivacy({ hideActivity: $event.checked })">
-        Hide activity
-        <span class="hint">Remove the activity list from your profile.</span>
-      </mat-slide-toggle>
-      <mat-slide-toggle [checked]="pv.hideLocation" (change)="setPrivacy({ hideLocation: $event.checked })">
-        Hide location
-        <span class="hint">Keep your location off your public profile.</span>
-      </mat-slide-toggle>
-    </mat-card-content>
-  </mat-card>
-}
-
-<app-email-card />
-
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Your checkpoints</mat-card-title>
-    <mat-card-subtitle>Every checkpoint in your repos and the organizations you own, as JSON Lines. Delete single checkpoints from a repo's timeline; checkpoints of a removed repo are deleted automatically.</mat-card-subtitle>
-  </mat-card-header>
-  <mat-card-actions>
-    <a mat-stroked-button href="/api/me/checkpoints/export" download><mat-icon>download</mat-icon>Download checkpoints</a>
-  </mat-card-actions>
-</mat-card>
-
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Username</mat-card-title>
-    <mat-card-subtitle>Your repos live at appmarket.org/{{ owner()?.handle ?? '…' }}/…</mat-card-subtitle>
-  </mat-card-header>
-  <mat-card-content>
-    @if (owner()) {
-      <form class="row" [formGroup]="handleForm" (ngSubmit)="saveHandle()" novalidate>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Username</mat-label>
-          <input matInput [formControl]="handle" autocomplete="username" spellcheck="false" maxlength="39" />
-          <mat-hint>Lowercase letters, numbers and hyphens. Changing it changes your repo links.</mat-hint>
-          @if (handle.hasError('reserved')) {
-            <mat-error>That name is reserved.</mat-error>
-          } @else {
-            <mat-error>Use lowercase letters, numbers and single hyphens (up to 39).</mat-error>
-          }
-        </mat-form-field>
-        <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
-      </form>
-      @if (error(); as message) {
-        <p class="error" role="alert">{{ message }}</p>
+<div class="settings-layout">
+  <aside class="settings-sidebar" aria-label="Settings navigation">
+    <p class="eyebrow">YOUR ACCOUNT</p>
+    <mat-nav-list aria-label="Settings sections" class="section-links">
+      @for (item of sections; track item.id) {
+        <a mat-list-item [routerLink]="['/settings', item.id]" [activated]="section() === item.id" [attr.aria-current]="section() === item.id ? 'page' : null">
+          <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
       }
-    } @else {
-      <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+    </mat-nav-list>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="section-picker">
+      <mat-label>Settings section</mat-label>
+      <mat-select [value]="section()" (selectionChange)="openSection($event.value)">
+        @for (item of sections; track item.id) { <mat-option [value]="item.id">{{ item.label }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    @if (owner(); as current) {
+      <a mat-button class="view-profile" [routerLink]="'/' + current.handle">View public profile<mat-icon iconPositionEnd>arrow_outward</mat-icon></a>
     }
-  </mat-card-content>
-</mat-card>
-
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Organizations</mat-card-title>
-    <mat-card-subtitle>Share repos with a team under one name, like appmarket.org/acme/…</mat-card-subtitle>
-  </mat-card-header>
-  <mat-card-content>
-    @switch (orgs()) {
-      @case (undefined) {
-        <mat-progress-bar mode="indeterminate" aria-label="Loading organizations" />
-      }
-      @default {
-        @if (orgs()!.length) {
-          <mat-nav-list aria-label="Your organizations">
-            @for (m of orgs(); track m.org.id) {
-              <a mat-list-item [routerLink]="['/settings/orgs', m.org.handle]">
-                <mat-icon matListItemIcon aria-hidden="true">corporate_fare</mat-icon>
-                <span matListItemTitle>{{ m.org.name }}</span>
-                <span matListItemLine>{{ m.org.handle }} · {{ m.role === 'owner' ? 'Owner' : 'Member' }}</span>
-              </a>
+  </aside>
+  <div class="settings-content">
+    @if (visited().has('profile')) {
+      <section class="settings-section" [hidden]="section() !== 'profile'" aria-label="Profile settings">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Profile</mat-card-title>
+            <mat-card-subtitle>Your picture and details on your public profile. Empty fields stay hidden.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (owner() && profile(); as p) {
+              <app-avatar-editor [owner]="owner()!" (changed)="avatarChanged($event)" />
+              <app-profile-form kind="user" [name]="owner()!.name" [profile]="p" [saving]="profileSaving()" [errors]="profileFieldErrors()" (save)="saveProfile($event)" />
+            } @else {
+              <mat-progress-bar mode="indeterminate" aria-label="Loading profile" />
             }
-          </mat-nav-list>
-        } @else {
-          <p class="empty">You are not in any organization.</p>
+          </mat-card-content>
+        </mat-card>
+      </section>
+    }
+    @if (visited().has('privacy')) {
+      <section class="settings-section" [hidden]="section() !== 'privacy'" aria-label="Privacy settings">
+        @if (privacy(); as pv) {
+        <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Profile privacy</mat-card-title>
+              <mat-card-subtitle>Changes save automatically. Names of unpublished repositories stay private.</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content class="privacy">
+              <mat-slide-toggle [checked]="pv.privateContributions" (change)="setPrivacy({ privateContributions: $event.checked })">
+                Include private contributions
+                <span class="hint">Count your work in unpublished repos on the graph and in activity, as numbers only.</span>
+              </mat-slide-toggle>
+              <mat-slide-toggle [checked]="pv.hideActivity" (change)="setPrivacy({ hideActivity: $event.checked })">
+                Hide activity
+                <span class="hint">Remove the activity list from your profile.</span>
+              </mat-slide-toggle>
+              <mat-slide-toggle [checked]="pv.hideLocation" (change)="setPrivacy({ hideLocation: $event.checked })">
+                Hide location
+                <span class="hint">Keep your location off your public profile.</span>
+              </mat-slide-toggle>
+            </mat-card-content>
+          </mat-card>
         }
-      }
+      </section>
     }
-  </mat-card-content>
-  <mat-card-actions>
-    <a mat-stroked-button routerLink="/settings/orgs/new"><mat-icon>add</mat-icon>New organization</a>
-  </mat-card-actions>
-</mat-card>
-
-<mat-card appearance="outlined">
-  <mat-card-header>
-    <mat-card-title>Signed-in devices</mat-card-title>
-    <mat-card-subtitle>Browsers, CLIs and agents using your account. Connect a CLI at appmarket.org/device.</mat-card-subtitle>
-  </mat-card-header>
-  <mat-card-content>
-    @if (ciToken(); as t) {
-      <div class="ci-token" role="status">
-        <p><strong>{{ t.label }}</strong>: copy this token now; it is not shown again. Valid until {{ t.expiresAt | date: 'mediumDate' }} (extended while in use); revoke it below.</p>
-        <pre><code>{{ t.token }}</code></pre>
-        <p class="hint">In the pipeline: set the secret <code>APPMARKET_TOKEN</code>, or run <code>appmarket login --token -</code> with the token on stdin.</p>
-        <div class="row-actions">
-          <button mat-stroked-button type="button" (click)="copyToken()"><mat-icon>content_copy</mat-icon>Copy token</button>
-          <button mat-button type="button" (click)="ciToken.set(null)">Done</button>
-        </div>
-      </div>
+    @if (visited().has('notifications')) {
+      <section class="settings-section" [hidden]="section() !== 'notifications'" aria-label="Notifications settings">
+        <app-email-card />
+      </section>
     }
-    @switch (sessions()) {
-      @case (undefined) {
-        <mat-progress-bar mode="indeterminate" aria-label="Loading devices" />
-      }
-      @default {
-        <mat-list aria-label="Signed-in devices">
-          @for (s of sessions(); track s.id) {
-            <mat-list-item>
-              <mat-icon matListItemIcon aria-hidden="true">{{ s.device ? 'terminal' : s.current ? 'computer' : 'devices' }}</mat-icon>
-              <span matListItemTitle>{{ label(s) }}{{ s.current ? ' · this browser' : '' }}</span>
-              <span matListItemLine>{{ s.lastUsedAt ? 'Last used ' + (s.lastUsedAt | date: 'medium') : 'Signed in ' + (s.createdAt | date: 'medium') }}{{ s.ipPrefix ? ' · ' + s.ipPrefix : '' }}</span>
-              <span matListItemLine>Signed in {{ s.createdAt | date: 'mediumDate' }} · expires {{ s.expiresAt | date: 'mediumDate' }}{{ s.device ? ' · can ' + s.device.scopes.join(', ') : '' }}</span>
-              <span matListItemMeta class="session-actions">
-                @if (s.device) {
-                  <button mat-icon-button type="button" (click)="rename(s)" [attr.aria-label]="'Rename ' + s.device.name" matTooltip="Rename"><mat-icon>edit</mat-icon></button>
+    @if (visited().has('account')) {
+      <section class="settings-section" [hidden]="section() !== 'account'" aria-label="Account settings">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Username</mat-card-title>
+            <mat-card-subtitle>Your repos live at appmarket.org/{{ owner()?.handle ?? '…' }}/…</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (owner()) {
+              <form class="row" [formGroup]="handleForm" (ngSubmit)="saveHandle()" novalidate>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Username</mat-label>
+                  <input matInput [formControl]="handle" autocomplete="username" spellcheck="false" maxlength="39" />
+                  <mat-hint>Lowercase letters, numbers and hyphens. Changing it changes your repo links.</mat-hint>
+                  @if (handle.hasError('reserved')) {
+                    <mat-error>That name is reserved.</mat-error>
+                  } @else {
+                    <mat-error>Use lowercase letters, numbers and single hyphens (up to 39).</mat-error>
+                  }
+                </mat-form-field>
+                <button mat-flat-button type="submit" [disabled]="saving()">Save</button>
+              </form>
+              @if (error(); as message) {
+                <p class="error" role="alert">{{ message }}</p>
+              }
+            } @else {
+              <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+            }
+          </mat-card-content>
+        </mat-card>
+      </section>
+    }
+    @if (visited().has('organizations')) {
+      <section class="settings-section" [hidden]="section() !== 'organizations'" aria-label="Organizations settings">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Organizations</mat-card-title>
+            <mat-card-subtitle>Share repos with a team under one name, like appmarket.org/acme/…</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @switch (orgs()) {
+              @case (undefined) {
+                <mat-progress-bar mode="indeterminate" aria-label="Loading organizations" />
+              }
+              @default {
+                @if (orgs()!.length) {
+                  <mat-nav-list aria-label="Your organizations">
+                    @for (m of orgs(); track m.org.id) {
+                      <a mat-list-item [routerLink]="['/settings/orgs', m.org.handle]">
+                        <mat-icon matListItemIcon aria-hidden="true">corporate_fare</mat-icon>
+                        <span matListItemTitle>{{ m.org.name }}</span>
+                        <span matListItemLine>{{ m.org.handle }} · {{ m.role === 'owner' ? 'Owner' : 'Member' }}</span>
+                      </a>
+                    }
+                  </mat-nav-list>
+                } @else {
+                  <p class="empty">You are not in any organization.</p>
                 }
-                @if (!s.current) {
-                  <button mat-button type="button" class="danger" (click)="signOut(s)">Sign out</button>
-                }
-              </span>
-            </mat-list-item>
-          }
-        </mat-list>
-      }
+              }
+            }
+          </mat-card-content>
+          <mat-card-actions>
+            <a mat-stroked-button routerLink="/settings/orgs/new"><mat-icon>add</mat-icon>New organization</a>
+          </mat-card-actions>
+        </mat-card>
+      </section>
     }
-  </mat-card-content>
-  <mat-card-actions>
-    <button mat-stroked-button type="button" (click)="createCiToken()"><mat-icon>key</mat-icon>New CI token</button>
-  </mat-card-actions>
-</mat-card>
+    @if (visited().has('access')) {
+      <section class="settings-section" [hidden]="section() !== 'access'" aria-label="Access settings">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Signed-in devices</mat-card-title>
+            <mat-card-subtitle>Browsers, CLIs and agents using your account. Connect a CLI at appmarket.org/device.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (ciToken(); as t) {
+              <div class="ci-token" role="status">
+                <p><strong>{{ t.label }}</strong>: copy this token now; it is not shown again. Valid until {{ t.expiresAt | date: 'mediumDate' }} (extended while in use); revoke it below.</p>
+                <pre><code>{{ t.token }}</code></pre>
+                <p class="hint">In the pipeline: set the secret <code>APPMARKET_TOKEN</code>, or run <code>appmarket login --token -</code> with the token on stdin.</p>
+                <div class="row-actions">
+                  <button mat-stroked-button type="button" (click)="copyToken()"><mat-icon>content_copy</mat-icon>Copy token</button>
+                  <button mat-button type="button" (click)="ciToken.set(null)">Done</button>
+                </div>
+              </div>
+            }
+            @switch (sessions()) {
+              @case (undefined) {
+                <mat-progress-bar mode="indeterminate" aria-label="Loading devices" />
+              }
+              @default {
+                <mat-list aria-label="Signed-in devices">
+                  @for (s of sessions(); track s.id) {
+                    <mat-list-item>
+                      <mat-icon matListItemIcon aria-hidden="true">{{ s.device ? 'terminal' : s.current ? 'computer' : 'devices' }}</mat-icon>
+                      <span matListItemTitle>{{ label(s) }}{{ s.current ? ' · this browser' : '' }}</span>
+                      <span matListItemLine>{{ s.lastUsedAt ? 'Last used ' + (s.lastUsedAt | date: 'medium') : 'Signed in ' + (s.createdAt | date: 'medium') }}{{ s.ipPrefix ? ' · ' + s.ipPrefix : '' }}</span>
+                      <span matListItemLine>Signed in {{ s.createdAt | date: 'mediumDate' }} · expires {{ s.expiresAt | date: 'mediumDate' }}{{ s.device ? ' · can ' + s.device.scopes.join(', ') : '' }}</span>
+                      <span matListItemMeta class="session-actions">
+                        @if (s.device) {
+                          <button mat-icon-button type="button" (click)="rename(s)" [attr.aria-label]="'Rename ' + s.device.name" matTooltip="Rename"><mat-icon>edit</mat-icon></button>
+                        }
+                        @if (!s.current) {
+                          <button mat-button type="button" class="danger" (click)="signOut(s)">Sign out</button>
+                        }
+                      </span>
+                    </mat-list-item>
+                  }
+                </mat-list>
+              }
+            }
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-stroked-button type="button" (click)="createCiToken()"><mat-icon>key</mat-icon>New CI token</button>
+          </mat-card-actions>
+        </mat-card>
+      </section>
+    }
+    @if (visited().has('data')) {
+      <section class="settings-section" [hidden]="section() !== 'data'" aria-label="Data settings">
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Your checkpoints</mat-card-title>
+            <mat-card-subtitle>Every checkpoint in your repos and the organizations you own, as JSON Lines. Delete single checkpoints from a repo's timeline; checkpoints of a removed repo are deleted automatically.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-actions>
+            <a mat-stroked-button href="/api/me/checkpoints/export" download><mat-icon>download</mat-icon>Download checkpoints</a>
+          </mat-card-actions>
+        </mat-card>
+      </section>
+    }
+  </div>
+</div>

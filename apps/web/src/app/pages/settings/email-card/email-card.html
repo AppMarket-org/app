@@ -1,10 +1,15 @@
-@if (prefs(); as p) {
   <mat-card appearance="outlined">
     <mat-card-header>
-      <mat-card-title>Email</mat-card-title>
-      <mat-card-subtitle>Sent to the address of your sign-in account.</mat-card-subtitle>
+      <mat-card-title>Email notifications</mat-card-title>
+      <mat-card-subtitle>Choose the messages sent to your sign-in email. Changes save automatically.</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content class="email">
+      @if (loading()) {
+        <p role="status">Loading email preferences…</p>
+      } @else if (loadFailed()) {
+        <p role="alert">Could not load your email preferences.</p>
+        <button mat-stroked-button (click)="load()">Try again</button>
+      } @else if (prefs(); as p) {
       <mat-slide-toggle [checked]="p.impacts" (change)="set('impacts', $event.checked)">
         Security notices for my repos
         <span class="hint">When a vulnerable package or a rule change affects a repo you own, with what to do about it.</span>
@@ -16,6 +21,6 @@
       @if (!p.sending) {
         <p class="hint">appmarket.org does not send email yet; your choice applies once it does.</p>
       }
+      }
     </mat-card-content>
   </mat-card>
-}
