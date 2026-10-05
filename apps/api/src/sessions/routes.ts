@@ -5,6 +5,7 @@ import { type Context, Hono } from "hono";
 import { deleteGitRepo, forkGitRepo, gitRepoNameFor, mintGitToken, revokeAllGitTokens } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
+import { leavePlane } from "../plane/routes.ts";
 import { canEdit } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { strictHit } from "../strict-limit.ts";
@@ -125,6 +126,8 @@ export const agentSessionRoutes = new Hono<Ctx>()
 		if (!row) return c.json({ error: "not_found" }, 404);
 		if (row.status === "active" && row.fork_git_repo) await revokeAllGitTokens(row.fork_git_repo);
 		await env.DB.prepare("UPDATE agent_sessions SET status = 'ended', ended_at = COALESCE(ended_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = ? AND status = 'active'").bind(row.id).run();
+		// #236: the agent leaves the collaboration board; tasks it claimed but did not finish reopen.
+		await leavePlane(row.repo_id, row.id).catch(() => undefined);
 		logEvent("agent_session.ended", { session: row.id });
 		return c.json(toSession((await findSession(row.id))!));
 	})
@@ -140,6 +143,7 @@ export const agentSessionRoutes = new Hono<Ctx>()
 			env.DB.prepare("UPDATE repos SET state = 'removed', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.fork_repo_id),
 			env.DB.prepare("UPDATE agent_sessions SET status = 'discarded', ended_at = COALESCE(ended_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = ?").bind(row.id),
 		]);
+		await leavePlane(row.repo_id, row.id).catch(() => undefined);
 		logEvent("agent_session.discarded", { session: row.id });
 		return c.json({ ok: true });
 	});
