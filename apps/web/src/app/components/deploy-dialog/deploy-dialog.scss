@@ -28,3 +28,10 @@ legend {
 .error {
   color: var(--mat-sys-error);
 }
+
+.cost {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}

@@ -100,3 +100,7 @@ Choose **Any URL** instead. appmarket.org POSTs the same payload as JSON and sig
 `X-Appmarket-Signature-256: sha256=<HMAC-SHA256 of the body with your signing secret>`. Check it
 before trusting the request. Buildkite, Codemagic and Jenkins accept such a call through a small
 trigger endpoint of your own.
+
+## Container apps
+
+Build and push the image in CI, then pin it by digest in `wrangler.jsonc`; see [containers.md](containers.md).

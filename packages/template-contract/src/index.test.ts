@@ -93,3 +93,29 @@ describe("checkTemplate", () => {
 		expect(result.manifest?.resources.map((r) => r.type)).toEqual(["queue", "durable-object", "container", "assets"]);
 	});
 });
+
+describe("container apps (#54)", () => {
+	const config = (image: string, withBinding = true) =>
+		files({
+			"wrangler.jsonc": JSON.stringify({
+				name: "api",
+				main: "src/index.ts",
+				compatibility_date: "2026-10-01",
+				containers: [{ class_name: "Api", image }],
+				...(withBinding ? { durable_objects: { bindings: [{ name: "API", class_name: "Api" }] } } : {}),
+			}),
+			".dev.vars.example": "",
+		});
+	const pinned = `docker.io/acme/api:1.0@sha256:${"b".repeat(64)}`;
+
+	it("requires a published image pinned by digest", () => {
+		expect(checkTemplate({ runtime: "container", rootEntries: [], files: config(pinned) }).errors).toEqual([]);
+		const built = checkTemplate({ runtime: "container", rootEntries: [], files: config("./Dockerfile") });
+		expect(built.errors.map((e) => e.rule)).toEqual(["container-image"]);
+		expect(checkTemplate({ runtime: "container", rootEntries: [], files: files({ "wrangler.jsonc": JSON.stringify({ name: "x", main: "a.ts", compatibility_date: "2026-01-01" }) }) }).errors.map((e) => e.rule)).toContain("container-image");
+	});
+
+	it("warns when no Durable Object binding uses the container class", () => {
+		expect(checkTemplate({ runtime: "container", rootEntries: [], files: config(pinned, false) }).warnings.map((w) => w.rule)).toContain("container-binding");
+	});
+});

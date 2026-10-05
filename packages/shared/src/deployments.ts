@@ -27,9 +27,10 @@ export interface Deployment {
 
 /**
  * PRD D4: runtimes the one-click deploy pipeline builds. Python (pywrangler) and Rust
- * (worker-build) toolchains are in the build image since #87; Container apps wait for R27.
+ * (worker-build) toolchains are in the build image since #87; container apps (#54) deploy a
+ * published, digest-pinned image, so no Docker is needed.
  */
-export const ONE_CLICK_RUNTIMES: readonly Runtime[] = ["workers-js", "static", "workers-python", "workers-rust"];
+export const ONE_CLICK_RUNTIMES: readonly Runtime[] = ["workers-js", "static", "workers-python", "workers-rust", "container"];
 
 export type DeployUnavailableReason = "not_published" | "platform" | "runtime" | "no_config" | "paid";
 

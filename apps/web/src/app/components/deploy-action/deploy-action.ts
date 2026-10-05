@@ -81,7 +81,7 @@ export class DeployAction {
 
   protected async open(): Promise<void> {
     const l = this.repo();
-    const data: DeployDialogData = { path: l.fullName, slug: l.slug, name: l.name, version: l.publishedTag ?? '', secrets: l.manifest?.secrets ?? [] };
+    const data: DeployDialogData = { path: l.fullName, slug: l.slug, name: l.name, version: l.publishedTag ?? '', secrets: l.manifest?.secrets ?? [], container: l.runtime === 'container' };
     const deployment = await firstValueFrom(this.dialog.open<DeployDialog, DeployDialogData, Deployment>(DeployDialog, { data, width: '32rem', maxWidth: '95vw' }).afterClosed());
     if (deployment) await this.router.navigate(['/dashboard/deployments', deployment.id]);
   }

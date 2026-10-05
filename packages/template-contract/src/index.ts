@@ -1,10 +1,11 @@
 // PRD D2 (template contract), G4 (context pack) and D3 (deploy manifest). Pure functions over the
 // files of one submitted commit, so the API can run them at submit and publish time.
 import type { ContractIssue, ContractResult, DeployManifest, ManifestResourceType, Runtime } from "@appmarket/shared";
+import { CONTAINER_IMAGE } from "./deploy-config";
 import { readWrangler } from "./wrangler";
 
 export { buildRepoMap, type RepoMapInput } from "./repo-map";
-export { buildDeployConfig, ejectConfig, type DeployConfig, type DeployConfigResult } from "./deploy-config";
+export { buildDeployConfig, CONTAINER_IMAGE, ejectConfig, type DeployConfig, type DeployConfigResult } from "./deploy-config";
 
 /** Files the contract reads, by path relative to the repo root. */
 export const CONTRACT_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml", "package.json", ".dev.vars.example", ".env.example", "AGENTS.md"] as const;
@@ -67,6 +68,17 @@ export function checkTemplate({ runtime, rootEntries, files }: TemplateInput): C
 
 	const secretsFile = files.has(".dev.vars.example") ? ".dev.vars.example" : files.has(".env.example") ? ".env.example" : null;
 	if (!secretsFile) warn("secrets-documented", ".dev.vars.example", "If the app needs secrets, list their names in .dev.vars.example so buyers are asked for them.");
+
+	// #54 (R27): container apps deploy a published image; buyers' deploys cannot build a Dockerfile.
+	const containers = list(config.containers);
+	if (runtime === "container" && containers.length === 0) error("container-image", path, "Container apps need a `containers` entry with `class_name` and `image`.");
+	const doClasses = new Set(list(isObject(config.durable_objects) ? (config.durable_objects as Config).bindings : undefined).map((b) => b.class_name));
+	for (const [i, c] of containers.entries()) {
+		if (typeof c.image !== "string" || !CONTAINER_IMAGE.test(c.image)) {
+			error("container-image", path, `containers[${i}].image must be published to Docker Hub, Amazon ECR or Google Artifact Registry and pinned by digest, e.g. docker.io/you/app:1.0@sha256:<64 hex>. Buyers' deploys cannot build a Dockerfile; build and push it in your CI.`);
+		}
+		if (typeof c.class_name === "string" && !doClasses.has(c.class_name)) warn("container-binding", path, `containers[${i}] uses class \`${c.class_name}\`, but no Durable Object binding points to it.`);
+	}
 
 	if (runtime === "workers-js") {
 		const pkg = parseJsonFile(files.get("package.json"));
