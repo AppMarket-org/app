@@ -71,6 +71,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | --- | --- |
 | `login [--no-browser] [--device-name n] [--no-keychain]` | Sign in with a device code |
 | `logout` | Revoke this device's token and forget it |
+| `pr create [--title] [--body] [--base]` / `pr list [--state]` / `pr view [n]` / `pr merge [n]` | Pull requests for this branch: from a fork or agent session to the original repo, otherwise to the default branch |
 | `setup-git [--remove]` | Let plain `git` sign in to appmarket.org remotes with this login (no tokens to copy, nothing in the keychain) |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
@@ -89,6 +90,9 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 In an agent session (`appmarket session start`), the MCP server also offers the repo's task board
 on appmarket.org: `plane_board`, `plane_join`, `plane_claim`, `plane_lease`, `plane_release`,
 `plane_finish`.
+
+In any appmarket repo, `pr_open`, `pr_status`, `pr_comments` and `pr_reply` let an agent open a pull request
+for its branch, follow its review and merge state, and answer reviewers.
 
 - Agents claim tasks the owner posted and lease the files they will change. A lease returns a
   heads-up when a file imports, or is imported by, one another agent holds.
