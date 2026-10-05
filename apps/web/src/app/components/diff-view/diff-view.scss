@@ -1,0 +1,113 @@
+:host {
+  display: block;
+  overflow-x: auto;
+}
+
+.diff {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  min-width: max-content;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+
+  &.add {
+    background: color-mix(in srgb, #2da44e 14%, transparent);
+  }
+
+  &.del {
+    background: color-mix(in srgb, #cf222e 12%, transparent);
+  }
+
+  &.hunk {
+    background: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface-variant);
+    padding: 0.125rem 0.75rem;
+  }
+
+  &:hover .add-comment {
+    opacity: 1;
+  }
+}
+
+.num {
+  flex: 0 0 3rem;
+  text-align: right;
+  padding-right: 0.5rem;
+  color: var(--mat-sys-outline);
+  user-select: none;
+}
+
+.add-comment {
+  --mat-icon-button-state-layer-size: 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  opacity: 0;
+  flex: 0 0 auto;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  // The 3rem touch target would reach into the rows above and below, so a click could land on a
+  // neighbouring line's button (and comment on the wrong line).
+  --mat-icon-button-touch-target-display: none;
+
+  ::ng-deep .mat-mdc-button-touch-target {
+    display: none;
+  }
+}
+
+.sign {
+  flex: 0 0 1rem;
+  text-align: center;
+  user-select: none;
+}
+
+.code {
+  white-space: pre;
+  font: inherit;
+  padding-right: 1rem;
+}
+
+.thread {
+  margin: 0.25rem 0.75rem 0.5rem 7.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface);
+  font-family: var(--mat-sys-body-medium-font);
+  white-space: normal;
+  max-width: 48rem;
+}
+
+.comment + .comment {
+  border-top: 0.0625rem solid var(--mat-sys-outline-variant);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.who {
+  font: var(--mat-sys-label-large);
+}
+
+.box {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

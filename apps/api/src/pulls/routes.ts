@@ -411,6 +411,51 @@ export const pullRoutes = new Hono<Ctx>()
 		logEvent("pull.merge_requested", { repo: repo.fullName, number: row.number });
 		return c.json(await toPull((await pullRow(repo.id, row.number))!, repo, session), 202);
 	})
+	// #259: where the viewer can propose changes from: this repo (owners and members) and their forks of it.
+	.get("/:owner/:slug/pulls/sources", async (c) => {
+		const session = c.get("session");
+		const repo = await target(c);
+		if (!repo || !session) return notFound(c);
+		const self = await env.DB.prepare("SELECT id FROM owners WHERE user_id = ?").bind(session.user.id).first<{ id: string }>();
+		const mine = [self?.id, ...session.orgIds].filter((x): x is string => !!x);
+		const { results: forks } = await env.DB.prepare(
+			`SELECT r.id, o.handle || '/' || r.slug AS full_name, r.git_repo, r.session_of FROM repos r JOIN owners o ON o.id = r.owner_id
+			 WHERE (r.forked_from = ? OR r.session_of = ?) AND r.state != 'removed' AND r.git_repo IS NOT NULL AND r.owner_id IN (${mine.map(() => "?").join(",") || "''"})
+			 ORDER BY r.created_at DESC LIMIT 10`,
+		)
+			.bind(repo.id, repo.id, ...mine)
+			.all<{ id: string; full_name: string; git_repo: string; session_of: string | null }>();
+		const candidates = [...(canEdit(repo, session) ? [{ fullName: repo.fullName, gitRepo: repo.gitRepo!, fork: false, session: false }] : []), ...forks.map((f) => ({ fullName: f.full_name, gitRepo: f.git_repo, fork: true, session: !!f.session_of }))];
+		const sources = await Promise.all(
+			candidates.map(async (r) => {
+				const b = await listBranches(r.gitRepo).catch(() => ({ defaultBranch: "", branches: [] as { name: string }[] }));
+				return { repo: r.fullName, fork: r.fork, session: r.session, defaultBranch: b.defaultBranch, branches: b.branches.map((x) => x.name).sort() };
+			}),
+		);
+		const targetBranches = await listBranches(repo.gitRepo!);
+		return c.json({ sources, target: { defaultBranch: pickBranch(targetBranches.defaultBranch, targetBranches.branches)?.name ?? targetBranches.defaultBranch, branches: targetBranches.branches.map((b) => b.name).sort() } });
+	})
+	// #259: the diff a pull request would have, before opening it.
+	.get("/:owner/:slug/compare", async (c) => {
+		const repo = await target(c);
+		if (!repo) return notFound(c);
+		const sourceName = c.req.query("source") || repo.fullName;
+		const branch = c.req.query("branch");
+		const into = c.req.query("target");
+		if (!isBranchName(branch) || !isBranchName(into)) return invalid(c, "branch and target are branch names.");
+		let source: Repo | null = repo;
+		if (sourceName !== repo.fullName) {
+			const [o, s] = sourceName.split("/");
+			source = o && s ? await new RepoStore(env.DB).findByPath(o, s) : null;
+			const links = source ? await env.DB.prepare("SELECT forked_from, session_of FROM repos WHERE id = ?").bind(source.id).first<{ forked_from: string | null; session_of: string | null }>() : null;
+			if (!source?.gitRepo || (links?.forked_from !== repo.id && links?.session_of !== repo.id) || !canView(source, c.get("session"))) return notFound(c);
+		}
+		const head = (await listBranches(source.gitRepo!)).branches.find((b) => b.name === branch)?.sha;
+		if (!head) return invalid(c, `${branch} does not exist in ${source.fullName}.`);
+		const range = await diffRange({ id: "", state: "open", target_branch: into, source_branch: branch, head_sha: head, target_git: repo.gitRepo!, source_git: source.gitRepo! });
+		if (!range) return c.json({ error: "unavailable", message: "These branches share no history." }, 409);
+		return c.json({ base: range.base, head: range.head, commits: range.commits, ...(await changedFiles(range)) });
+	})
 	// #258: the repo's merge rule.
 	.get("/:owner/:slug/pull-settings", async (c) => {
 		const repo = await target(c);

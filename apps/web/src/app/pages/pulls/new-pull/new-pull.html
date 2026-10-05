@@ -1,0 +1,87 @@
+<header class="head">
+  <a mat-button [routerLink]="['/', owner(), slug(), 'pulls']"><mat-icon>arrow_back</mat-icon>Pull requests</a>
+  <h1>New pull request</h1>
+  <p class="lead">Propose changes from a branch of {{ path }}, or of your fork of it.</p>
+</header>
+
+@switch (sources()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">You cannot open pull requests on this repo.</p>
+  }
+  @default {
+    @if (!sources()!.sources.length) {
+      <p class="empty">
+        You need a fork of {{ path }} to propose changes: use the app as a template, push a branch to your fork, then come back here.
+      </p>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+        <div class="branches">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>From</mat-label>
+            <mat-select formControlName="source" (selectionChange)="pickSource($event.value)">
+              @for (s of sources()!.sources; track s.repo) {
+                <mat-option [value]="s.repo">{{ s.repo }}{{ s.session ? ' (agent session)' : s.fork ? ' (your fork)' : '' }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Branch</mat-label>
+            <mat-select formControlName="sourceBranch" (selectionChange)="compare()">
+              @for (b of branches(); track b) {
+                <mat-option [value]="b">{{ b }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-icon aria-hidden="true" class="arrow">arrow_forward</mat-icon>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Into {{ path }}</mat-label>
+            <mat-select formControlName="targetBranch" (selectionChange)="compare()">
+              @for (b of sources()!.target.branches; track b) {
+                <mat-option [value]="b">{{ b }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        @if (previewError(); as e) {
+          <p class="problem" role="alert">{{ e }}</p>
+        } @else if (preview(); as p) {
+          <section class="preview" aria-label="Changes">
+            <p class="summary">
+              {{ p.commits.length }} commit{{ p.commits.length === 1 ? '' : 's' }}, {{ p.files.length }} file{{ p.files.length === 1 ? '' : 's' }} changed
+            </p>
+            <mat-list dense>
+              @for (f of p.files; track f.path) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon aria-hidden="true">{{ f.status === 'added' ? 'add_circle' : f.status === 'deleted' ? 'remove_circle' : 'edit' }}</mat-icon>
+                  <span matListItemTitle><code>{{ f.path }}</code></span>
+                  <span matListItemLine>{{ f.binary ? 'binary' : f.additions === null ? '' : '+' + f.additions + ' −' + f.deletions }}</span>
+                </mat-list-item>
+              }
+            </mat-list>
+          </section>
+        } @else {
+          <mat-progress-bar mode="indeterminate" aria-label="Comparing" />
+        }
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" maxlength="200" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Description (Markdown)</mat-label>
+          <textarea matInput formControlName="body" rows="8" maxlength="20000"></textarea>
+        </mat-form-field>
+        @if (error(); as e) {
+          <p class="problem" role="alert">{{ e }}</p>
+        }
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="form.invalid || busy() || !preview()">Open pull request</button>
+        </div>
+      </form>
+    }
+  }
+}

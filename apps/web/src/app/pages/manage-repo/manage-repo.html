@@ -13,6 +13,7 @@
     </div>
     <div class="head-actions">
       <a mat-stroked-button [routerLink]="['/', owner(), slug(), 'code']"><mat-icon>code</mat-icon>Code</a>
+      <a mat-stroked-button [routerLink]="['/', owner(), slug(), 'pulls']"><mat-icon>call_split</mat-icon>Pull requests</a>
       <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'agents']"><mat-icon>smart_toy</mat-icon>Agents</a>
       <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"
         ><mat-icon>history_edu</mat-icon>Checkpoints</a
@@ -89,6 +90,12 @@
             <pre><code>git checkout -B main {{ f.tag }} && git push --force appmarket main</code></pre>
           </mat-card-content>
         }
+        <!-- #259: send changes back to the source. -->
+        <mat-card-actions>
+          <a mat-stroked-button [routerLink]="['/', f.fullName.split('/')[0], f.fullName.split('/')[1], 'pulls', 'new']" [queryParams]="{ source: owner() + '/' + slug() }"
+            ><mat-icon>call_split</mat-icon>Propose changes to {{ f.fullName }}</a
+          >
+        </mat-card-actions>
       </mat-card>
     }
   </div>
