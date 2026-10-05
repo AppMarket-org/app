@@ -1,38 +1,126 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
+// Material 3 is the component foundation. Semantic overrides keep every route
+// and overlay in the same ink / ivory / copper design system.
 html {
   height: 100%;
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: mat.$orange-palette,
+        tertiary: mat.$green-palette,
+        theme-type: light,
       ),
-      typography: Roboto,
+      typography: (
+        plain-family: 'DM Sans',
+        brand-family: 'Manrope',
+        medium-weight: 600,
+      ),
       density: 0,
     )
   );
+  @include mat.theme-overrides(
+    (
+      primary: #923f20,
+      on-primary: #ffffff,
+      primary-container: #f6e4d8,
+      on-primary-container: #542610,
+      secondary: #526054,
+      on-secondary: #ffffff,
+      secondary-container: #e5ebe3,
+      on-secondary-container: #28392b,
+      tertiary: #35664d,
+      on-tertiary: #ffffff,
+      tertiary-container: #d8eddf,
+      on-tertiary-container: #173c28,
+      surface: #f8f7f4,
+      surface-dim: #e3e1dc,
+      surface-bright: #fcfbf8,
+      surface-container-lowest: #ffffff,
+      surface-container-low: #f2f0eb,
+      surface-container: #eeece6,
+      surface-container-high: #e8e5de,
+      surface-container-highest: #e2dfd7,
+      surface-variant: #eeece6,
+      on-surface: #20251f,
+      on-surface-variant: #62665e,
+      outline: #797b72,
+      outline-variant: #dedfd6,
+      inverse-surface: #20251f,
+      inverse-on-surface: #f8f7f4,
+      inverse-primary: #f4b894,
+      background: #f8f7f4,
+      on-background: #20251f,
+    )
+  );
+  @include mat.button-overrides(
+    (
+      filled-container-color: #20251f,
+      filled-label-text-color: #fcfbf8,
+      filled-container-shape: 0.625rem,
+      outlined-container-shape: 0.625rem,
+      protected-container-shape: 0.625rem,
+      text-container-shape: 0.625rem,
+      filled-container-height: 2.875rem,
+      outlined-container-height: 2.875rem,
+      text-container-height: 2.75rem,
+      outlined-outline-color: #c7cac0,
+      outlined-label-text-color: #20251f,
+      text-label-text-color: #20251f,
+      filled-label-text-tracking: 0,
+      outlined-label-text-tracking: 0,
+      text-label-text-tracking: 0,
+    )
+  );
+  @include mat.card-overrides(
+    (
+      outlined-container-color: #fcfbf8,
+      outlined-container-shape: 1rem,
+      outlined-outline-color: #dedfd6,
+      elevated-container-color: #fcfbf8,
+      elevated-container-shape: 1rem,
+    )
+  );
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: 0.625rem,
+      outlined-outline-color: #b4b8ad,
+      outlined-hover-outline-color: #62665e,
+    )
+  );
+  @include mat.chips-overrides(
+    (
+      outline-color: #dedfd6,
+      container-shape-radius: 0.625rem,
+      label-text-color: #41483d,
+    )
+  );
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: transparent,
+      container-text-color: #20251f,
+    )
+  );
+
+  --app-font-display: 'Manrope', sans-serif;
+  --app-font-body: 'DM Sans', sans-serif;
+  --app-font-mono: 'IBM Plex Mono', monospace;
+  --app-ink: #20251f;
+  --app-muted: #62665e;
+  --app-accent: #923f20;
+  --app-copper: #c6754b;
+  --app-border: #dedfd6;
+  --app-paper: #f8f7f4;
+  --app-space-section: clamp(4rem, 8vw, 7rem);
+  --app-radius: 1rem;
+  --app-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
   color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
-  height: 100%;
+  min-height: 100%;
 }

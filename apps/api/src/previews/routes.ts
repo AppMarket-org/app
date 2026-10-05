@@ -1,4 +1,4 @@
-import type { PreviewSettings } from "@appmarket/shared";
+import { type PreviewSettings, previewWorkerName } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -7,7 +7,9 @@ import { cloudflareAccounts } from "../cloudflare/oauth.ts";
 import { logEvent } from "../observability/log.ts";
 import { canEdit } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { previewStore } from "./store.ts";
+import { markPreviewDeleted, previewStore } from "./store.ts";
+import { accessToken } from "../cloudflare/oauth.ts";
+import { listBranches } from "../artifacts/git.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -32,7 +34,30 @@ export const previewRoutes = new Hono<Ctx>()
 		const row = await previewStore.settings(repo.id);
 		const name = row && (await env.DB.prepare('SELECT name FROM "user" WHERE id = ?').bind(row.user_id).first<{ name: string }>());
 		const settings: PreviewSettings | null = row ? { enabled: !!row.enabled, deployDefault: !!row.deploy_default, workerName: row.worker_name, accountId: row.account_id, connectedBy: name?.name ?? "someone", mine: row.user_id === c.get("session")!.user.id } : null;
-		return c.json({ settings, items: await previewStore.latest(repo.id) });
+		const items = await previewStore.latest(repo.id);
+		// #192: flag previews whose branch is gone, so they can be cleaned up.
+		const branches = items.length && repo.gitRepo ? new Set((await listBranches(repo.gitRepo).catch(() => null))?.branches.map((b) => b.name) ?? items.map((p) => p.branch)) : null;
+		return c.json({ settings, items: items.map((p) => ({ ...p, branchExists: branches ? branches.has(p.branch) : true })) });
+	})
+	// #192: delete one preview's Worker from the account it was deployed to (only Workers named by
+	// the preview scheme, so the app itself is never touched). Resources stay; they are listed.
+	.delete("/:owner/:slug/previews/:deploymentId", requireRole(), async (c) => {
+		const repo = await editable(c);
+		if (!repo) return c.json({ error: "not_found" }, 404);
+		const preview = (await previewStore.latest(repo.id)).find((p) => p.deploymentId === c.req.param("deploymentId"));
+		if (!preview || preview.deleted) return c.json({ error: "not_found" }, 404);
+		if (preview.workerName !== previewWorkerName(repo.slug, preview.branch)) return c.json({ error: "not_a_preview", message: "This is the deploy of the default branch, not a preview." }, 409);
+		const row = await env.DB.prepare("SELECT user_id, account_id FROM deployments WHERE id = ?").bind(preview.deploymentId).first<{ user_id: string; account_id: string }>();
+		// Only the connection that deployed it can delete it.
+		if (row?.user_id !== c.get("session")!.user.id) return c.json({ error: "forbidden", message: "Only the person whose Cloudflare account has the preview can delete it." }, 403);
+		const token = await accessToken(row.user_id);
+		if (!token) return c.json({ error: "reconnect", message: "Reconnect your Cloudflare account first." }, 409);
+		const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(row.account_id)}/workers/scripts/${encodeURIComponent(preview.workerName)}?force=true`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+		// Already gone counts as deleted.
+		if (!response.ok && response.status !== 404) return c.json({ error: "cloudflare_error", message: `Cloudflare refused (HTTP ${response.status}).` }, 502);
+		await markPreviewDeleted(preview.deploymentId);
+		logEvent("previews.deleted", { repo: repo.fullName, branch: preview.branch, worker: preview.workerName });
+		return c.json({ ok: true, resources: preview.resources });
 	})
 	.put("/:owner/:slug/previews", requireRole(), async (c) => {
 		const repo = await editable(c);

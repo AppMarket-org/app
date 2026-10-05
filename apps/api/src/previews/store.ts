@@ -42,13 +42,42 @@ export const previewStore = {
 	/** The newest preview deploy of each branch. */
 	latest: async (repoId: string): Promise<BranchPreview[]> => {
 		const { results } = await env.DB.prepare(
-			`SELECT d.id, d.preview_branch, d.commit_sha, d.status, d.url, d.error, d.updated_at FROM deployments d
+			`SELECT d.id, d.preview_branch, d.commit_sha, d.status, d.url, d.error, d.updated_at, d.deleted_at, d.worker_name, d.deploy_config FROM deployments d
 			 WHERE d.repo_id = ? AND d.preview_branch IS NOT NULL
 			   AND d.created_at = (SELECT MAX(created_at) FROM deployments x WHERE x.repo_id = d.repo_id AND x.preview_branch = d.preview_branch)
 			 ORDER BY d.updated_at DESC`,
 		)
 			.bind(repoId)
-			.all<{ id: string; preview_branch: string; commit_sha: string; status: DeploymentStatus; url: string | null; error: string | null; updated_at: string }>();
-		return results.map((r) => ({ branch: r.preview_branch, commit: r.commit_sha, deploymentId: r.id, status: r.status, url: r.url, error: r.error, updatedAt: r.updated_at }));
+			.all<{ id: string; preview_branch: string; commit_sha: string; status: DeploymentStatus; url: string | null; error: string | null; updated_at: string; deleted_at: string | null; worker_name: string; deploy_config: string }>();
+		return results.map((r) => ({
+			branch: r.preview_branch,
+			commit: r.commit_sha,
+			deploymentId: r.id,
+			status: r.status,
+			url: r.deleted_at ? null : r.url,
+			error: r.error,
+			updatedAt: r.deleted_at ?? r.updated_at,
+			deleted: !!r.deleted_at,
+			workerName: r.worker_name,
+			resources: previewResources(r.deploy_config),
+		}));
 	},
 };
+
+/** #192: names of the D1 databases, KV namespaces and R2 buckets a deploy config creates. */
+export function previewResources(deployConfig: string): string[] {
+	try {
+		const c = (JSON.parse(deployConfig) as { config?: Record<string, unknown> }).config ?? {};
+		const list = (k: string) => (Array.isArray(c[k]) ? (c[k] as Record<string, unknown>[]) : []);
+		return [
+			...list("d1_databases").map((d) => `D1 database ${String(d.database_name ?? d.binding)}`),
+			...list("kv_namespaces").map((k) => `KV namespace for ${String(k.binding)}`),
+			...list("r2_buckets").map((b) => `R2 bucket ${String(b.bucket_name ?? b.binding)}`),
+		];
+	} catch {
+		return [];
+	}
+}
+
+export const markPreviewDeleted = (deploymentId: string) =>
+	env.DB.prepare("UPDATE deployments SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(deploymentId).run();

@@ -1,6 +1,74 @@
-// Global styles. Material 3 theme lives in material-theme.scss; component styles live next to each component.
 @use 'material-theme';
+@use 'marketing';
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
 a {
   color: var(--mat-sys-primary);
+}
+::selection {
+  background: #eed8c7;
+  color: var(--app-ink);
+}
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+p {
+  line-height: 1.65;
+}
+pre,
+code {
+  font-family: var(--app-font-mono);
+}
+
+// Public Material classes only; interaction, ripples and state layers stay intact.
+.mat-mdc-button-base {
+  transition:
+    transform 180ms var(--app-ease),
+    box-shadow 180ms var(--app-ease);
+}
+.mat-mdc-button-base:not(:disabled):active {
+  transform: translateY(0.0625rem);
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 0.1875rem solid var(--app-accent);
+  outline-offset: 0.1875rem;
+}
+.mat-mdc-card-header {
+  padding: 1.5rem 1.5rem 0;
+}
+.mat-mdc-card-content {
+  padding: 0 1.5rem;
+}
+.mat-mdc-card-content:last-child {
+  padding-bottom: 1.5rem;
+}
+.mat-mdc-card-actions {
+  padding: 0.75rem 1rem;
+}
+.mat-mdc-card-title {
+  letter-spacing: -0.025em;
+}
+.mat-mdc-form-field {
+  --mat-form-field-container-text-line-height: 1.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
