@@ -165,6 +165,7 @@
       <div class="grid">
         <app-previews-card [path]="path()" [slug]="slug()" />
         <app-checks-card [path]="path()" />
+      <app-conformance class="wide" [path]="path()" [latest]="true" />
         @if (!l.sessionOf) {
           <app-webhooks-card class="wide" [path]="l.fullName" />
         }

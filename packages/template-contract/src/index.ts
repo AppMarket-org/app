@@ -168,3 +168,4 @@ function parseJsonFile(text: string | undefined): Record<string, unknown> | null
 }
 export { checkPwa, pwaManifestCandidates } from "./pwa";
 export { detectRuntime, RUNTIME_FILES } from "./runtime";
+export { blockingFailures, evaluateConformance, RULESET, type ConformanceRule, type RuleResult } from "./conformance";

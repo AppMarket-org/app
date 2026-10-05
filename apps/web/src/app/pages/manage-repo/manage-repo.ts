@@ -24,6 +24,7 @@ import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { ReleasesCard } from './releases-card/releases-card';
 import { AndroidCard } from './android-card/android-card';
 import { ChecksCard } from './checks-card/checks-card';
+import { Conformance } from '../../components/conformance/conformance';
 import { ExportCard } from './export-card/export-card';
 import { PreviewsCard } from './previews-card/previews-card';
 import { PriceCard } from './price-card/price-card';
@@ -54,6 +55,7 @@ import { STATE_LABELS } from '../state-labels';
     RepoForm,
     AndroidCard,
     ChecksCard,
+    Conformance,
     ExportCard,
     PreviewsCard,
     PriceCard,
