@@ -39,20 +39,22 @@ export const DEPLOY_UNAVAILABLE: Record<DeployUnavailableReason, string> = {
 	platform: "This app does not run on Cloudflare Workers.",
 	runtime: "One-click deploy is not available for this runtime yet. Clone the code and deploy it with Wrangler.",
 	no_config: "This version has no Wrangler config, so it cannot be deployed in one step. Clone the code to run it yourself.",
-	paid: "Paid apps can be deployed after checkout.",
+	paid: "Buy this app to deploy it.",
 };
 
 /** D4: whether a repo shows the Deploy action, and if not, why. The API applies the same rule. */
 export function deployAvailability(
 	repo: Pick<Repo, "state" | "platforms" | "runtime" | "manifest" | "priceCents">,
+	/** #213: the viewer bought the app (or edits it). */
+	owned = false,
 ): { ok: true } | { ok: false; reason: DeployUnavailableReason } {
 	if (repo.state !== "published") return { ok: false, reason: "not_published" };
 	if (!repo.platforms.includes("workers")) return { ok: false, reason: "platform" };
 	if (!ONE_CLICK_RUNTIMES.includes(repo.runtime)) return { ok: false, reason: "runtime" };
 	// D3: the manifest exists only when the published version has a Wrangler config.
 	if (!repo.manifest) return { ok: false, reason: "no_config" };
-	// R17: paid repos deploy after checkout, which is Phase 2.
-	if (repo.priceCents > 0) return { ok: false, reason: "paid" };
+	// R17: paid apps deploy after purchase.
+	if (repo.priceCents > 0 && !owned) return { ok: false, reason: "paid" };
 	return { ok: true };
 }
 

@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -39,6 +40,11 @@ export class Dashboard {
 
   /** D6: the user's deploys into Cloudflare; empty on error. */
   protected readonly deployments = toSignal(inject(DeploymentsApi).mine().pipe(catchError(() => of([]))));
+  protected readonly purchases = toSignal(
+    inject(HttpClient)
+      .get<{ items: { repo: string; name: string; amountCents: number; status: string; purchasedAt: string }[] }>('/api/me/purchases')
+      .pipe(map((r) => r.items), catchError(() => of([]))),
+  );
   /** Repos the user rang a cowbell for; empty on error. */
   protected readonly cowbelled = toSignal(inject(CowbellsApi).mine().pipe(catchError(() => of([]))));
   protected readonly deployStatus: Record<string, string> = { queued: 'Queued', building: 'Building', deploying: 'Deploying', succeeded: 'Live', failed: 'Failed' };

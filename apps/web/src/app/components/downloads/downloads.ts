@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RELEASE_PLATFORMS, type Release } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Catalog } from '../../api/catalog';
+import { Purchases } from '../../api/purchases';
 import { ConfirmDialog, type ConfirmDialogData } from '../confirm-dialog/confirm-dialog';
 import { fileSize } from '../file-size';
 
@@ -21,6 +22,11 @@ import { fileSize } from '../file-size';
 })
 export class Downloads {
   readonly releases = input.required<Release[]>();
+  /** #213: paid apps download only for buyers. */
+  readonly path = input('');
+  readonly priceCents = input(0);
+  private readonly purchases = inject(Purchases);
+  protected readonly locked = computed(() => this.priceCents() > 0 && !this.purchases.owned()[this.path()]);
   /** #33: the developer's Android verification declaration; APKs download only with it. */
   readonly android = input<{ package: string } | null>(null);
   private readonly dialog = inject(MatDialog);

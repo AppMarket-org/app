@@ -59,3 +59,8 @@ p {
     background-color: var(--mat-sys-outline);
   }
 }
+
+.price {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-primary);
+}

@@ -11,6 +11,7 @@ import { clientIp, rateLimit } from "../rate-limit.ts";
 import { signDownload, verifyDownload } from "./signing.ts";
 import { Releases } from "./store.ts";
 import { logEvent } from "../observability/log.ts";
+import { entitled } from "../payments/routes.ts";
 
 type Ctx = { Variables: AuthVariables };
 const repos = () => new RepoStore(env.DB);
@@ -74,7 +75,7 @@ export const releaseLinkRoutes = new Hono<Ctx>().post(
 			return c.json({ error: "android_not_verified", message: "The developer has not confirmed Android developer verification for this app yet." }, 403);
 		}
 		// R17: paid repos need an entitlement check here before a link is issued.
-		if (repo.priceCents > 0) return c.json({ error: "payment_required" }, 402);
+		if (!(await entitled(repo, session))) return c.json({ error: "payment_required", message: "Buy this app to download it." }, 402);
 		const expiresAt = Math.floor(Date.now() / 1000) + LINK_TTL_SECONDS;
 		const sig = await signDownload(env.DOWNLOAD_SIGNING_KEY, release.id, expiresAt);
 		logEvent("download.link_issued", { repo: repo.fullName, release: release.id });

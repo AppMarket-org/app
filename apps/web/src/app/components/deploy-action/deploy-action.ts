@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, input, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DEPLOY_UNAVAILABLE, RUNTIMES, type Deployment, type Repo, deployAvailability } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
+import { Purchases } from '../../api/purchases';
 import { Auth } from '../../auth/auth';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { DeployDialog, type DeployDialogData } from '../deploy-dialog/deploy-dialog';
 
 /**
@@ -32,12 +34,20 @@ export class DeployAction {
   private readonly route = inject(ActivatedRoute);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  private readonly availability = computed(() => deployAvailability(this.repo()));
+  private readonly purchases = inject(Purchases);
+  private readonly snackBar = inject(MatSnackBar);
+  /** #213: bought (or edits it); paid apps deploy only then. */
+  protected readonly owned = computed(() => !!this.purchases.owned()[this.repo().fullName]);
+  protected readonly price = computed(() => `$${(this.repo().priceCents / 100).toFixed(2)}`);
+  protected readonly buying = signal(false);
+  private readonly availability = computed(() => deployAvailability(this.repo(), this.owned()));
+  /** #212: paid, published, not owned yet: offer to buy. */
+  protected readonly forSale = computed(() => { const a = this.availability(); return !a.ok && a.reason === 'paid'; });
   protected readonly deployable = computed(() => this.availability().ok);
   /** Why there is no Deploy action, for published repos; null otherwise. */
   protected readonly guidance = computed(() => {
     const a = this.availability();
-    if (a.ok || a.reason === 'not_published') return null;
+    if (a.ok || a.reason === 'not_published' || a.reason === 'paid') return null;
     const l = this.repo();
     if (a.reason === 'platform') return this.hasReleases() ? 'Download it from the Downloads section above, or get the code below.' : 'Get the code below to build and run it.';
     if (a.reason === 'runtime') return `One-click deploy is not available for ${RUNTIMES[l.runtime].name} apps yet. Get the code below and deploy it with Wrangler.`;
@@ -46,9 +56,27 @@ export class DeployAction {
   protected readonly returnPath = computed(() => `/${this.repo().fullName}?deploy=1`);
 
   async ngOnInit(): Promise<void> {
-    if (!this.isBrowser || this.route.snapshot.queryParamMap.get('deploy') !== '1' || !this.deployable()) return;
+    if (!this.isBrowser) return;
+    const path = this.repo().fullName;
+    if (this.repo().priceCents > 0 && (await this.auth.load())) {
+      // #212: back from Stripe Checkout.
+      const session = this.route.snapshot.queryParamMap.get('purchase');
+      if (session) {
+        void this.router.navigate([], { queryParams: { purchase: null }, queryParamsHandling: 'merge', replaceUrl: true });
+        const ok = await this.purchases.confirm(path, session);
+        this.snackBar.open(ok ? `You own ${this.repo().name}. Deploy it or download it any time.` : 'The payment is still processing; this page updates once it completes.', 'OK', { duration: 6000 });
+      } else await this.purchases.load(path);
+    }
+    if (this.route.snapshot.queryParamMap.get('deploy') !== '1' || !this.deployable()) return;
     void this.router.navigate([], { queryParams: { deploy: null, connected: null }, queryParamsHandling: 'merge', replaceUrl: true });
     if (await this.auth.load()) await this.open();
+  }
+
+  protected async buy(): Promise<void> {
+    this.buying.set(true);
+    const error = await this.purchases.buy(this.repo().fullName);
+    this.buying.set(false);
+    if (error) this.snackBar.open(error, 'OK', { duration: 6000 });
   }
 
   protected async open(): Promise<void> {

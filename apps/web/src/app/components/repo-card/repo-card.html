@@ -11,6 +11,7 @@
   <mat-card-actions class="actions">
     <a mat-button [routerLink]="'/' + repo().fullName" [attr.aria-label]="'View app: ' + repo().name">View app</a>
     <span class="meta">
+      <span class="price">{{ repo().priceCents > 0 ? '$' + (repo().priceCents / 100).toFixed(2) : 'Free' }}</span>
       @if (topLanguage(); as lang) {
         <span class="language"><span class="dot" [class.other]="!lang.color" [style.background-color]="lang.color" aria-hidden="true"></span>{{ lang.name }}</span>
       }

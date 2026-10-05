@@ -25,6 +25,24 @@
   }
 </section>
 
+@if (purchases()?.length) {
+  <!-- #213: paid apps the user bought. -->
+  <section aria-labelledby="purchases-heading">
+    <h2 id="purchases-heading">Purchased apps</h2>
+    <mat-card appearance="outlined">
+      <mat-nav-list aria-labelledby="purchases-heading">
+        @for (p of purchases(); track p.repo + p.purchasedAt) {
+          <a mat-list-item [routerLink]="'/' + p.repo">
+            <mat-icon matListItemIcon aria-hidden="true">{{ p.status === 'paid' ? 'shopping_bag' : 'money_off' }}</mat-icon>
+            <span matListItemTitle>{{ p.name }}</span>
+            <span matListItemLine>{{ '$' + (p.amountCents / 100).toFixed(2) }} · {{ p.purchasedAt | date: 'mediumDate' }}{{ p.status === 'paid' ? '' : ' · ' + p.status }}</span>
+          </a>
+        }
+      </mat-nav-list>
+    </mat-card>
+  </section>
+}
+
 <section aria-labelledby="repos-heading">
   <header class="head">
     <h2 id="repos-heading">Your repos</h2>
