@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import { deleteGitRepo, forkGitRepo, gitRepoNameFor, mintGitToken, revokeAllGitTokens } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { publicRemote } from "../git/remote.ts";
 import { logEvent } from "../observability/log.ts";
 import { leavePlane } from "../plane/routes.ts";
 import { canEdit } from "../repos/access.ts";
@@ -59,7 +60,7 @@ async function manageable(c: Context<Ctx>): Promise<SessionRow | null> {
 async function issueToken(row: SessionRow, gitRepo: string): Promise<AgentSessionToken> {
 	const minted = await mintGitToken(gitRepo, "write", SESSION_TOKEN_TTL);
 	await env.DB.prepare("UPDATE agent_sessions SET token_expires_at = ? WHERE id = ?").bind(minted.expiresAt, row.id).run();
-	return { session: toSession({ ...row, token_expires_at: minted.expiresAt }), remote: minted.remote, token: minted.token, expiresAt: minted.expiresAt };
+	return { session: toSession({ ...row, token_expires_at: minted.expiresAt }), remote: publicRemote(row.fork), token: minted.token, expiresAt: minted.expiresAt };
 }
 
 /** #29 (R9): start and list a repo's agent sessions. Mounted under /api/repos. */

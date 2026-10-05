@@ -5,7 +5,7 @@ const all = ["checkpoints:write", "checkpoints:read", "repos:read"];
 
 describe("grantScopes", () => {
 	it("defaults to the client's scopes and refuses anything wider or unknown", () => {
-		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write"]);
+		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write", "git:write"]);
 		expect(grantScopes("appmarket-ci", undefined)).toEqual([...all, "releases:write", "memory:read"]);
 		expect(grantScopes("appmarket-ci", "sessions:write")).toBeNull();
 		expect(grantScopes("appmarket-ci", "memory:write")).toBeNull();

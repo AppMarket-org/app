@@ -3,7 +3,8 @@ import { RELEASE_LIMITS } from "@appmarket/shared";
 import { releaseUploadSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
-import { gitRemote, resolveTag } from "../artifacts/git.ts";
+import { resolveTag } from "../artifacts/git.ts";
+import { publicRemote } from "../git/remote.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { canEdit, canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
@@ -143,5 +144,5 @@ export const repoExportRoutes = new Hono<Ctx>().get("/:owner/:slug/export", requ
 	);
 	logEvent("repo.exported", { repo: repo.fullName, releases: files.length });
 	c.header("Cache-Control", "no-store");
-	return c.json({ repo: repo.fullName, gitRemote: repo.gitRepo ? await gitRemote(repo.gitRepo) : null, releases: releasesOut, expiresAt: new Date(expiresAt * 1000).toISOString() } satisfies RepoExport);
+	return c.json({ repo: repo.fullName, gitRemote: repo.gitRepo ? publicRemote(repo.fullName) : null, releases: releasesOut, expiresAt: new Date(expiresAt * 1000).toISOString() } satisfies RepoExport);
 });
