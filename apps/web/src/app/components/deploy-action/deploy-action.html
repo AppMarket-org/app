@@ -6,9 +6,9 @@
       <p class="hint">Runs as a Cloudflare Container: needs the Workers Paid plan; container time is billed to you.</p>
     }
     @if (auth.user()) {
-      <button mat-flat-button type="button" (click)="open()"><mat-icon>rocket_launch</mat-icon>Deploy to Cloudflare</button>
+      <button mat-flat-button type="button" (click)="open()"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Deploy to Cloudflare</button>
     } @else if (auth.user() === null) {
-      <a mat-flat-button [routerLink]="['/login']" [queryParams]="{ next: returnPath() }"><mat-icon>rocket_launch</mat-icon>Sign in to deploy</a>
+      <a mat-flat-button [routerLink]="['/login']" [queryParams]="{ next: returnPath() }"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Sign in to deploy</a>
     }
   </section>
 }
