@@ -241,3 +241,33 @@ export async function pushedCommits(gitRepo: string, limit = 200): Promise<{ las
 	const changedAt = info.lastPushAt ?? info.updatedAt;
 	return { lastPushAt: changedAt, commits: await git.log({ ref: info.defaultBranch, limit }).catch(() => []), defaultBranch: info.defaultBranch };
 }
+
+/** Code browser: a ref (branch, tag or commit) resolved to its commit, or null. */
+export async function resolveRef(gitRepo: string, ref: string): Promise<string | null> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const [commit] = await git.log({ ref, limit: 1 }).catch(() => []);
+	return commit?.hash ?? null;
+}
+
+/** Code browser: the entries of one directory at a commit ("" is the root), or null if there is no such directory. */
+export async function readDirectory(gitRepo: string, commit: string, path: string): Promise<{ name: string; type: "tree" | "blob" | "link"; hash: string }[] | null> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const meta = await git.readCommit(commit);
+	if (!meta) return null;
+	let tree = meta.treeHash;
+	for (const segment of path.split("/").filter(Boolean)) {
+		const entry = ((await git.readTree(tree)) ?? []).find((e) => e.name === segment && e.type === "tree");
+		if (!entry) return null;
+		tree = entry.hash;
+	}
+	const entries = (await git.readTree(tree)) ?? [];
+	return entries
+		.map((e) => ({ name: e.name, type: (e.mode === "120000" ? "link" : e.type === "tree" ? "tree" : "blob") as "tree" | "blob" | "link", hash: e.hash }))
+		.sort((a, b) => (a.type === "tree") === (b.type === "tree") ? a.name.localeCompare(b.name) : a.type === "tree" ? -1 : 1);
+}
+
+/** Code browser: one file's bytes at a commit (null if missing). */
+export async function readPath(gitRepo: string, commit: string, path: string): Promise<Blob | null> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	return git.readFile({ ref: commit, path });
+}

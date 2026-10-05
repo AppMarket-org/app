@@ -1,0 +1,84 @@
+<header class="head">
+  <a mat-button [routerLink]="'/' + full"><mat-icon>arrow_back</mat-icon>{{ full }}</a>
+  @if (tree(); as t) {
+    @if (t.editor && branches().length) {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ref">
+        <mat-label>Branch</mat-label>
+        <mat-select [value]="t.ref" (selectionChange)="chooseRef($event.value)">
+          @for (b of branches(); track b) {
+            <mat-option [value]="b">{{ b }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    } @else if (t.ref) {
+      <span class="ref-label"><mat-icon aria-hidden="true">sell</mat-icon>{{ t.ref }}</span>
+    }
+  }
+</header>
+
+<nav class="crumbs" aria-label="Path">
+  <a mat-button [routerLink]="[]" [queryParams]="params({ path: null, file: null })">{{ slug }}</a>
+  @for (c of crumbs(); track c.path) {
+    <span aria-hidden="true">/</span>
+    @if (c.last) {
+      <span class="current">{{ c.name }}</span>
+    } @else {
+      <a mat-button [routerLink]="[]" [queryParams]="params({ path: c.path, file: null })">{{ c.name }}</a>
+    }
+  }
+</nav>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+}
+
+@switch (tree()) {
+  @case (undefined) {}
+  @case (null) {
+    <p class="empty">This code is not available.</p>
+  }
+  @default {
+    @let t = tree()!;
+    @if (t.empty) {
+      <p class="empty">No code yet. Push to this repo to see it here.</p>
+    } @else {
+      <div class="layout" [class.with-file]="file()">
+        <mat-nav-list class="files" aria-label="Files">
+          @if (dir()) {
+            <a mat-list-item [routerLink]="[]" [queryParams]="params({ path: dir().split('/').slice(0, -1).join('/') || null, file: null })">
+              <mat-icon matListItemIcon aria-hidden="true">arrow_upward</mat-icon>
+              <span matListItemTitle>..</span>
+            </a>
+          }
+          @for (e of t.entries; track e.name) {
+            <a mat-list-item [routerLink]="[]" [queryParams]="entryParams(e.name, e.type)" [activated]="isOpen(e.name)">
+              <mat-icon matListItemIcon aria-hidden="true">{{ e.type === 'tree' ? 'folder' : e.type === 'link' ? 'link' : 'description' }}</mat-icon>
+              <span matListItemTitle>{{ e.name }}</span>
+            </a>
+          }
+        </mat-nav-list>
+
+        @if (file()) {
+          <section class="viewer" aria-label="File">
+            @if (blob(); as b) {
+              <div class="viewer-head">
+                <span class="name">{{ b.path.split('/').pop() }}</span>
+                <span class="size">{{ b.size }} bytes</span>
+                @if (b.text != null) {
+                  <button mat-button type="button" (click)="copy()"><mat-icon>content_copy</mat-icon>Copy</button>
+                }
+              </div>
+              @if (b.binary) {
+                <p class="empty">Binary file; not shown.</p>
+              } @else if (b.tooLarge) {
+                <p class="empty">This file is over 1 MB; not shown.</p>
+              } @else if (html(); as h) {
+                <div class="code" [innerHTML]="h"></div>
+              }
+            }
+          </section>
+        }
+      </div>
+    }
+  }
+}

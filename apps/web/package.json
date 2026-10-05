@@ -24,6 +24,7 @@
     "@appmarket/shared": "workspace:*",
     "marked": "^18.0.14",
     "rxjs": "~7.8.0",
+    "shiki": "4",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

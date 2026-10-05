@@ -12,6 +12,7 @@
       </div>
     </div>
     <div class="head-actions">
+      <a mat-stroked-button [routerLink]="['/', owner(), slug(), 'code']"><mat-icon>code</mat-icon>Code</a>
       <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"
         ><mat-icon>history_edu</mat-icon>Checkpoints</a
       >

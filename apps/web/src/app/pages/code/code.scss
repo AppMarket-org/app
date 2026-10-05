@@ -1,0 +1,112 @@
+:host {
+  display: block;
+  padding: 1rem;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ref {
+  width: min(16rem, 100%);
+}
+
+.ref-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font: var(--mat-sys-label-large);
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+  margin: 0.5rem 0;
+
+  .current {
+    font: var(--mat-sys-label-large);
+    padding: 0 0.5rem;
+  }
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+
+  &.with-file {
+    grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 48rem) {
+  .layout.with-file {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.files {
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  align-self: start;
+}
+
+.viewer {
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  overflow: hidden;
+}
+
+.viewer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem 0.25rem 1rem;
+  border-bottom: 0.0625rem solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+
+  .name {
+    font: var(--mat-sys-title-small);
+  }
+
+  .size {
+    flex: 1;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+}
+
+.code {
+  overflow: auto;
+  max-height: 75vh;
+  font-size: 0.8125rem;
+
+  // Shiki output is inserted as HTML, outside this component's encapsulation.
+  ::ng-deep pre.shiki {
+    margin: 0;
+    padding: 0.75rem 0;
+    counter-reset: line;
+    tab-size: 2;
+  }
+
+  ::ng-deep .line::before {
+    counter-increment: line;
+    content: counter(line);
+    display: inline-block;
+    width: 3rem;
+    padding-right: 1rem;
+    text-align: right;
+    color: var(--mat-sys-outline);
+    user-select: none;
+  }
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+}
