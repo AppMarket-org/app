@@ -1,6 +1,6 @@
 # Legal document review
 
-The four `/legal/*` pages are drafts, not yet in effect. They describe the implemented Git, checkpoint, deployment, and marketplace features as of October 5, 2026. They do not establish that the operator has completed legal review or regulatory requirements.
+The four `/legal/*` pages no longer display draft notices, as requested by the owner. Operator-specific fields remain unresolved. They describe the implemented Git, checkpoint, deployment, and marketplace features as of October 5, 2026. They do not establish that the operator has completed legal review or regulatory requirements.
 
 Before adopting the documents, confirm and replace the bracketed fields:
 
