@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -52,6 +52,8 @@ export class DevicePage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly code = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8), Validators.maxLength(9)] });
+  /** Makes <form> an Angular form so (ngSubmit) fires instead of a page-reloading native submit. */
+  protected readonly codeForm = new FormGroup({ code: this.code });
 
   constructor() {
     inject(Seo).set({ title: 'Connect a device', description: 'Approve a CLI or agent sign-in.', path: '/device', noindex: true });

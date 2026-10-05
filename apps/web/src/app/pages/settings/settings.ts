@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -53,6 +53,9 @@ export class Settings {
     nonNullable: true,
     validators: [Validators.required, Validators.pattern(HANDLE_PATTERN), (c) => (RESERVED_HANDLES.has(String(c.value)) ? { reserved: true } : null)],
   });
+
+  /** A form group makes <form> an Angular form, so (ngSubmit) fires instead of a native submit that reloads the page. */
+  protected readonly handleForm = new FormGroup({ handle: this.handle });
 
   constructor() {
     inject(Seo).set({ title: 'Settings', description: 'Your profile, username and organizations.', path: '/settings', noindex: true });

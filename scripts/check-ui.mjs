@@ -41,6 +41,19 @@ for (const file of files) {
 		if (FORBIDDEN[tag]) report(file, m.index, text, `<${tag}> is not a Material component; ${FORBIDDEN[tag]}`);
 		else if (!NEEDS_MATERIAL[tag].test(attrs)) report(file, m.index, text, `<${tag}> without a Material directive${tag === "table" ? " (use mat-table)" : ""}`);
 	}
+	// (ngSubmit) only fires on an Angular form: [formGroup], or NgForm from FormsModule. Otherwise the
+	// browser submits natively and reloads the page (the username and device-code forms once did).
+	for (const m of text.matchAll(/<form\b([^>]*)>/g)) {
+		if (!/\(ngSubmit\)/.test(m[1]) || /\[formGroup\]/.test(m[1])) continue;
+		const component = (() => {
+			try {
+				return readFileSync(file.replace(/\.html$/, ".ts"), "utf8");
+			} catch {
+				return "";
+			}
+		})();
+		if (!/\bFormsModule\b/.test(component)) report(file, m.index, text, "<form (ngSubmit)> needs [formGroup] (or FormsModule), or the browser reloads the page on submit");
+	}
 }
 
 if (problems.length > 0) {

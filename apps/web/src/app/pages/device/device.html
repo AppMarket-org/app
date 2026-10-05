@@ -12,7 +12,7 @@
     @switch (step()) {
       @case ('enter') {
         <p>Enter the code your CLI or agent shows.</p>
-        <form (ngSubmit)="check()" novalidate>
+        <form [formGroup]="codeForm" (ngSubmit)="check()" novalidate>
           <mat-form-field appearance="outline">
             <mat-label>Code</mat-label>
             <input matInput class="code" [formControl]="code" autocomplete="one-time-code" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX" />

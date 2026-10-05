@@ -55,7 +55,7 @@
   </mat-card-header>
   <mat-card-content>
     @if (owner()) {
-      <form class="row" (ngSubmit)="saveHandle()" novalidate>
+      <form class="row" [formGroup]="handleForm" (ngSubmit)="saveHandle()" novalidate>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Username</mat-label>
           <input matInput [formControl]="handle" autocomplete="username" spellcheck="false" maxlength="39" />
