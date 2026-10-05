@@ -43,7 +43,12 @@
           @if (d.error) {
             <pre><code>{{ d.error }}</code></pre>
           }
-          <a mat-stroked-button [routerLink]="'/' + d.repoFullName" [queryParams]="{ deploy: 1 }">Try again</a>
+          @if (d.previewBranch) {
+            <!-- An automatic deploy: run it again (same branch, commit and Worker). -->
+            <button mat-stroked-button type="button" [disabled]="retrying()" (click)="retry()">Try again</button>
+          } @else {
+            <a mat-stroked-button [routerLink]="'/' + d.repoFullName" [queryParams]="{ deploy: 1 }">Try again</a>
+          }
         }
       </mat-card-content>
     </mat-card>

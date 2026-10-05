@@ -25,6 +25,11 @@ export class DeploymentsApi {
     return this.http.get<{ items: WorkerVersion[] }>(`/api/deployments/${id}/versions`).pipe(map((r) => r.items));
   }
 
+  /** A failed automatic deploy (auto deploy or a preview), deployed again; the new deployment's id. */
+  retry(id: string): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`/api/deployments/${id}/retry`, {});
+  }
+
   rollback(id: string, versionId: string): Observable<unknown> {
     return this.http.post(`/api/deployments/${id}/rollback`, { versionId });
   }
