@@ -17,3 +17,4 @@ export type { CheckpointPatch, CheckpointUpload, DeploymentRequest, OrgCreate, O
 export * from "./sessions";
 export * from "./memory";
 export * from "./pulls";
+export * from "./device-scopes";

@@ -1,15 +1,9 @@
 // #107 (Checkpoints PRD, "Device code auth"): what a device-login session may do. Browser sessions
 // have no scopes and full access; device sessions are limited to these scopes and the routes below.
 
-/** Scopes each device client may request; also its default when it asks for none. */
-export const DEVICE_CLIENT_SCOPES: Readonly<Record<string, readonly string[]>> = {
-	// #29: sessions:write lets `appmarket session` start agent sessions in forks. CI tokens cannot.
-	// #194: memory:read and memory:write let agents recall and keep repo notes.
-	"appmarket-cli": ["checkpoints:write", "checkpoints:read", "repos:read", "sessions:write", "memory:read", "memory:write", "git:write"],
-	// #134: CI tokens created in Settings, for pipelines that cannot approve a device code.
-	// #34: CI pipelines upload release builds (releases:write).
-	"appmarket-ci": ["checkpoints:write", "checkpoints:read", "repos:read", "releases:write", "memory:read"],
-};
+import { DEVICE_CLIENT_SCOPES } from "@appmarket/shared";
+
+export { DEVICE_CLIENT_SCOPES };
 
 /** The granted scopes: the request (or the client's default), refused if it asks for more. */
 export function grantScopes(clientId: string, requested: string | undefined): string[] | null {
