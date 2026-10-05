@@ -32,15 +32,15 @@ export async function evaluateCommit(repo: Target, commit: string): Promise<Rule
 	using git = await env.ARTIFACTS.get(repo.gitRepo);
 	const log = await git.log({ ref: commit, limit: 100 }).catch(() => []);
 	const shas = log.map((c) => c.hash);
-	const withCheckpoint = shas.length
-		? new Set(
-				(
-					await env.DB.prepare(`SELECT DISTINCT commit_sha FROM checkpoints WHERE repo_id = ? AND commit_sha IN (${shas.map(() => "?").join(",")})`)
-						.bind(repo.id, ...shas)
-						.all<{ commit_sha: string }>()
-				).results.map((r) => r.commit_sha),
-			)
-		: new Set<string>();
+	// D1 binds at most 100 variables per statement: look the commits up in batches.
+	const withCheckpoint = new Set<string>();
+	for (let i = 0; i < shas.length; i += 50) {
+		const batch = shas.slice(i, i + 50);
+		const { results } = await env.DB.prepare(`SELECT DISTINCT commit_sha FROM checkpoints WHERE repo_id = ? AND commit_sha IN (${batch.map(() => "?").join(",")})`)
+			.bind(repo.id, ...batch)
+			.all<{ commit_sha: string }>();
+		for (const r of results) withCheckpoint.add(r.commit_sha);
+	}
 	const results = evaluateConformance({ contract, hasLicense: license, security: "none", commits: shas.length, unattributed: shas.filter((s) => !withCheckpoint.has(s)).length });
 	await env.DB.prepare("INSERT OR REPLACE INTO conformance_results (repo_id, commit_sha, ruleset_version, results) VALUES (?, ?, ?, ?)").bind(repo.id, commit, RULESET.version, JSON.stringify(results)).run();
 	return results;
