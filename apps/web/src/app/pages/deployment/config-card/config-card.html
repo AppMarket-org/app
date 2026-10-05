@@ -1,0 +1,87 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Variables and secrets</mat-card-title>
+    <mat-card-subtitle>Changes deploy a new version of your Worker right away. Secret values go straight to Cloudflare; appmarket.org never stores or shows them.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (busy() || (!config() && !error())) {
+      <mat-progress-bar mode="indeterminate" aria-label="Working" />
+    }
+    @if (error(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    }
+    @if (config(); as c) {
+      @if (c.missing.length) {
+        <p class="warn" role="status"><mat-icon aria-hidden="true">warning</mat-icon>The app needs these secrets: {{ c.missing.join(', ') }}.</p>
+      }
+      <h3>Variables</h3>
+      <mat-list role="list" aria-label="Variables">
+        @for (v of c.vars; track v.name) {
+          <mat-list-item role="listitem" lines="2">
+            <span matListItemTitle><code>{{ v.name }}</code></span>
+            <span matListItemLine class="value">{{ v.value }}</span>
+            <span matListItemMeta class="actions">
+              <button mat-button type="button" (click)="edit('vars', v.name, v.value)">Edit</button>
+              <button mat-button type="button" [disabled]="busy()" (click)="remove('vars', v.name)">Delete</button>
+            </span>
+          </mat-list-item>
+        } @empty {
+          <p class="hint">No variables.</p>
+        }
+      </mat-list>
+      <h3>Secrets</h3>
+      <mat-list role="list" aria-label="Secrets">
+        @for (s of c.secrets; track s) {
+          <mat-list-item role="listitem">
+            <span matListItemTitle><code>{{ s }}</code> <span class="hint">· value hidden</span></span>
+            <span matListItemMeta class="actions">
+              <button mat-button type="button" (click)="edit('secrets', s)">Replace</button>
+              <button mat-button type="button" [disabled]="busy()" (click)="remove('secrets', s)">Delete</button>
+            </span>
+          </mat-list-item>
+        }
+        @for (m of c.missing; track m) {
+          <mat-list-item role="listitem">
+            <span matListItemTitle><code>{{ m }}</code> <span class="error">· not set</span></span>
+            <span matListItemMeta><button mat-button type="button" (click)="edit('secrets', m)">Set</button></span>
+          </mat-list-item>
+        }
+        @if (!c.secrets.length && !c.missing.length) {
+          <p class="hint">No secrets.</p>
+        }
+      </mat-list>
+
+      <div class="form">
+        <mat-button-toggle-group [value]="kind()" (change)="kind.set($event.value)" aria-label="Kind">
+          <mat-button-toggle value="vars">Variable</mat-button-toggle>
+          <mat-button-toggle value="secrets">Secret</mat-button-toggle>
+        </mat-button-toggle-group>
+        <div class="row">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="name">
+            <mat-label>Name</mat-label>
+            <input matInput [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" autocomplete="off" spellcheck="false" placeholder="API_URL" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="val">
+            <mat-label>Value</mat-label>
+            <input matInput [type]="kind() === 'secrets' ? 'password' : 'text'" [ngModel]="value()" (ngModelChange)="value.set($event)" name="value" autocomplete="off" />
+          </mat-form-field>
+        </div>
+        <button mat-flat-button type="button" [disabled]="busy() || !validName()" (click)="save()">Save and deploy</button>
+      </div>
+
+      @if (c.audit.length) {
+        <mat-expansion-panel class="audit">
+          <mat-expansion-panel-header><mat-panel-title>Change history</mat-panel-title></mat-expansion-panel-header>
+          <mat-list role="list" aria-label="Change history">
+            @for (a of c.audit; track $index) {
+              <mat-list-item role="listitem">
+                <span matListItemTitle>{{ a.user }} {{ a.action === 'set' ? 'set' : 'deleted' }} {{ a.kind === 'secret' ? 'secret' : 'variable' }} <code>{{ a.name }}</code></span>
+                <span matListItemLine>{{ a.created_at | date: 'medium' }}</span>
+              </mat-list-item>
+            }
+          </mat-list>
+        </mat-expansion-panel>
+      }
+    }
+  </mat-card-content>
+</mat-card>

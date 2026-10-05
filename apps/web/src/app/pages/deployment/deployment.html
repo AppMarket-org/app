@@ -49,6 +49,7 @@
     </mat-card>
     <app-logs-card [deploymentId]="d.id" [status]="d.status" />
     @if (d.status === 'succeeded') {
+      <app-config-card [deploymentId]="d.id" />
       <app-domains-card [deploymentId]="d.id" />
       <app-versions-card [deploymentId]="d.id" />
       <app-eject-card [deploymentId]="d.id" />
