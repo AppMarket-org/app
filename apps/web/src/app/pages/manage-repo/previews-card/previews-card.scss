@@ -13,3 +13,8 @@
 .hint {
   color: var(--mat-sys-on-surface-variant);
 }
+
+.row-actions {
+  display: flex;
+  gap: 0.25rem;
+}

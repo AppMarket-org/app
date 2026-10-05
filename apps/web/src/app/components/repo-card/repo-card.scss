@@ -64,3 +64,25 @@ p {
   font: var(--mat-sys-label-large);
   color: var(--mat-sys-primary);
 }
+
+// Catalog cards share the global theme and retain their existing data/actions.
+mat-card {
+  transition:
+    border-color 200ms var(--app-ease),
+    box-shadow 200ms var(--app-ease);
+  &:hover {
+    border-color: #b9c0ae;
+    box-shadow: 0 0.5rem 1.5rem rgb(32 37 31 / 6%);
+  }
+}
+.actions {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.meta {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+mat-card-title {
+  overflow-wrap: anywhere;
+}

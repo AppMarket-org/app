@@ -47,11 +47,15 @@
         <mat-list role="list" aria-label="Automatic deploys by branch">
           @for (p of deploys(); track p.branch) {
             <mat-list-item role="listitem" lines="2">
-              <mat-icon matListItemIcon aria-hidden="true">{{ p.status === 'succeeded' ? 'check_circle' : p.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
-              <span matListItemTitle class="branch">{{ p.branch }}</span>
-              <span matListItemLine><code>{{ short(p.commit) }}</code> · {{ p.status }} · {{ p.updatedAt | date: 'short' }}</span>
-              <span matListItemMeta>
-                @if (p.status === 'succeeded' && p.url) {
+              <mat-icon matListItemIcon aria-hidden="true">{{ p.deleted ? 'delete' : p.status === 'succeeded' ? 'check_circle' : p.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
+              <span matListItemTitle class="branch">{{ p.branch }}{{ p.branchExists === false ? ' · branch deleted' : '' }}</span>
+              <span matListItemLine><code>{{ short(p.commit) }}</code> · {{ p.deleted ? 'Worker deleted' : p.status }} · {{ p.updatedAt | date: 'short' }}</span>
+              <span matListItemMeta class="row-actions">
+                @if (!p.deleted && isPreview(p) && p.status !== 'queued' && p.status !== 'building' && p.status !== 'deploying') {
+                  <button mat-button type="button" [disabled]="busy()" (click)="deletePreview(p)">Delete</button>
+                }
+                @if (p.deleted) {
+                } @else if (p.status === 'succeeded' && p.url) {
                   <a mat-button [href]="p.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>Open</a>
                 } @else {
                   <a mat-button [routerLink]="['/dashboard/deployments', p.deploymentId]">Details</a>

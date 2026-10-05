@@ -1,104 +1,188 @@
 :host {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 100vh;
 }
-
+mat-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 5rem;
+  padding: 0 max(1.25rem, calc((100vw - 76rem) / 2));
+  gap: 0.375rem;
+  border-bottom: 0.0625rem solid var(--app-border);
+  background: rgb(248 247 244 / 92%);
+  backdrop-filter: blur(1rem);
+}
 .brand {
-  --mat-icon-button-state-layer-size: 3rem;
-  width: 3rem;
-  height: 3rem;
-  padding: 0.25rem;
-
+  --mat-button-text-horizontal-padding: 0.25rem;
+  flex: 0 0 auto;
+  min-width: 0;
   .logo {
-    height: 2.25rem;
+    height: 2rem;
     width: auto;
-    display: block;
-    margin: 0 auto;
+    vertical-align: middle;
+    margin-right: 0.625rem;
   }
 }
-
+.wordmark {
+  font-family: var(--app-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+}
+.domain {
+  color: var(--app-muted);
+  font-weight: 500;
+}
 .heading {
   display: flex;
   align-items: center;
   min-width: 0;
-  margin-left: 0.5rem;
-  font: var(--mat-sys-title-medium);
+  margin-left: 1rem;
+  font: var(--mat-sys-title-small);
   overflow: hidden;
   white-space: nowrap;
-
   span,
   a {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
   a {
     --mat-button-text-horizontal-padding: 0.25rem;
     min-width: 0;
     font: inherit;
   }
-
   .current {
     font-weight: 600;
   }
-
   .separator {
     margin: 0 0.25rem;
     color: var(--mat-sys-on-surface-variant);
   }
 }
-
 .spacer {
   flex: 1;
 }
-
-// Header actions: text buttons normally, icon buttons in narrow windows (phones, side panels),
-// so the header always fits and nothing is pushed off the edge.
 .narrow {
   display: none;
 }
-
-@media (max-width: 30rem) {
-  mat-toolbar {
-    padding: 0 0.5rem;
-  }
-
-  .wide {
-    display: none;
-  }
-
-  .narrow {
-    display: inline-flex;
-  }
-
-  .sign-in {
-    --mat-button-filled-horizontal-padding: 1rem;
-    flex: 0 0 auto;
-  }
-}
-
 main {
   flex: 1;
   width: 100%;
-  max-width: 70rem;
+  max-width: 76rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
+  padding: 2.5rem 1.5rem;
   box-sizing: border-box;
 }
-
+main:has(app-home) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
 footer {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 1rem;
+  gap: 1.5rem;
+  border-top: 0.0625rem solid var(--app-border);
+  padding: 2.5rem max(1.5rem, calc((100vw - 73rem) / 2));
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem;
+  }
+  a {
+    font-size: 0.75rem;
+    color: var(--app-muted);
+  }
 }
-
+.footer-brand {
+  .wordmark {
+    font-size: 1rem;
+  }
+  p {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--app-muted);
+  }
+}
 .account {
   font: var(--mat-sys-label-large);
 }
-
+.account-trigger {
+  --mat-icon-button-state-layer-size: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+}
 .me {
   margin-left: 0.5rem;
   color: var(--mat-sys-on-surface-variant);
+}
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -5rem;
+  z-index: 100;
+  background: var(--app-paper);
+  &:focus {
+    top: 0.75rem;
+  }
+}
+@media (max-width: 56rem) {
+  .product-link {
+    display: none;
+  }
+  .heading {
+    margin-left: 0.5rem;
+  }
+  .domain {
+    display: none;
+  }
+}
+@media (max-width: 37.5rem) {
+  mat-toolbar {
+    height: 4.5rem;
+    padding: 0 0.75rem;
+    gap: 0;
+  }
+  .brand .logo {
+    height: 1.75rem;
+    margin-right: 0.375rem;
+  }
+  .wordmark {
+    font-size: 1rem;
+  }
+  .heading {
+    font-size: 0.75rem;
+  }
+  .wide {
+    display: none;
+  }
+  .narrow {
+    display: inline-flex;
+  }
+  .sign-in {
+    --mat-button-filled-horizontal-padding: 0.875rem;
+    flex: 0 0 auto;
+  }
+  main {
+    padding: 1.5rem 1rem;
+  }
+  footer {
+    padding: 2rem 1rem;
+  }
+}
+@media (max-width: 24rem) {
+  .wordmark {
+    font-size: 0.875rem;
+  }
+  .heading {
+    margin-left: 0.25rem;
+  }
 }

@@ -1,3 +1,8 @@
+<div class="login-intro">
+  <p class="page-eyebrow">YOUR WORKSPACE</p>
+  <h1>Build apps on appmarket.</h1>
+  <p>Host Git repositories, build with your agent, and manage your app deployments.</p>
+</div>
 <mat-card appearance="outlined" class="login">
   @if (pending()) {
     <mat-progress-bar mode="indeterminate" />
@@ -10,10 +15,20 @@
   <mat-card-content>
     <app-turnstile (token)="captchaToken.set($event)" />
 
-    <button mat-stroked-button type="button" [disabled]="!captchaToken() || pending()" (click)="signIn('google')">
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="!captchaToken() || pending()"
+      (click)="signIn('google')"
+    >
       Continue with Google
     </button>
-    <button mat-stroked-button type="button" [disabled]="!captchaToken() || pending()" (click)="signIn('github')">
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="!captchaToken() || pending()"
+      (click)="signIn('github')"
+    >
       Continue with GitHub
     </button>
 

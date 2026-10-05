@@ -87,6 +87,11 @@ export interface PreviewSettings {
 
 export interface BranchPreview {
 	branch: string;
+	/** #192: the Worker was deleted (until the next push to the branch). */
+	deleted: boolean;
+	workerName: string;
+	/** D1, KV and R2 resources the preview created in the account (names). */
+	resources: string[];
 	commit: string;
 	deploymentId: string;
 	status: DeploymentStatus;

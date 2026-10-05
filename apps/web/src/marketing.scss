@@ -1,0 +1,153 @@
+// Shared marketing typography, actions and catalog layouts.
+// Material remains responsible for every interactive component.
+.marketing-page {
+  display: block;
+  p {
+    color: var(--app-muted);
+  }
+  .eyebrow,
+  .mono {
+    font-family: var(--app-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+  }
+  .eyebrow {
+    color: var(--app-accent);
+    margin: 0 0 1.5rem;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    background: var(--app-copper);
+    border-radius: 50%;
+    margin-right: 0.5rem;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--app-font-display);
+  }
+  h2 {
+    font-size: clamp(2rem, 3.7vw, 3rem);
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0 0 1.5rem;
+    letter-spacing: -0.05em;
+  }
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+  }
+  .hero-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .hero-actions a {
+    --mat-button-filled-container-height: 3.25rem;
+    --mat-button-outlined-container-height: 3.25rem;
+    --mat-button-filled-horizontal-padding: 1.5rem;
+  }
+  .hero-actions a:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.5rem 1rem rgb(32 37 31 / 8%);
+  }
+  .section-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    h2 {
+      margin: 0;
+    }
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+    gap: 1.5rem;
+  }
+  .latest-heading {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin: 3rem 0 1.25rem;
+    h3 {
+      margin: 0;
+    }
+    .mono {
+      color: var(--app-muted);
+      font-size: 0.5625rem;
+    }
+  }
+  .catalog-description {
+    margin: 1rem 0 2rem;
+  }
+
+  .empty {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    border: 0.0625rem dashed #b7bdae;
+    padding: 2rem;
+    border-radius: var(--app-radius);
+    > mat-icon {
+      color: #75826b;
+      flex: 0 0 auto;
+    }
+    h3 {
+      font-size: 1rem;
+      margin-bottom: 0.375rem;
+    }
+    p {
+      font-size: 0.8125rem;
+      margin: 0;
+      max-width: 34rem;
+    }
+    a {
+      margin-left: auto;
+      flex: 0 0 auto;
+    }
+  }
+  .terminal-heading {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 0.0625rem solid #3b4238;
+    font-size: 0.6875rem;
+    color: #b7c1aa;
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+  .window-dots {
+    display: flex;
+    gap: 0.375rem;
+    i {
+      width: 0.4375rem;
+      height: 0.4375rem;
+      border-radius: 50%;
+      background: #727966;
+    }
+    i:first-child {
+      background: #c6754b;
+    }
+  }
+
+  .terminal-footer {
+    border-top: 0.0625rem solid #3b4238;
+    font: 0.625rem var(--app-font-mono);
+    color: #b7c1aa;
+    padding: 1rem 1.5rem;
+  }
+}

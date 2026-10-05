@@ -1,11 +1,18 @@
+<a mat-button class="skip-link" href="#main-content">Skip to content</a>
 <mat-toolbar>
-  <a mat-icon-button class="brand" routerLink="/" aria-label="appmarket.org home"><img class="logo" src="/brand/logo.png" alt="" /></a>
+  <a mat-button class="brand" routerLink="/" aria-label="appmarket.org home"
+    ><img class="logo" src="/brand/logo.png" alt="" /><span class="wordmark"
+      >appmarket<span class="domain">.org</span></span
+    ></a
+  >
   <nav class="heading" aria-label="Current page">
     @for (part of seo.heading(); track $index; let last = $last) {
       @if (part.link) {
         <a mat-button [routerLink]="part.link" [class.current]="last">{{ part.label }}</a>
       } @else {
-        <span [class.current]="last" [attr.aria-current]="last ? 'page' : null">{{ part.label }}</span>
+        <span [class.current]="last" [attr.aria-current]="last ? 'page' : null">{{
+          part.label
+        }}</span>
       }
       @if (!last) {
         <span class="separator" aria-hidden="true">/</span>
@@ -14,17 +21,43 @@
   </nav>
   <span class="spacer"></span>
   <!-- Narrow windows (and side panels) get icon buttons so the header never overflows. -->
-  <a mat-button class="wide" routerLink="/search">Search</a>
-  <a mat-icon-button class="narrow" routerLink="/search" aria-label="Search" matTooltip="Search"><mat-icon>search</mat-icon></a>
+  <a mat-button class="wide product-link" href="/#workflow">How it works</a>
+  <a mat-button class="wide" routerLink="/search">Explore apps</a>
+  <a mat-icon-button class="narrow" routerLink="/search" aria-label="Search" matTooltip="Search"
+    ><mat-icon>search</mat-icon></a
+  >
 
   @if (auth.user(); as user) {
     <a mat-button class="wide" routerLink="/dashboard">Dashboard</a>
-    <a mat-icon-button class="narrow" routerLink="/dashboard" aria-label="Dashboard" matTooltip="Dashboard"><mat-icon>space_dashboard</mat-icon></a>
-    <button mat-icon-button type="button" [matMenuTriggerFor]="account" aria-label="Account menu">
-      <app-avatar [name]="auth.owner()?.name ?? user.name" [src]="auth.owner()?.avatarUrl ?? user.image" [size]="2" [decorative]="true" />
+    <a
+      mat-icon-button
+      class="narrow"
+      routerLink="/dashboard"
+      aria-label="Dashboard"
+      matTooltip="Dashboard"
+      ><mat-icon>space_dashboard</mat-icon></a
+    >
+    <button
+      mat-icon-button
+      class="account-trigger"
+      type="button"
+      [matMenuTriggerFor]="account"
+      aria-label="Account menu"
+    >
+      <app-avatar
+        [name]="auth.owner()?.name ?? user.name"
+        [src]="auth.owner()?.avatarUrl ?? user.image"
+        [size]="2"
+        [decorative]="true"
+      />
     </button>
     <mat-menu #account="matMenu">
-      <div class="account" mat-menu-item disabled>{{ user.name }}@if (auth.owner(); as me) { <span class="me">{{ me.handle }}</span>}</div>
+      <div class="account" mat-menu-item disabled>
+        {{ user.name }}
+        @if (auth.owner(); as me) {
+          <span class="me">{{ me.handle }}</span>
+        }
+      </div>
       @if (auth.owner(); as me) {
         <a mat-menu-item [routerLink]="'/' + me.handle"><mat-icon>person</mat-icon>Your page</a>
       }
@@ -36,13 +69,19 @@
   }
 </mat-toolbar>
 
-<main>
+<main id="main-content" tabindex="-1">
   <router-outlet />
 </main>
 
 <footer>
-  <a mat-button routerLink="/legal/terms">Terms</a>
-  <a mat-button routerLink="/legal/privacy">Privacy</a>
-  <a mat-button routerLink="/legal/content-policy">Content policy</a>
-  <a mat-button routerLink="/legal/developer-agreement">Developer agreement</a>
+  <div class="footer-brand">
+    <span class="wordmark">appmarket.org</span>
+    <p>A Git platform for agents and humans.</p>
+  </div>
+  <nav aria-label="Legal">
+    <a mat-button routerLink="/legal/terms">Terms</a>
+    <a mat-button routerLink="/legal/privacy">Privacy</a>
+    <a mat-button routerLink="/legal/content-policy">Content policy</a>
+    <a mat-button routerLink="/legal/developer-agreement">Developer agreement</a>
+  </nav>
 </footer>
