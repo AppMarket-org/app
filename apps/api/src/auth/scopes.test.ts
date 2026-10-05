@@ -23,6 +23,19 @@ describe("deviceMayCall", () => {
 		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/acme/todo/checkpoints")).toBe(false);
 	});
 
+	it("lets agents in a session use the collaboration plane, but not cancel tasks or watch live (#236)", () => {
+		const cli = ["sessions:write"];
+		const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+		expect(deviceMayCall(cli, "GET", "/api/repos/dev/app/plane")).toBe(true);
+		expect(deviceMayCall(cli, "POST", "/api/repos/dev/app/plane/agents")).toBe(true);
+		expect(deviceMayCall(cli, "POST", `/api/repos/dev/app/plane/tasks/${id}/claim`)).toBe(true);
+		expect(deviceMayCall(cli, "POST", `/api/repos/dev/app/plane/tasks/${id}/finish`)).toBe(true);
+		expect(deviceMayCall(cli, "DELETE", "/api/repos/dev/app/plane/leases")).toBe(true);
+		expect(deviceMayCall(cli, "DELETE", `/api/repos/dev/app/plane/tasks/${id}`)).toBe(false);
+		expect(deviceMayCall(cli, "GET", "/api/repos/dev/app/plane/live")).toBe(false);
+		expect(deviceMayCall(["checkpoints:write", "repos:read"], "POST", "/api/repos/dev/app/plane/agents")).toBe(false);
+	});
+
 	it("lets the CLI manage agent sessions with sessions:write only (#29)", () => {
 		const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
 		for (const [method, path] of [

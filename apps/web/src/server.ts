@@ -77,6 +77,8 @@ async function serve(request: Request, env: Env, ctx: ExecutionContext): Promise
 }
 
 function withHeaders(response: Response, headers: Record<string, string>): Response {
+	// A WebSocket upgrade (#236's live board) must reach the browser as it is.
+	if (response.status === 101) return response;
 	const copy = new Response(response.body, response);
 	for (const [name, value] of Object.entries(headers)) copy.headers.set(name, value);
 	return copy;

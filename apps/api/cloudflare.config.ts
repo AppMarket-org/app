@@ -43,6 +43,8 @@ export default defineConfig(({ mode }) => {
 				CiSandbox: exports.durableObject({ storage: "sqlite", container: buildContainer }),
 				// #182: exact rate limits for sensitive actions.
 				RateLimiter: exports.durableObject({ storage: "sqlite" }),
+				// #236: the collaboration plane's coordinator, one per repo.
+				RepoPlane: exports.durableObject({ storage: "sqlite" }),
 				DeployWorkflow: exports.workflow({ name: `${workerName}-deploy`, concurrency: { limit: 5 } }),
 				ChecksWorkflow: exports.workflow({ name: `${workerName}-checks`, concurrency: { limit: 5 } }),
 			},
@@ -87,6 +89,7 @@ export default defineConfig(({ mode }) => {
 				CHECKS_WORKFLOW: bindings.workflow({ name: `${workerName}-checks`, worker: workerName, exportName: "ChecksWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
 				RATE_LIMITER: bindings.durableObject({ worker: workerName, exportName: "RateLimiter" }),
+				PLANE: bindings.durableObject({ worker: workerName, exportName: "RepoPlane" }),
 				CLOUDFLARE_ACCOUNT_ID: bindings.text(CLOUDFLARE_ACCOUNT_ID),
 				BACKUP_BUCKET: bindings.r2({ name: buildsBucket }),
 				BACKUP_BUCKET_NAME: bindings.text(buildsBucket),

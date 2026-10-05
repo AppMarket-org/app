@@ -1,0 +1,153 @@
+<header class="head">
+  <a mat-button [routerLink]="['/dashboard/repos', owner(), slug()]"><mat-icon>arrow_back</mat-icon>{{ path() }}</a>
+  <div class="title">
+    <h1>Agents</h1>
+    <span class="live" [class.on]="live()" [matTooltip]="live() ? 'Updates appear as they happen' : 'Reconnecting…'">
+      <mat-icon aria-hidden="true">{{ live() ? 'sensors' : 'sensors_off' }}</mat-icon>{{ live() ? 'Live' : 'Offline' }}
+    </span>
+  </div>
+  <p class="lead">
+    Post tasks for your agents. Each agent works in its own agent session, claims a task that matches what it can do, and leases the files it
+    will change, so two agents never edit the same files at once.
+  </p>
+</header>
+
+@switch (state()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">This board is not available.</p>
+  }
+  @default {
+    <div class="board">
+      <section class="column" aria-labelledby="open-h">
+        <h2 id="open-h">Open <span class="count">{{ open().length }}</span></h2>
+        <mat-card appearance="outlined" class="new">
+          <form [formGroup]="form" (ngSubmit)="post()">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Task</mat-label>
+              <input matInput formControlName="title" maxlength="200" placeholder="Add a dark mode toggle" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Details</mat-label>
+              <textarea matInput formControlName="description" rows="3" maxlength="4000"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Needs (optional)</mat-label>
+              <input matInput formControlName="capabilities" placeholder="typescript, frontend" />
+              <mat-hint>Only agents that declared these can claim the task.</mat-hint>
+            </mat-form-field>
+            <button mat-flat-button type="submit" [disabled]="form.invalid || saving()"><mat-icon>add_task</mat-icon>Post task</button>
+          </form>
+        </mat-card>
+        @for (t of open(); track t.id) {
+          <mat-card appearance="outlined" class="task">
+            <mat-card-header>
+              <mat-card-title>{{ t.title }}</mat-card-title>
+              <mat-card-subtitle>Posted {{ t.createdAt | date: 'short' }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              @if (t.description) {
+                <p class="description">{{ t.description }}</p>
+              }
+              @if (t.capabilities.length) {
+                <mat-chip-set aria-label="Needs">
+                  @for (c of t.capabilities; track c) {
+                    <mat-chip>{{ c }}</mat-chip>
+                  }
+                </mat-chip-set>
+              }
+            </mat-card-content>
+            <mat-card-actions align="end">
+              <button mat-button type="button" (click)="remove(t)">Remove</button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </section>
+
+      <section class="column" aria-labelledby="claimed-h">
+        <h2 id="claimed-h">In progress <span class="count">{{ claimed().length }}</span></h2>
+        @for (t of claimed(); track t.id) {
+          <mat-card appearance="outlined" class="task">
+            <mat-card-header>
+              <mat-icon mat-card-avatar aria-hidden="true">smart_toy</mat-icon>
+              <mat-card-title>{{ t.title }}</mat-card-title>
+              <mat-card-subtitle>{{ agentName(t.claimedBy) }} · since {{ t.updatedAt | date: 'short' }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-actions align="end">
+              <button mat-button type="button" (click)="remove(t)">Cancel</button>
+            </mat-card-actions>
+          </mat-card>
+        } @empty {
+          <p class="empty">No agent is working on a task.</p>
+        }
+      </section>
+
+      <section class="column" aria-labelledby="done-h">
+        <h2 id="done-h">Finished <span class="count">{{ finished().length }}</span></h2>
+        @for (t of finished(); track t.id) {
+          <mat-card appearance="outlined" class="task" [class.failed]="t.status === 'failed'">
+            <mat-card-header>
+              <mat-icon mat-card-avatar aria-hidden="true">{{ t.status === 'done' ? 'task_alt' : 'error' }}</mat-icon>
+              <mat-card-title>{{ t.title }}</mat-card-title>
+              <mat-card-subtitle>
+                {{ t.status === 'done' ? 'Done' : 'Failed' }} by {{ agentName(t.claimedBy) }} · {{ t.updatedAt | date: 'short' }}
+              </mat-card-subtitle>
+            </mat-card-header>
+            @if (t.branch || t.note) {
+              <mat-card-content>
+                @if (t.branch) {
+                  <p class="branch"><mat-icon aria-hidden="true">call_split</mat-icon><code>{{ t.branch }}</code></p>
+                }
+                @if (t.note) {
+                  <p class="description">{{ t.note }}</p>
+                }
+              </mat-card-content>
+            }
+          </mat-card>
+        } @empty {
+          <p class="empty">Nothing finished yet.</p>
+        }
+      </section>
+    </div>
+
+    <section class="agents" aria-labelledby="agents-h">
+      <h2 id="agents-h">Agents <span class="count">{{ state()!.agents.length }}</span></h2>
+      @for (a of state()!.agents; track a.id) {
+        <mat-card appearance="outlined" class="agent">
+          <mat-card-header>
+            <mat-icon mat-card-avatar aria-hidden="true">smart_toy</mat-icon>
+            <mat-card-title>{{ a.name }}</mat-card-title>
+            <mat-card-subtitle>{{ a.vendor }} · seen {{ a.lastSeen | date: 'short' }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (a.capabilities.length) {
+              <mat-chip-set aria-label="Can do">
+                @for (c of a.capabilities; track c) {
+                  <mat-chip>{{ c }}</mat-chip>
+                }
+              </mat-chip-set>
+            }
+            @let held = leasesOf(a.id);
+            @if (held.length) {
+              <mat-list dense class="leases" aria-label="Leased files">
+                @for (l of held; track l.path) {
+                  <mat-list-item>
+                    <mat-icon matListItemIcon aria-hidden="true">lock</mat-icon>
+                    <span matListItemTitle><code>{{ l.path }}</code></span>
+                    <span matListItemLine>until {{ l.expiresAt | date: 'shortTime' }}</span>
+                  </mat-list-item>
+                }
+              </mat-list>
+            }
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        <p class="empty">
+          No agents yet. Agents join from an agent session: start one with <code>appmarket session start</code> in a clone of this repo.
+        </p>
+      }
+    </section>
+  }
+}

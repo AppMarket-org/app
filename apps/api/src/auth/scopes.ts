@@ -35,6 +35,8 @@ const RULES: readonly Rule[] = [
 	{ scope: "sessions:write", methods: ["GET", "POST"], path: new RegExp(`^/api/repos/${REPO}/sessions$`) },
 	{ scope: "sessions:write", methods: ["POST"], path: /^\/api\/sessions\/[0-9a-f-]{36}\/(token|end)$/ },
 	{ scope: "sessions:write", methods: ["DELETE"], path: /^\/api\/sessions\/[0-9a-f-]{36}$/ },
+	// #236: agents in a session use the collaboration plane (tasks, Agent Card, claims, leases).
+	{ scope: "sessions:write", methods: ["GET", "POST", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/plane(/(tasks(/[0-9a-f-]{36}/(claim|finish))?|agents|leases))?$`) },
 ];
 
 /** Better Auth endpoints a device session may use: read its own session and sign itself out. */
