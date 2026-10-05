@@ -1,4 +1,4 @@
-h1 {
+.app-name {
   font: var(--mat-sys-headline-large);
   margin: 0;
 }
@@ -67,15 +67,13 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 20rem;
   gap: 2rem;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
 }
 
 .description {
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
-
-
 
 @media (max-width: 52.5rem) {
   .columns {
@@ -107,4 +105,88 @@ h2 {
 .fork {
   width: 100%;
   margin-bottom: 1rem;
+}
+
+.repo-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 0.0625rem solid var(--mat-sys-outline-variant);
+  margin-bottom: 2rem;
+  padding-bottom: 0.5rem;
+}
+.current-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--mat-sys-secondary-container);
+  font: var(--mat-sys-label-large);
+}
+.manage {
+  margin-left: auto;
+}
+article > header {
+  padding: 0.5rem 0 1rem;
+}
+.section-heading {
+  margin-top: 0;
+}
+.main {
+  padding: 1.5rem;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: 1rem;
+  background: var(--mat-sys-surface);
+  align-self: start;
+  min-width: 0;
+}
+aside {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  min-width: 0;
+}
+aside > section {
+  padding: 1.25rem;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: 0.75rem;
+}
+aside h2 {
+  margin-top: 0;
+}
+.publication {
+  background: var(--mat-sys-surface-container-low);
+  display: grid;
+  gap: 0.75rem;
+}
+.publication h2,
+.publication p {
+  margin: 0;
+}
+.publication p,
+.version-empty {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-label-medium);
+}
+.eyebrow mat-icon {
+  height: 1rem;
+  width: 1rem;
+  font-size: 1rem;
+}
+@media (max-width: 40rem) {
+  .manage {
+    margin-left: 0;
+  }
+  .main {
+    padding: 1rem;
+  }
 }

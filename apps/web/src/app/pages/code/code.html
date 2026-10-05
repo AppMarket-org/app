@@ -1,84 +1,110 @@
 <header class="head">
-  <a mat-button [routerLink]="'/' + full"><mat-icon>arrow_back</mat-icon>{{ full }}</a>
-  @if (tree(); as t) {
-    @if (t.editor && branches().length) {
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ref">
-        <mat-label>Branch</mat-label>
-        <mat-select [value]="t.ref" (selectionChange)="chooseRef($event.value)">
-          @for (b of branches(); track b) {
-            <mat-option [value]="b">{{ b }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    } @else if (t.ref) {
-      <span class="ref-label"><mat-icon aria-hidden="true">sell</mat-icon>{{ t.ref }}</span>
-    }
-  }
+  <a mat-button [routerLink]="'/' + full"><mat-icon>arrow_back</mat-icon>Overview</a>
+  <a mat-button [routerLink]="'/' + full + '/history'"
+    ><mat-icon>history_edu</mat-icon>Build history</a
+  >
+  <button
+    mat-button
+    class="toggle-files"
+    type="button"
+    (click)="showFiles.set(!showFiles())"
+    [attr.aria-expanded]="showFiles()"
+  >
+    <mat-icon>view_sidebar</mat-icon>{{ showFiles() ? 'Hide files' : 'Show files' }}
+  </button>
 </header>
-
-<nav class="crumbs" aria-label="Path">
-  <a mat-button [routerLink]="[]" [queryParams]="params({ path: null, file: null })">{{ slug }}</a>
-  @for (c of crumbs(); track c.path) {
-    <span aria-hidden="true">/</span>
-    @if (c.last) {
-      <span class="current">{{ c.name }}</span>
-    } @else {
-      <a mat-button [routerLink]="[]" [queryParams]="params({ path: c.path, file: null })">{{ c.name }}</a>
-    }
-  }
-</nav>
-
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  <mat-progress-bar mode="indeterminate" aria-label="Loading code" />
 }
-
 @switch (tree()) {
   @case (undefined) {}
   @case (null) {
     <p class="empty">This code is not available.</p>
   }
   @default {
-    @let t = tree()!;
-    @if (t.empty) {
-      <p class="empty">No code yet. Push to this repo to see it here.</p>
-    } @else {
-      <div class="layout" [class.with-file]="file()">
-        <mat-nav-list class="files" aria-label="Files">
-          @if (dir()) {
-            <a mat-list-item [routerLink]="[]" [queryParams]="params({ path: dir().split('/').slice(0, -1).join('/') || null, file: null })">
-              <mat-icon matListItemIcon aria-hidden="true">arrow_upward</mat-icon>
-              <span matListItemTitle>..</span>
-            </a>
-          }
-          @for (e of t.entries; track e.name) {
-            <a mat-list-item [routerLink]="[]" [queryParams]="entryParams(e.name, e.type)" [activated]="isOpen(e.name)">
-              <mat-icon matListItemIcon aria-hidden="true">{{ e.type === 'tree' ? 'folder' : e.type === 'link' ? 'link' : 'description' }}</mat-icon>
-              <span matListItemTitle>{{ e.name }}</span>
-            </a>
-          }
-        </mat-nav-list>
-
-        @if (file()) {
-          <section class="viewer" aria-label="File">
-            @if (blob(); as b) {
-              <div class="viewer-head">
-                <span class="name">{{ b.path.split('/').pop() }}</span>
-                <span class="size">{{ b.size }} bytes</span>
-                @if (b.text != null) {
-                  <button mat-button type="button" (click)="copy()"><mat-icon>content_copy</mat-icon>Copy</button>
-                }
-              </div>
-              @if (b.binary) {
-                <p class="empty">Binary file; not shown.</p>
-              } @else if (b.tooLarge) {
-                <p class="empty">This file is over 1 MB; not shown.</p>
-              } @else if (html(); as h) {
-                <div class="code" [innerHTML]="h"></div>
-              }
+    <div class="layout" [class.collapsed]="!showFiles()">
+      @if (showFiles()) {
+        <aside class="files">
+          <app-code-explorer
+            [busy]="switching()"
+            [nodes]="nodes()"
+            [selected]="file()"
+            [ref]="ref() || tree()!.ref"
+            [branches]="branches()"
+            [files]="files()"
+            [indexing]="indexing()"
+            [indexError]="indexError()"
+            [complete]="complete()"
+            (toggle)="toggle($event)"
+            (selectFile)="openFile($event)"
+            (selectBranch)="chooseRef($event)"
+            (search)="searchFiles()"
+          />
+        </aside>
+      }
+      <section class="viewer" aria-label="File contents">
+        <div class="viewer-head">
+          <mat-icon aria-hidden="true">{{ file() ? 'draft' : 'code' }}</mat-icon>
+          <span class="name">{{ file() || slug }}</span>
+          @if (blob(); as b) {
+            <span class="size">{{ b.size }} bytes</span>
+            @if (b.text != null) {
+              <button
+                mat-icon-button
+                type="button"
+                (click)="copy()"
+                aria-label="Copy file contents"
+              >
+                <mat-icon>content_copy</mat-icon>
+              </button>
             }
-          </section>
+          }
+        </div>
+        @if (tree()!.empty) {
+          <div class="placeholder">
+            <mat-icon>folder_open</mat-icon>
+            <h2>No code on this branch yet</h2>
+            <p>Push your code or choose another branch.</p>
+          </div>
+        } @else if (fileError()) {
+          <div class="placeholder">
+            <mat-icon>find_in_page</mat-icon>
+            <h2>File not found on this branch</h2>
+            <p>Choose another file or switch branches.</p>
+          </div>
+        } @else if (blob(); as b) {
+          @if (markdown() && b.text != null) {
+            <div class="view-tools">
+              <mat-button-toggle-group
+                [value]="preview()"
+                (change)="preview.set($event.value)"
+                aria-label="Markdown view"
+              >
+                <mat-button-toggle [value]="true">Preview</mat-button-toggle>
+                <mat-button-toggle [value]="false">Code</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+          }
+          @if (markdown() && preview() && b.text != null) {
+            <div class="markdown-preview"><app-markdown [source]="b.text" /></div>
+          } @else if (b.binary) {
+            <p class="empty">Binary file; not shown.</p>
+          } @else if (b.tooLarge) {
+            <p class="empty">This file is over 1 MB; not shown.</p>
+          } @else if (html(); as h) {
+            <div class="code" [innerHTML]="h"></div>
+          } @else if (!loading() && b.text != null) {
+            <pre class="code plain">{{ b.text }}</pre>
+          }
+        } @else if (!file()) {
+          <div class="placeholder">
+            <mat-icon>code_blocks</mat-icon>
+            <h2>Explore the source</h2>
+            <p>Open a folder or use Go to file to find what you need.</p>
+            <span>{{ tree()!.ref }} · {{ tree()!.commit?.slice(0, 7) }}</span>
+          </div>
         }
-      </div>
-    }
+      </section>
+    </div>
   }
 }

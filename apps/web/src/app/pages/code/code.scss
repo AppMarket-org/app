@@ -1,65 +1,50 @@
 :host {
   display: block;
-  padding: 1rem;
+  padding: 0;
 }
 
 .head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.5rem;
-}
-
-.ref {
-  width: min(16rem, 100%);
-}
-
-.ref-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font: var(--mat-sys-label-large);
-}
-
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.125rem;
-  margin: 0.5rem 0;
-
-  .current {
-    font: var(--mat-sys-label-large);
-    padding: 0 0.5rem;
-  }
+  padding: 0.5rem 1rem;
+  border-bottom: 0.0625rem solid var(--mat-sys-outline-variant);
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
-
-  &.with-file {
-    grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
-  }
+  grid-template-columns: 18rem minmax(0, 1fr);
+  gap: 0;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-top: 0;
+  height: calc(100dvh - 8rem);
+  border-radius: 0;
 }
-
+.layout.collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
 @media (max-width: 48rem) {
-  .layout.with-file {
+  .layout {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
 .files {
-  border: 0.0625rem solid var(--mat-sys-outline-variant);
-  border-radius: var(--mat-sys-corner-medium);
-  align-self: start;
+  min-width: 0;
+  overflow: hidden;
+  border-right: 0.0625rem solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
 }
 
 .viewer {
-  border: 0.0625rem solid var(--mat-sys-outline-variant);
-  border-radius: var(--mat-sys-corner-medium);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--mat-sys-surface);
   overflow: hidden;
 }
 
@@ -72,11 +57,12 @@
   background: var(--mat-sys-surface-container-low);
 
   .name {
+    flex: 1;
+    overflow-wrap: anywhere;
     font: var(--mat-sys-title-small);
   }
 
   .size {
-    flex: 1;
     color: var(--mat-sys-on-surface-variant);
     font: var(--mat-sys-body-small);
   }
@@ -84,7 +70,8 @@
 
 .code {
   overflow: auto;
-  max-height: 75vh;
+  flex: 1;
+  min-height: 0;
   font-size: 0.8125rem;
 
   // Shiki output is inserted as HTML, outside this component's encapsulation.
@@ -109,4 +96,67 @@
 
 .empty {
   color: var(--mat-sys-on-surface-variant);
+}
+
+.placeholder {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  text-align: center;
+  padding: 4rem 1.5rem;
+  min-height: 22rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+.placeholder > mat-icon {
+  height: 2.5rem;
+  width: 2.5rem;
+  font-size: 2.5rem;
+  color: var(--mat-sys-primary);
+}
+.placeholder h2 {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 1rem 0 0;
+}
+.placeholder p {
+  max-width: 23rem;
+  font: var(--mat-sys-body-medium);
+}
+.placeholder span {
+  font: var(--mat-sys-label-small);
+}
+.empty {
+  padding: 1rem;
+}
+
+.plain {
+  white-space: pre;
+  margin: 0;
+  padding: 1rem;
+}
+
+@media (max-width: 48rem) {
+  .layout {
+    height: auto;
+  }
+  .viewer {
+    min-height: 25rem;
+  }
+  .code {
+    max-height: 75vh;
+  }
+}
+
+.view-tools {
+  padding: 0.5rem 1rem;
+  border-bottom: 0.0625rem solid var(--mat-sys-outline-variant);
+}
+.markdown-preview {
+  padding: 1.5rem max(1.5rem, calc((100% - 60rem) / 2));
+  overflow: auto;
+  min-height: 0;
+}
+
+.toggle-files {
+  margin-left: auto;
 }

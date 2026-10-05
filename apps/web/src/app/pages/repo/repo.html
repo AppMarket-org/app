@@ -1,14 +1,36 @@
 @if (details(); as d) {
   <article>
+    <nav class="repo-nav" aria-label="Repository">
+      <span class="current-tab"><mat-icon aria-hidden="true">apps</mat-icon>Overview</span>
+      <a mat-button [routerLink]="'/' + d.repo.fullName + '/code'"><mat-icon>code</mat-icon>Code</a>
+      <a mat-button [routerLink]="'/' + d.repo.fullName + '/history'"
+        ><mat-icon>history_edu</mat-icon>Build history</a
+      >
+      @if (canManage()) {
+        <a mat-button class="manage" [routerLink]="'/dashboard/repos/' + d.repo.fullName"
+          ><mat-icon>settings</mat-icon>Manage repo</a
+        >
+      }
+    </nav>
     <header>
       <div class="title">
-        <h1>{{ d.repo.name }}</h1>
+        <h2 class="app-name">{{ d.repo.name }}</h2>
         @if (d.repo.state === 'published') {
-          <app-cowbell-button [path]="d.repo.fullName" [name]="d.repo.name" [initialCount]="d.repo.cowbells" />
+          <app-cowbell-button
+            [path]="d.repo.fullName"
+            [name]="d.repo.name"
+            [initialCount]="d.repo.cowbells"
+          />
         }
       </div>
-      <p class="summary">{{ d.repo.summary }}</p>
-      <p class="by">by <a mat-button class="owner" [routerLink]="'/' + d.repo.owner.handle">{{ d.repo.owner.name }}</a>
+      @if (d.repo.summary.trim().toLowerCase() !== d.repo.name.trim().toLowerCase()) {
+        <p class="summary">{{ d.repo.summary }}</p>
+      }
+      <p class="by">
+        by
+        <a mat-button class="owner" [routerLink]="'/' + d.repo.owner.handle">{{
+          d.repo.owner.name
+        }}</a>
         @if (d.repo.forkedFrom; as f) {
           · forked from <a mat-button [routerLink]="'/' + f.fullName">{{ f.fullName }}</a>
         }
@@ -16,8 +38,12 @@
       <div class="meta">
         <app-runtime-badge [runtime]="d.repo.runtime" />
         <mat-chip-set aria-label="Details">
-          <a mat-chip [routerLink]="['/category', d.repo.category]">{{ categoryName(d.repo.category) }}</a>
-          <mat-chip>{{ d.repo.priceCents > 0 ? '$' + (d.repo.priceCents / 100).toFixed(2) : 'Free' }}</mat-chip>
+          <a mat-chip [routerLink]="['/category', d.repo.category]">{{
+            categoryName(d.repo.category)
+          }}</a>
+          <mat-chip>{{
+            d.repo.priceCents > 0 ? '$' + (d.repo.priceCents / 100).toFixed(2) : 'Free'
+          }}</mat-chip>
           @if (d.repo.publishedTag) {
             <mat-chip>{{ d.repo.publishedTag }}</mat-chip>
           }
@@ -28,29 +54,43 @@
             <mat-chip>{{ platformName(p) }}</mat-chip>
           }
           @if (badge(d.history); as b) {
-            <a mat-chip class="built" [routerLink]="'/' + d.repo.fullName + '/history'" [attr.aria-label]="b + '. Open the build history.'"><mat-icon matChipAvatar aria-hidden="true">smart_toy</mat-icon>{{ b }}</a>
+            <a
+              mat-chip
+              class="built"
+              [routerLink]="'/' + d.repo.fullName + '/history'"
+              [attr.aria-label]="b + '. Open the build history.'"
+              ><mat-icon matChipAvatar aria-hidden="true">smart_toy</mat-icon>{{ b }}</a
+            >
           }
         </mat-chip-set>
       </div>
-      @if (d.repo.state !== 'published') {
-        <p class="state" role="status">Not public: {{ d.repo.state }}</p>
-      }
     </header>
 
     @if (d.screenshots.length > 0) {
       <section class="screenshots" aria-label="Screenshots">
         @for (shot of d.screenshots; track shot.id; let i = $index) {
-          <img [src]="shot.url" [alt]="d.repo.name + ' screenshot ' + (i + 1)" loading="lazy" decoding="async" />
+          <img
+            [src]="shot.url"
+            [alt]="d.repo.name + ' screenshot ' + (i + 1)"
+            loading="lazy"
+            decoding="async"
+          />
         }
       </section>
     }
 
     @if (d.releases.length > 0) {
-      <app-downloads [releases]="d.releases" [android]="d.repo.android" [path]="d.repo.fullName" [priceCents]="d.repo.priceCents" />
+      <app-downloads
+        [releases]="d.releases"
+        [android]="d.repo.android"
+        [path]="d.repo.fullName"
+        [priceCents]="d.repo.priceCents"
+      />
     }
 
     <div class="columns">
       <section class="main" aria-label="About">
+        <h2 class="section-heading">About this app</h2>
         @if (d.readme) {
           <app-markdown [source]="d.readme" />
         } @else {
@@ -59,6 +99,43 @@
       </section>
 
       <aside>
+        @if (d.repo.state !== 'published') {
+          <section class="publication" aria-labelledby="publication-heading">
+            <span class="eyebrow"
+              ><mat-icon aria-hidden="true">lock</mat-icon
+              >{{
+                d.repo.state === 'submitted'
+                  ? 'In review'
+                  : d.repo.state === 'removed'
+                    ? 'Removed'
+                    : 'Not published'
+              }}</span
+            >
+            <h2 id="publication-heading">
+              {{
+                d.repo.state === 'submitted'
+                  ? 'Your version is in review'
+                  : d.repo.state === 'removed'
+                    ? 'This app has been removed'
+                    : d.repo.state === 'unpublished'
+                      ? 'This app is unpublished'
+                      : 'Your code starts here'
+              }}
+            </h2>
+            <p>
+              This app is visible to its owner, workspace members, and admins. Marketplace
+              deployment becomes available after a version is approved.
+            </p>
+            <a mat-flat-button [routerLink]="'/' + d.repo.fullName + '/code'"
+              ><mat-icon>code</mat-icon>Explore code</a
+            >
+            @if (canManage()) {
+              <a mat-stroked-button [routerLink]="'/dashboard/repos/' + d.repo.fullName">{{
+                d.repo.state === 'draft' ? 'Prepare a version' : 'Manage versions'
+              }}</a>
+            }
+          </section>
+        }
         <app-deploy-action [repo]="d.repo" [hasReleases]="d.releases.length > 0" />
         <app-repo-graph [path]="d.repo.fullName" />
         @if (d.repo.state === 'published') {
@@ -78,16 +155,31 @@
           <mat-divider />
         }
         @if (d.repo.state === 'published' && !d.repo.priceCents) {
-          <button mat-stroked-button type="button" class="fork" (click)="useTemplate(d.repo)"><mat-icon>fork_right</mat-icon>Use this template</button>
+          <button mat-stroked-button type="button" class="fork" (click)="useTemplate(d.repo)">
+            <mat-icon>fork_right</mat-icon>Use this template
+          </button>
         }
         @if (d.repo.state === 'published') {
-          <a mat-stroked-button [routerLink]="['/', d.repo.owner.handle, d.repo.slug, 'code']"><mat-icon>code</mat-icon>Browse code</a>
+          <a mat-stroked-button [routerLink]="['/', d.repo.owner.handle, d.repo.slug, 'code']"
+            ><mat-icon>code</mat-icon>Browse code</a
+          >
         }
-        <app-get-code [path]="d.repo.fullName" />
+        @if (d.repo.state === 'published') {
+          <app-get-code [path]="d.repo.fullName" />
+        }
         @if (d.repo.state === 'published') {
           <app-repo-map [path]="d.repo.fullName" />
         }
-        <button mat-button type="button" class="report" (click)="report(d.repo.fullName, d.repo.name)"><mat-icon>flag</mat-icon>Report this app</button>
+        @if (d.repo.state === 'published') {
+          <button
+            mat-button
+            type="button"
+            class="report"
+            (click)="report(d.repo.fullName, d.repo.name)"
+          >
+            <mat-icon>flag</mat-icon>Report this app
+          </button>
+        }
         <mat-divider />
         @if (d.repo.languages) {
           <app-language-bar [languages]="d.repo.languages" />
@@ -97,7 +189,9 @@
           <section aria-labelledby="history-heading">
             <h2 id="history-heading">How it was built</h2>
             <p class="history">{{ builtWith(d.history!) || summaryLine(d.history!) }}</p>
-            <a mat-stroked-button [routerLink]="'/' + d.repo.fullName + '/history'"><mat-icon>history_edu</mat-icon>Build history</a>
+            <a mat-stroked-button [routerLink]="'/' + d.repo.fullName + '/history'"
+              ><mat-icon>history_edu</mat-icon>Build history</a
+            >
           </section>
           <mat-divider />
         }
@@ -113,7 +207,9 @@
                 }
               </mat-list-item>
             } @empty {
-              <mat-list-item>No published versions yet.</mat-list-item>
+              <p class="version-empty">
+                No published versions yet. Approved versions and release notes will appear here.
+              </p>
             }
           </mat-list>
         </section>

@@ -1,5 +1,5 @@
 <a mat-button class="skip-link" href="#main-content">Skip to content</a>
-<mat-toolbar>
+<mat-toolbar [class.workspace]="workspace()">
   @if (seo.heading().length === 0) {
     <a mat-button class="brand" routerLink="/" aria-label="appmarket.org home"
       ><img class="logo" src="/brand/logo.png" alt="" /><span class="wordmark"
@@ -7,7 +7,12 @@
       ></a
     >
   } @else {
-    <a mat-icon-button class="brand-mark" routerLink="/" aria-label="appmarket.org home">
+    <a
+      mat-icon-button
+      class="brand-mark"
+      [routerLink]="workspace() ? '/dashboard' : '/'"
+      [attr.aria-label]="workspace() ? 'Dashboard home' : 'appmarket.org home'"
+    >
       <img class="logo" src="/brand/logo.png" alt="" />
     </a>
     <nav class="heading" aria-label="Current page">
@@ -46,8 +51,10 @@
   }
   <span class="spacer"></span>
   <!-- Narrow windows (and side panels) get icon buttons so the header never overflows. -->
-  <a mat-button class="wide product-link" href="/#workflow">How it works</a>
-  <a mat-button class="wide" routerLink="/search">Explore apps</a>
+  @if (!auth.user()) {
+    <a mat-button class="wide product-link" href="/#workflow">How it works</a>
+  }
+  <a mat-button class="wide" routerLink="/search">{{ workspace() ? 'Apps' : 'Explore apps' }}</a>
   <a mat-icon-button class="narrow" routerLink="/search" aria-label="Search" matTooltip="Search"
     ><mat-icon>search</mat-icon></a
   >
@@ -88,6 +95,9 @@
       @if (auth.owner(); as me) {
         <a mat-menu-item [routerLink]="'/' + me.handle"><mat-icon>person</mat-icon>Your page</a>
       }
+      @if (workspace()) {
+        <a mat-menu-item routerLink="/legal/terms"><mat-icon>gavel</mat-icon>Terms & policies</a>
+      }
       <a mat-menu-item routerLink="/settings"><mat-icon>settings</mat-icon>Settings</a>
       <button mat-menu-item type="button" (click)="signOut()">Sign out</button>
     </mat-menu>
@@ -96,19 +106,21 @@
   }
 </mat-toolbar>
 
-<main id="main-content" tabindex="-1">
+<main [class.workspace]="workspace()" id="main-content" tabindex="-1">
   <router-outlet />
 </main>
 
-<footer>
-  <div class="footer-brand">
-    <span class="wordmark">appmarket.org</span>
-    <p>A Git platform for agents and humans.</p>
-  </div>
-  <nav aria-label="Legal">
-    <a mat-button routerLink="/legal/terms">Terms</a>
-    <a mat-button routerLink="/legal/privacy">Privacy</a>
-    <a mat-button routerLink="/legal/content-policy">Content policy</a>
-    <a mat-button routerLink="/legal/developer-agreement">Developer agreement</a>
-  </nav>
-</footer>
+@if (!workspace()) {
+  <footer>
+    <div class="footer-brand">
+      <span class="wordmark">appmarket.org</span>
+      <p>A Git platform for agents and humans.</p>
+    </div>
+    <nav aria-label="Legal">
+      <a mat-button routerLink="/legal/terms">Terms</a>
+      <a mat-button routerLink="/legal/privacy">Privacy</a>
+      <a mat-button routerLink="/legal/content-policy">Content policy</a>
+      <a mat-button routerLink="/legal/developer-agreement">Developer agreement</a>
+    </nav>
+  </footer>
+}

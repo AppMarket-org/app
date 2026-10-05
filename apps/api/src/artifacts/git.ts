@@ -86,9 +86,9 @@ export async function listRefs(gitRepo: string): Promise<{ remote: string; refs:
 
 /**
  * #41: every file of a commit (except .git and node_modules) with its Git mode, or complete:false
- * when the repo is larger than the limits.
+ * when the repo is larger than the limits. Code search includes tracked dependencies explicitly.
  */
-export async function sourceFiles(gitRepo: string, commit: string, limits = { maxFiles: 5000, maxDirs: 2000 }): Promise<{ files: { path: string; hash: string; mode: string }[]; complete: boolean }> {
+export async function sourceFiles(gitRepo: string, commit: string, limits: { maxFiles: number; maxDirs: number; includeDependencies?: boolean } = { maxFiles: 5000, maxDirs: 2000 }): Promise<{ files: { path: string; hash: string; mode: string }[]; complete: boolean }> {
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const meta = await git.readCommit(commit);
 	if (!meta) return { files: [], complete: false };
@@ -102,7 +102,7 @@ export async function sourceFiles(gitRepo: string, commit: string, limits = { ma
 			// Names Git itself refuses never reach an archive (#41).
 			if (!e.name || e.name === "." || e.name === ".." || /[/\\\x00-\x1f]/.test(e.name)) continue;
 			if (e.type === "tree") {
-				if (e.name !== ".git" && e.name !== "node_modules") queue.push({ prefix: `${prefix}${e.name}/`, hash: e.hash });
+				if (e.name !== ".git" && (e.name !== "node_modules" || limits.includeDependencies)) queue.push({ prefix: `${prefix}${e.name}/`, hash: e.hash });
 			} else if (e.type === "blob") {
 				files.push({ path: prefix + e.name, hash: e.hash, mode: e.mode });
 				if (files.length > limits.maxFiles) return { files, complete: false };

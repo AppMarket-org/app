@@ -1,0 +1,93 @@
+<div class="tools">
+  <h2><mat-icon aria-hidden="true">account_tree</mat-icon>Files</h2>
+  @if (branches().length) {
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Branch</mat-label>
+      <mat-select [value]="ref()" (selectionChange)="selectBranch.emit($event.value)">
+        @for (branch of branches(); track branch) {
+          <mat-option [value]="branch">{{ branch }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  } @else {
+    <span class="revision"><mat-icon aria-hidden="true">sell</mat-icon>{{ ref() }}</span>
+  }
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Go to file</mat-label>
+    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+    <input
+      matInput
+      [disabled]="busy()"
+      [value]="term()"
+      (input)="term.set($any($event.target).value)"
+      (focus)="search.emit()"
+      [matAutocomplete]="finder"
+    />
+    <mat-autocomplete #finder="matAutocomplete" (optionSelected)="open($event.option.value)">
+      @for (path of matches(); track path) {
+        <mat-option [value]="path">{{ path }}</mat-option>
+      }
+      @if (indexing()) {
+        <mat-option disabled>Loading files…</mat-option>
+      } @else if (indexError()) {
+        <mat-option disabled>Could not load files. Focus the search to retry.</mat-option>
+      } @else if (!matches().length) {
+        <mat-option disabled>No matching files</mat-option>
+      }
+      @if (!complete()) {
+        <mat-option disabled>Search limited to the first 5,000 files</mat-option>
+      }
+    </mat-autocomplete>
+  </mat-form-field>
+</div>
+<nav class="tree" aria-label="Repository files">
+  <ng-container *ngTemplateOutlet="branch; context: { $implicit: nodes(), level: 0 }" />
+</nav>
+<ng-template #branch let-items let-level="level">
+  @for (node of items; track node.path) {
+    <button
+      mat-button
+      type="button"
+      class="entry"
+      [disabled]="busy()"
+      [class.active]="selected() === node.path"
+      [style.padding-left.rem]="0.5 + level * 1"
+      [attr.aria-expanded]="node.type === 'tree' ? !!node.expanded : null"
+      [attr.aria-current]="selected() === node.path ? 'true' : null"
+      [attr.title]="node.path"
+      (click)="node.type === 'tree' ? toggle.emit(node) : selectFile.emit(node.path)"
+    >
+      <span class="entry-content">
+        <mat-icon class="chevron" aria-hidden="true">{{
+          node.type === 'tree' ? (node.expanded ? 'expand_more' : 'chevron_right') : ''
+        }}</mat-icon>
+        <mat-icon aria-hidden="true">{{
+          node.type === 'tree'
+            ? node.expanded
+              ? 'folder_open'
+              : 'folder'
+            : node.type === 'link'
+              ? 'link'
+              : 'draft'
+        }}</mat-icon>
+        <span class="filename">{{ node.name }}</span>
+      </span>
+    </button>
+    @if (node.expanded) {
+      @if (node.loading) {
+        <mat-progress-bar mode="indeterminate" [attr.aria-label]="'Loading ' + node.path" />
+      }
+      @if (node.error) {
+        <button mat-button class="retry" (click)="toggle.emit(node)">
+          Could not load {{ node.name }}. Retry
+        </button>
+      } @else if (node.children?.length) {
+        <ng-container
+          *ngTemplateOutlet="branch; context: { $implicit: node.children, level: level + 1 }"
+        />
+      } @else if (!node.loading) {
+        <p class="hint">Empty directory</p>
+      }
+    }
+  }
+</ng-template>

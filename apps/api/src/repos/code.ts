@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
-import { listBranches, readDirectory, readPath, resolveRef } from "../artifacts/git.ts";
+import { listBranches, readDirectory, readPath, resolveRef, sourceFiles } from "../artifacts/git.ts";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { canEdit, canView } from "./access.ts";
 import { pickBranch } from "./pick-branch.ts";
@@ -51,6 +51,14 @@ export const codeRoutes = new Hono<Ctx>()
 		const entries = await readDirectory(t.repo.gitRepo!, t.commit, path);
 		if (!entries) return c.json({ error: "not_found" }, 404);
 		return c.json({ ref: t.ref, commit: t.commit, path, editor: t.editor, entries: entries.map(({ name, type }) => ({ name, type })) });
+	})
+	.get("/:owner/:slug/code/files", async (c) => {
+		const t = await target(c);
+		if (!t) return c.json({ error: "not_found" }, 404);
+		c.header("Cache-Control", t.editor ? "private, no-store" : "public, max-age=300");
+		if (!t.commit) return c.json({ files: [], complete: true });
+		const result = await sourceFiles(t.repo.gitRepo!, t.commit, { maxFiles: 5000, maxDirs: 2000, includeDependencies: true });
+		return c.json({ files: result.files.slice(0, 5000).map((f) => f.path), complete: result.complete });
 	})
 	.get("/:owner/:slug/code/blob", async (c) => {
 		const t = await target(c);

@@ -1,19 +1,20 @@
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { Markdown } from '../../components/markdown/markdown';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Seo } from '../../seo/seo';
 import { languageFor } from './languages';
+import { CodeExplorer, type FileNode } from './explorer/explorer';
 
 interface CodeTree {
   ref: string;
@@ -37,7 +38,15 @@ interface CodeFile {
  */
 @Component({
   selector: 'app-code',
-  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatListModule, MatProgressBarModule, MatSelectModule, RouterLink],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    RouterLink,
+    CodeExplorer,
+    MatButtonToggleModule,
+    Markdown,
+  ],
   templateUrl: './code.html',
   styleUrl: './code.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,8 +62,10 @@ export class CodePage {
   protected readonly slug = this.route.snapshot.paramMap.get('slug') ?? '';
   protected readonly full = `${this.owner}/${this.slug}`;
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
-  /** Directory shown (the file's directory when a file is open). */
+  /** Legacy directory links are expanded in the explorer on arrival. */
   protected readonly dir = computed(() => this.query().get('path') ?? '');
+  protected readonly preview = signal(true);
+  protected readonly markdown = computed(() => /\.(md|markdown)$/i.test(this.file() ?? ''));
   protected readonly file = computed(() => this.query().get('file'));
   protected readonly ref = computed(() => this.query().get('ref'));
 
@@ -63,61 +74,199 @@ export class CodePage {
   protected readonly html = signal<SafeHtml | null>(null);
   protected readonly loading = signal(false);
   protected readonly branches = signal<string[]>([]);
-  protected readonly crumbs = computed(() => {
-    const parts = (this.file() ?? this.dir()).split('/').filter(Boolean);
-    return parts.map((name, i) => ({ name, path: parts.slice(0, i + 1).join('/'), last: i === parts.length - 1 }));
-  });
 
   constructor() {
-    inject(Seo).set({ title: `Code · ${this.full}`, description: `Source code of ${this.full}.`, path: `/${this.full}/code`, noindex: true });
-    this.route.queryParamMap.subscribe(() => void this.load());
+    inject(Seo).set({
+      title: `Code · ${this.full}`,
+      description: `Source code of ${this.full}.`,
+      path: `/${this.full}/code`,
+      noindex: true,
+      heading: [
+        { label: this.owner, link: `/${this.owner}` },
+        { label: this.slug, link: `/${this.full}` },
+        { label: 'Code' },
+      ],
+    });
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(() => void this.load());
   }
 
-  protected params(extra: Record<string, string | null>): Record<string, string | null> {
-    return { ref: this.ref(), ...extra };
-  }
-
-  protected entryParams(name: string, type: string): Record<string, string | null> {
-    const path = [this.dir(), name].filter(Boolean).join('/');
-    return type === 'tree' ? this.params({ path, file: null }) : this.params({ path: this.dir() || null, file: path });
-  }
-
-  protected isOpen(name: string): boolean {
-    return this.file() === [this.dir(), name].filter(Boolean).join('/');
-  }
+  protected readonly nodes = signal<FileNode[]>([]);
+  protected readonly files = signal<string[]>([]);
+  protected readonly indexing = signal(false);
+  protected readonly indexError = signal(false);
+  protected readonly complete = signal(true);
+  protected readonly switching = signal(false);
+  protected readonly fileError = signal(false);
+  protected readonly showFiles = signal(true);
+  private readonly compact = toSignal(inject(BreakpointObserver).observe('(max-width: 48rem)'), {
+    initialValue: { matches: false, breakpoints: {} },
+  });
+  private loadedRef: string | null | undefined = undefined;
+  private generation = 0;
+  private request = 0;
+  private indexed = false;
+  private rootPending: Promise<void> | null = null;
 
   protected chooseRef(ref: string): void {
-    void this.router.navigate([], { queryParams: { ref, path: null, file: null } });
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { ref, file: this.file() },
+    });
+  }
+
+  protected openFile(file: string): void {
+    if (this.compact().matches) this.showFiles.set(false);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { ref: this.ref(), file },
+    });
   }
 
   protected copy(): void {
     const text = this.blob()?.text;
-    if (text) this.snackBar.open(this.clipboard.copy(text) ? 'Copied' : 'Copy failed', undefined, { duration: 2000 });
+    if (text != null)
+      this.snackBar.open(this.clipboard.copy(text) ? 'Copied' : 'Copy failed', undefined, {
+        duration: 2000,
+      });
+  }
+
+  private get base(): string {
+    return `/api/repos/${this.full}/code`;
+  }
+  private revision(): Record<string, string> {
+    const t = this.tree();
+    const ref = t?.editor ? t.commit : t?.ref;
+    return ref ? { ref } : {};
+  }
+  private entries(tree: CodeTree): FileNode[] {
+    return [...tree.entries]
+      .sort(
+        (a, b) =>
+          Number(b.type === 'tree') - Number(a.type === 'tree') || a.name.localeCompare(b.name),
+      )
+      .map((e) => ({ ...e, path: [tree.path, e.name].filter(Boolean).join('/') }));
+  }
+
+  protected async toggle(node: FileNode): Promise<void> {
+    if (node.expanded && !node.error) {
+      node.expanded = false;
+      this.nodes.update((nodes) => [...nodes]);
+      return;
+    }
+    node.expanded = true;
+    if (!node.children && !node.loading) await this.expand(node);
+    this.nodes.update((nodes) => [...nodes]);
+  }
+
+  private async expand(node: FileNode): Promise<void> {
+    const generation = this.generation;
+    node.loading = true;
+    node.error = false;
+    this.nodes.update((nodes) => [...nodes]);
+    try {
+      const tree = await firstValueFrom(
+        this.http.get<CodeTree>(`${this.base}/tree`, {
+          params: { ...this.revision(), path: node.path },
+        }),
+      );
+      if (generation === this.generation) node.children = this.entries(tree);
+    } catch {
+      if (generation === this.generation) node.error = true;
+    } finally {
+      node.loading = false;
+      if (generation === this.generation) this.nodes.update((nodes) => [...nodes]);
+    }
+  }
+
+  protected async searchFiles(): Promise<void> {
+    if (this.indexed || this.indexing() || !this.tree()?.commit) return;
+    const generation = this.generation;
+    this.indexing.set(true);
+    this.indexError.set(false);
+    try {
+      const index = await firstValueFrom(
+        this.http.get<{ files: string[]; complete: boolean }>(`${this.base}/files`, {
+          params: this.revision(),
+        }),
+      );
+      if (generation !== this.generation) return;
+      this.files.set(index.files);
+      this.complete.set(index.complete);
+      this.indexed = true;
+    } catch {
+      if (generation === this.generation) this.indexError.set(true);
+    } finally {
+      if (generation === this.generation) this.indexing.set(false);
+    }
+  }
+
+  private async reveal(path: string, generation: number): Promise<void> {
+    let nodes = this.nodes();
+    const parts = path.split('/');
+    for (const part of parts.slice(0, -1)) {
+      if (generation !== this.generation) return;
+      const node = nodes.find((n) => n.name === part && n.type === 'tree');
+      if (!node) return;
+      node.expanded = true;
+      if (!node.children) await this.expand(node);
+      nodes = node.children ?? [];
+    }
+    if (generation === this.generation) this.nodes.update((nodes) => [...nodes]);
+  }
+
+  private async loadRoot(ref: string | null): Promise<void> {
+    const generation = ++this.generation;
+    this.loadedRef = ref;
+    this.switching.set(true);
+    this.files.set([]);
+    this.indexed = false;
+    this.indexing.set(false);
+    this.indexError.set(false);
+    this.complete.set(true);
+    const tree = await firstValueFrom(
+      this.http.get<CodeTree>(`${this.base}/tree`, { params: ref ? { ref } : {} }),
+    ).catch(() => null);
+    if (generation !== this.generation) return;
+    this.tree.set(tree);
+    this.nodes.set(tree ? this.entries(tree) : []);
+    if (tree?.editor) {
+      const b = await firstValueFrom(
+        this.http.get<{ branches: string[] }>(`${this.base}/branches`),
+      ).catch(() => ({ branches: [] }));
+      if (generation === this.generation) this.branches.set(b.branches);
+    } else this.branches.set([]);
+    if (this.dir()) await this.reveal(`${this.dir()}/`, generation);
+    if (generation === this.generation) this.switching.set(false);
   }
 
   private async load(): Promise<void> {
+    const request = ++this.request;
     this.loading.set(true);
+    this.html.set(null);
+    this.blob.set(null);
+    this.fileError.set(false);
     const ref = this.ref();
-    const base = `/api/repos/${this.full}/code`;
-    const refParam: Record<string, string> = ref ? { ref } : {};
-    try {
-      const tree = await firstValueFrom(this.http.get<CodeTree>(`${base}/tree`, { params: { ...refParam, path: this.dir() } })).catch(() => null);
-      this.tree.set(tree);
-      if (tree?.editor && !this.branches().length) {
-        const b = await firstValueFrom(this.http.get<{ branches: string[] }>(`${base}/branches`)).catch(() => ({ branches: [] }));
-        this.branches.set(b.branches);
+    if (ref !== this.loadedRef) this.rootPending = this.loadRoot(ref);
+    await this.rootPending;
+    if (request !== this.request) return;
+    const file = this.file();
+    if (file && this.tree()?.commit) {
+      void this.reveal(file, this.generation);
+      const blob = await firstValueFrom(
+        this.http.get<CodeFile>(`${this.base}/blob`, {
+          params: { ...this.revision(), path: file },
+        }),
+      ).catch(() => null);
+      if (request !== this.request) return;
+      this.blob.set(blob);
+      this.fileError.set(!blob);
+      if (blob?.text != null) {
+        const html = await this.highlight(blob.text, file).catch(() => null);
+        if (request !== this.request) return;
+        this.html.set(html);
       }
-      const file = this.file();
-      this.html.set(null);
-      this.blob.set(null);
-      if (file) {
-        const blob = await firstValueFrom(this.http.get<CodeFile>(`${base}/blob`, { params: { ...refParam, path: file } })).catch(() => null);
-        this.blob.set(blob);
-        if (blob?.text != null) this.html.set(await this.highlight(blob.text, file));
-      }
-    } finally {
-      this.loading.set(false);
     }
+    if (request === this.request) this.loading.set(false);
   }
 
   private async highlight(text: string, path: string): Promise<SafeHtml> {

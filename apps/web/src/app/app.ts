@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -12,7 +12,16 @@ import { Avatar } from './components/avatar/avatar';
 
 @Component({
   selector: 'app-root',
-  imports: [Avatar, RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [
+    Avatar,
+    RouterOutlet,
+    RouterLink,
+    MatToolbarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatMenuModule,
+    MatTooltipModule,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +29,9 @@ import { Avatar } from './components/avatar/avatar';
 export class App {
   protected readonly auth = inject(Auth);
   protected readonly seo = inject(Seo);
+  protected readonly workspace = computed(
+    () => !!this.auth.user() && this.seo.heading().length > 0,
+  );
   private readonly router = inject(Router);
 
   constructor() {
