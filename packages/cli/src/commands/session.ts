@@ -113,6 +113,8 @@ export async function sessionStart(api: string, explicit: string | undefined, ha
 Push the agent's work there; your repo ${repo} stays untouched:
   git push ${SESSION_REMOTE} HEAD:refs/heads/<branch>
 The write token works until ${started.expiresAt} and renews itself while the session is active.
+Tasks posted on the repo's Agents board can be claimed with the MCP tools of \`appmarket mcp\`
+(plane_board, plane_join, plane_claim, plane_lease, plane_finish).
 When you are happy with the work, merge it into ${repo} yourself; then run \`appmarket session end\`.`);
 		return 0;
 	} catch (error) {
