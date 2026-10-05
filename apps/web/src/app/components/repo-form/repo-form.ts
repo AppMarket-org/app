@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
 import { type AbstractControl, FormBuilder, ReactiveFormsModule, type ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { CATEGORIES, RUNTIMES, TARGET_PLATFORMS, type Repo, type RepoInput, type Runtime } from '@appmarket/shared';
+import { CATEGORIES, TARGET_PLATFORMS, type Repo, type RepoInput } from '@appmarket/shared';
+
+/** What the form edits; the runtime is detected from the code, never entered. */
+export type RepoFormValue = Omit<RepoInput, 'runtime'>;
 
 const PLATFORM_LABELS: Record<(typeof TARGET_PLATFORMS)[number], string> = {
   workers: 'Cloudflare Workers',
@@ -40,11 +42,10 @@ export class RepoForm {
   /** Messages from the API keyed by field name; shown on those fields. */
   readonly fieldErrors = input<Record<string, string>>({});
   readonly errorMessage = input<string | null>(null);
-  readonly saved = output<RepoInput>();
+  readonly saved = output<RepoFormValue>();
   readonly cancelled = output<void>();
 
   protected readonly categories = CATEGORIES;
-  protected readonly runtimes = Object.entries(RUNTIMES).map(([key, info]) => ({ key: key as Runtime, ...info }));
   protected readonly platforms = TARGET_PLATFORMS.map((key) => ({ key, label: PLATFORM_LABELS[key] }));
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
@@ -52,20 +53,17 @@ export class RepoForm {
     summary: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(160)]],
     description: ['', [Validators.maxLength(20_000)]],
     category: ['', [Validators.required]],
-    runtime: ['workers-js' as Runtime, [Validators.required]],
     platforms: [['workers'] as string[], [Validators.required]],
     license: ['', [Validators.maxLength(64), licenseValidator]],
     demoUrl: ['', [Validators.maxLength(300), Validators.pattern(/^\s*(https:\/\/\S+)?\s*$/)]],
   });
 
-  private readonly runtimeValue = toSignal(this.form.controls.runtime.valueChanges, { initialValue: this.form.controls.runtime.value });
-  protected readonly runtimeNote = computed(() => RUNTIMES[this.runtimeValue()].note);
 
   constructor() {
     effect(() => {
       const l = this.initial();
       if (l) {
-        this.form.reset({ name: l.name, summary: l.summary, description: l.description, category: l.category, runtime: l.runtime, platforms: [...l.platforms], license: l.license ?? '', demoUrl: l.demoUrl ?? '' });
+        this.form.reset({ name: l.name, summary: l.summary, description: l.description, category: l.category, platforms: [...l.platforms], license: l.license ?? '', demoUrl: l.demoUrl ?? '' });
       }
     });
     effect(() => {

@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import type { Repo, RepoInput } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
-import { RepoForm } from '../../components/repo-form/repo-form';
+import { RepoForm, type RepoFormValue } from '../../components/repo-form/repo-form';
 import { Auth } from '../../auth/auth';
 import { Seo } from '../../seo/seo';
 import { describeRepoError } from '../repo-errors';
@@ -43,7 +43,7 @@ export class NewRepo {
     inject(Seo).set({ title: 'New repo', description: 'Create a repo for your app on appmarket.org.', path: '/dashboard/new', noindex: true });
   }
 
-  protected async create(input: RepoInput): Promise<void> {
+  protected async create(input: RepoFormValue): Promise<void> {
     this.saving.set(true);
     this.errorMessage.set(null);
     try {

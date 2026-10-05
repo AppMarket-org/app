@@ -15,11 +15,11 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { SCREENSHOT_LIMITS, canTransition, type Repo, type RepoEvent, type RepoInput, type RepoState, type GitToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
+import { RUNTIMES, SCREENSHOT_LIMITS, canTransition, type Repo, type RepoEvent, type RepoInput, type RepoState, type GitToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { Developer } from '../../api/developer';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
-import { RepoForm } from '../../components/repo-form/repo-form';
+import { RepoForm, type RepoFormValue } from '../../components/repo-form/repo-form';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { ReleasesCard } from './releases-card/releases-card';
 import { AndroidCard } from './android-card/android-card';
@@ -81,6 +81,7 @@ export class ManageRepo {
 
   protected readonly states = STATE_LABELS;
   protected readonly repo = signal<Repo | null>(null);
+  protected readonly runtimeName = (r: keyof typeof RUNTIMES) => RUNTIMES[r].name;
   protected readonly remote = signal<string | null>(null);
   protected readonly events = signal<RepoEvent[]>([]);
   protected readonly loadError = signal(false);
@@ -135,7 +136,7 @@ export class ManageRepo {
     }, 'Could not create a push token.');
   }
 
-  protected async saveDetails(input: RepoInput): Promise<void> {
+  protected async saveDetails(input: RepoFormValue): Promise<void> {
     this.busy.set(true);
     this.detailsError.set(null);
     try {
