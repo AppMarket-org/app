@@ -36,3 +36,13 @@
     max-width: 100%;
   }
 }
+
+.legal-copy .markdown {
+  table {
+    table-layout: fixed;
+  }
+
+  :is(th, td):first-child {
+    width: 28%;
+  }
+}

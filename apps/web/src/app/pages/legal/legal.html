@@ -1,13 +1,40 @@
-@if (page; as p) {
-  <article>
-    <mat-card appearance="outlined" class="draft" role="note">
-      <mat-card-content>
-        <mat-icon>gavel</mat-icon>
-        <span>Draft, not yet in effect. Pending legal review; bracketed details are placeholders.</span>
-      </mat-card-content>
-    </mat-card>
-    <app-markdown [source]="p.markdown" [shiftHeadings]="false" />
-  </article>
+@if (page(); as p) {
+  <div class="legal-layout">
+    <aside class="legal-nav">
+      <p class="eyebrow">LEGAL &amp; TRUST</p>
+      <nav aria-label="Legal documents">
+        @for (item of navigation; track item.slug) {
+          <a
+            mat-button
+            [routerLink]="['/legal', item.slug]"
+            [class.selected]="item.slug === slug()"
+            [attr.aria-current]="item.slug === slug() ? 'page' : null"
+            >{{ item.label }}</a
+          >
+        }
+      </nav>
+      <p class="nav-note">How we work together, protect information, and publish responsibly.</p>
+    </aside>
+    <article class="legal-document" [attr.aria-label]="p.title">
+      <p class="document-meta">
+        Updated October 5, 2026 <span aria-hidden="true">·</span> Draft for review
+      </p>
+      <mat-card appearance="outlined" class="draft" role="note">
+        <mat-card-content>
+          <mat-icon aria-hidden="true">gavel</mat-icon>
+          <div>
+            <strong>Draft, not yet in effect</strong>
+            <p>
+              Pending confirmation of operator details and legal review. Bracketed fields identify
+              information still to be finalized.
+            </p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <app-markdown class="legal-copy" [source]="p.markdown" [shiftHeadings]="false" />
+    </article>
+  </div>
 } @else {
-  <h1>Page not found</h1>
+  <p class="not-found">This legal document could not be found.</p>
+  <a mat-button routerLink="/legal/terms">View Terms of Service</a>
 }
