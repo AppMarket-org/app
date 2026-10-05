@@ -1,7 +1,7 @@
 import type { Repo } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import type { Context } from "hono";
-import { mintGitToken } from "../artifacts/git.ts";
+import { listBranches, mintGitToken } from "../artifacts/git.ts";
 import { auth } from "../auth/auth.ts";
 import type { AppSession } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
@@ -9,6 +9,7 @@ import { entitled } from "../payments/routes.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { OwnerStore } from "../owners/store.ts";
+import { updatedRefs, withMessages } from "./sideband.ts";
 import { credentialOf, FORWARD_REQUEST_HEADERS, FORWARD_RESPONSE_HEADERS, type GitRoute, isArtifactsToken, parseGitPath } from "./access.ts";
 
 const TOKEN_TTL = 900;
@@ -67,7 +68,7 @@ export async function gitProxy(c: Context): Promise<Response> {
 		}
 		upstreamToken = await artifactsToken(repo.gitRepo, write ? "write" : "read");
 	}
-	return forward(c, repo.gitRepo, route, upstreamToken);
+	return forward(c, repo.gitRepo, route, upstreamToken, repo);
 }
 
 async function allowed(repo: Repo, session: AppSession | null, write: boolean): Promise<"ok" | string> {
@@ -81,7 +82,31 @@ async function allowed(repo: Repo, session: AppSession | null, write: boolean): 
 	return (await entitled(repo, session)) ? "ok" : `${repo.fullName} is a paid app: buy it to clone it.`;
 }
 
-async function forward(c: Context, gitRepo: string, route: GitRoute, token: string): Promise<Response> {
+/**
+ * "remote:" lines after a push: a link to open a pull request for each pushed branch (into the
+ * repo it was forked from, for forks), or to the one already open.
+ */
+async function pullLinks(repo: Repo, branches: string[]): Promise<string[]> {
+	const links = await env.DB.prepare("SELECT forked_from, session_of FROM repos WHERE id = ?").bind(repo.id).first<{ forked_from: string | null; session_of: string | null }>();
+	const upstreamId = links?.session_of ?? links?.forked_from ?? null;
+	const target = upstreamId ? await new RepoStore(env.DB).findById(upstreamId) : repo;
+	if (!target || target.state === "removed") return [];
+	const { defaultBranch } = upstreamId ? { defaultBranch: "" } : await listBranches(repo.gitRepo!);
+	const lines: string[] = [];
+	for (const branch of branches.slice(0, 3)) {
+		if (!upstreamId && branch === defaultBranch) continue;
+		const open = await env.DB.prepare("SELECT number FROM pull_requests WHERE source_repo_id = ? AND source_branch = ? AND state = 'open' ORDER BY number DESC LIMIT 1")
+			.bind(repo.id, branch)
+			.first<{ number: number }>();
+		const base = `${env.PUBLIC_ORIGIN}/${target.fullName}/pulls`;
+		if (lines.length) lines.push("");
+		if (open) lines.push(`View pull request #${open.number} for '${branch}':`, `  ${base}/${open.number}`);
+		else lines.push(`Create a pull request for '${branch}'${upstreamId ? ` on ${target.fullName}` : ""}:`, `  ${base}/new?source=${encodeURIComponent(repo.fullName)}&branch=${encodeURIComponent(branch)}`);
+	}
+	return lines.length ? ["", ...lines, ""] : [];
+}
+
+async function forward(c: Context, gitRepo: string, route: GitRoute, token: string, repo?: Repo): Promise<Response> {
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const remote = (await git.info()).remote;
 	const target = route.kind === "info/refs" ? `${remote}/info/refs?service=${route.service}` : `${remote}/${route.service}`;
@@ -100,6 +125,15 @@ async function forward(c: Context, gitRepo: string, route: GitRoute, token: stri
 		const v = upstream.headers.get(h);
 		if (v) out.set(h, v);
 	}
-	if (route.service === "git-receive-pack" && route.kind === "service" && upstream.ok) logEvent("git.pushed", { repo: gitRepo });
+	if (route.service === "git-receive-pack" && route.kind === "service" && upstream.ok && repo) {
+		// #260: the push response is small (the report-status); read it to add pull request links.
+		const body = new Uint8Array(await upstream.arrayBuffer());
+		const branches = updatedRefs(body)
+			.filter((r) => r.startsWith("refs/heads/"))
+			.map((r) => r.slice("refs/heads/".length));
+		logEvent("git.pushed", { repo: repo.fullName, branches: branches.length });
+		const lines = branches.length ? await pullLinks(repo, branches).catch(() => []) : [];
+		return new Response(withMessages(body, lines), { status: upstream.status, headers: out });
+	}
 	return new Response(upstream.body, { status: upstream.status, headers: out });
 }
