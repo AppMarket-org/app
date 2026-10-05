@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimProblem, cleanTags, leaseConflicts, normalizePath, type PlaneAgent, type PlaneTask, pathsOverlap } from "./model";
+import { claimProblem, cleanTags, leaseConflicts, leaseHints, normalizePath, type PlaneAgent, type PlaneTask, pathsOverlap } from "./model";
 
 const task = (o: Partial<PlaneTask> = {}): PlaneTask => ({ id: "t1", title: "T", description: "", capabilities: ["typescript"], status: "open", claimedBy: null, branch: null, note: null, merge: null, createdAt: "", updatedAt: "", ...o });
 const agent = (o: Partial<PlaneAgent> = {}): PlaneAgent => ({ id: "a1", name: "Claude", vendor: "anthropic", capabilities: ["typescript", "frontend"], lastSeen: "", ...o });
@@ -35,5 +35,18 @@ describe("collaboration plane rules (#236)", () => {
 		expect(claimProblem(task({ capabilities: ["rust"] }), agent())).toMatch(/rust/);
 		expect(claimProblem(task(), undefined)).toMatch(/Register/);
 		expect(cleanTags(["TypeScript", "front end", "c++", 3])).toEqual(["typescript", "c++"]);
+	});
+
+	it("hints when a leased file imports or is imported by another agent's leased file (#240)", () => {
+		const neighbours = new Map([
+			["src/api.ts", [{ other: "src/db/store.ts", relation: "imports" as const }, { other: "src/ui/page.ts", relation: "imported by" as const }]],
+			["src/util.ts", [{ other: "src/mine.ts", relation: "imported by" as const }]],
+		]);
+		const leases = [
+			{ agentId: "a2", taskId: null, path: "src/db/", expiresAt: 2000 },
+			{ agentId: "a2", taskId: null, path: "src/ui/page.ts", expiresAt: 500 },
+			{ agentId: "a1", taskId: null, path: "src/mine.ts", expiresAt: 2000 },
+		];
+		expect(leaseHints(neighbours, leases, "a1", 1000)).toEqual([{ path: "src/api.ts", related: "src/db/store.ts", relation: "imports", agentId: "a2", lease: "src/db/" }]);
 	});
 });

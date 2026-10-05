@@ -55,6 +55,8 @@ interface Board {
 	tasks: { id: string; title: string; description: string; capabilities: string[]; status: string; claimedBy: string | null; branch: string | null }[];
 	agents: { id: string; name: string; vendor: string; capabilities: string[] }[];
 	leases: { agentId: string; taskId: string | null; path: string; expiresAt: number }[];
+	/** #240: soft conflicts through imports, on lease. */
+	hints?: { path: string; related: string; relation: string; agentId: string; lease: string }[];
 }
 
 export interface PlaneDeps {
@@ -121,7 +123,12 @@ export async function callPlaneTool(name: string, args: Record<string, unknown>,
 				const minutes = typeof args.minutes === "number" ? Math.min(Math.max(args.minutes, 1), 240) : undefined;
 				const board = await send("/leases", "POST", { paths, task: typeof args.task === "string" ? args.task : undefined, seconds: minutes ? minutes * 60 : undefined });
 				const mine = board.leases.filter((l) => l.agentId === agent);
-				return text(`Leased: ${mine.map((l) => `${l.path} (until ${new Date(l.expiresAt).toISOString()})`).join(", ")}.`);
+				const name = (id: string) => board.agents.find((x) => x.id === id)?.name ?? "another agent";
+				const hints = (board.hints ?? []).map((h) => `  ${h.path} ${h.relation} ${h.related}, which ${name(h.agentId)} has leased (${h.lease})`);
+				return text(
+					`Leased: ${mine.map((l) => `${l.path} (until ${new Date(l.expiresAt).toISOString()})`).join(", ")}.` +
+						(hints.length ? `\nHeads-up, related files are held by other agents; coordinate or keep those interfaces stable:\n${hints.join("\n")}` : ""),
+				);
 			}
 			case "plane_release": {
 				const paths = tags(args.paths);

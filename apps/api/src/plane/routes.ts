@@ -7,7 +7,8 @@ import { RepoStore } from "../repos/repository.ts";
 import { agentCard, dispatch } from "./a2a.ts";
 import { startMerge } from "./merge.ts";
 import type { PlaneResult, RepoPlane } from "./coordinator.ts";
-import { cleanTags, normalizePath } from "./model.ts";
+import { cleanTags, type LeaseHint, leaseHints, normalizePath, type PlaneLease } from "./model.ts";
+import { expandPaths, indexInfo, neighbours } from "../codegraph/store.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -119,7 +120,11 @@ export const planeRoutes = new Hono<Ctx>()
 		const paths = raw.map((x) => (typeof x === "string" ? normalizePath(x) : null));
 		if (!paths.length || paths.some((x) => x === null)) return c.json({ error: "invalid_paths" }, 400);
 		const seconds = typeof body.seconds === "number" ? body.seconds : undefined;
-		return reply(c, await p.stub.lease(s.id, paths as string[], typeof body.task === "string" ? body.task : null, seconds));
+		const result = await p.stub.lease(s.id, paths as string[], typeof body.task === "string" ? body.task : null, seconds);
+		if (!result.ok) return reply(c, result);
+		// #240: files these import, or that import them, inside other agents' leases (never blocks).
+		const hints = await hintsFor(p.repo.id, paths as string[], result.value.leases, s.id).catch(() => []);
+		return c.json({ ...result.value, hints });
 	})
 	.delete("/:owner/:slug/plane/leases", async (c) => {
 		const p = await plane(c);
@@ -171,6 +176,12 @@ async function card(c: Context<Ctx>) {
 	const endpoint = `${env.PUBLIC_ORIGIN}/api/repos/${repo.fullName}/a2a`;
 	c.header("Cache-Control", repo.state === "published" ? "public, max-age=300" : "private, no-store");
 	return c.json(agentCard({ fullName: repo.fullName, name: repo.name }, endpoint, env.PUBLIC_ORIGIN));
+}
+
+async function hintsFor(repoId: string, paths: string[], leases: PlaneLease[], agentId: string): Promise<LeaseHint[]> {
+	if (!(await indexInfo(repoId))) return [];
+	const files = (await expandPaths(repoId, paths)).slice(0, 200);
+	return files.length ? leaseHints(await neighbours(repoId, files), leases, agentId, Date.now()) : [];
 }
 
 /** The agent session ended or was discarded: it leaves the board (its claims reopen). */
