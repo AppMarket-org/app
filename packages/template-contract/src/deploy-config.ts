@@ -48,8 +48,15 @@ const COPIED = [
 ] as const;
 
 /** Bindings a deploy cannot set up yet; the repo page says so instead of failing mid-deploy. */
+/**
+ * #54 (R27): a container image buyers' deploys can use without Docker: published to Docker Hub,
+ * Amazon ECR or Google Artifact Registry (Cloudflare pulls it at deploy time) and pinned by
+ * digest, so the reviewed version is exactly what deploys.
+ */
+export const CONTAINER_IMAGE = /^(docker\.io|[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com|[a-z0-9-]+-docker\.pkg\.dev)\/[a-z0-9._/-]+(:[A-Za-z0-9._-]+)?@sha256:[0-9a-f]{64}$/;
+const INSTANCE_TYPES = new Set(["lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"]);
+
 const UNSUPPORTED: [key: string, label: string][] = [
-	["containers", "Containers"],
 	["hyperdrive", "Hyperdrive"],
 	["dispatch_namespaces", "dispatch namespaces"],
 	["unsafe", "unsafe bindings"],
@@ -73,6 +80,20 @@ export function buildDeployConfig(files: Map<string, string>, workerName: string
 	if (config.observability === undefined) config.observability = { enabled: true };
 
 	const scoped = (name: unknown) => scopedName(workerName, typeof name === "string" ? name : "");
+	// #54: containers from a published, digest-pinned image; the application name is scoped too.
+	const containers: Record<string, unknown>[] = [];
+	for (const c of list(source.containers)) {
+		if (typeof c.class_name !== "string" || !c.class_name) return { ok: false, reason: "Every container needs a `class_name`." };
+		if (typeof c.image !== "string" || !CONTAINER_IMAGE.test(c.image)) return { ok: false, reason: "Container images must be published to Docker Hub, Amazon ECR or Google Artifact Registry and pinned by digest." };
+		containers.push({
+			class_name: c.class_name,
+			image: c.image,
+			name: scoped(c.class_name.toLowerCase()),
+			...(typeof c.max_instances === "number" ? { max_instances: Math.min(Math.max(1, Math.floor(c.max_instances)), 100) } : {}),
+			...(typeof c.instance_type === "string" && INSTANCE_TYPES.has(c.instance_type) ? { instance_type: c.instance_type } : {}),
+		});
+	}
+	if (containers.length) config.containers = containers;
 	// Resource IDs in the repo belong to the developer's account. Without them Wrangler provisions
 	// the resources in the buyer's account; names are scoped to the Worker so two apps never share one.
 	for (const kv of list(config.kv_namespaces)) {

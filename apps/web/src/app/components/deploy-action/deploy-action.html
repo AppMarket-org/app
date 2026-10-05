@@ -2,6 +2,9 @@
   <section class="deploy" aria-labelledby="deploy-action-heading">
     <h2 id="deploy-action-heading">Run it on Cloudflare</h2>
     <p>Deploy this app into your own Cloudflare account in one step.</p>
+    @if (repo().runtime === 'container') {
+      <p class="hint">Runs as a Cloudflare Container: needs the Workers Paid plan; container time is billed to you.</p>
+    }
     @if (auth.user()) {
       <button mat-flat-button type="button" (click)="open()"><mat-icon>rocket_launch</mat-icon>Deploy to Cloudflare</button>
     } @else if (auth.user() === null) {

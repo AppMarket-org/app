@@ -58,7 +58,7 @@ describe("buildDeployConfig", () => {
 	it("rejects paths outside the repo and unsupported bindings", () => {
 		expect(buildDeployConfig(wrangler({ assets: { directory: "../etc" } }), "x")).toMatchObject({ ok: false });
 		expect(buildDeployConfig(wrangler({ main: "a.ts", d1_databases: [{ binding: "DB", database_name: "d", migrations_dir: "/abs" }] }), "x")).toMatchObject({ ok: false });
-		expect(buildDeployConfig(wrangler({ main: "a.ts", containers: [{ class_name: "C", image: "./Dockerfile" }] }), "x")).toEqual({ ok: false, reason: "One-click deploy does not support Containers yet." });
+		expect(buildDeployConfig(wrangler({ main: "a.ts", containers: [{ class_name: "C", image: "./Dockerfile" }] }), "x")).toEqual({ ok: false, reason: "Container images must be published to Docker Hub, Amazon ECR or Google Artifact Registry and pinned by digest." });
 		expect(buildDeployConfig(new Map(), "x")).toMatchObject({ ok: false });
 	});
 });
@@ -100,5 +100,17 @@ describe("Python Workers (#87)", () => {
 		const root = buildDeployConfig(wrangler({ main: "worker.py" }), "py-app");
 		expect(root.ok && root.deploy.python).toEqual({ sourceDir: "." });
 		expect(buildDeployConfig(wrangler({ main: "../x.py" }), "py-app").ok).toBe(false);
+	});
+});
+
+describe("Container apps (#54)", () => {
+	const digest = `sha256:${"a".repeat(64)}`;
+	it("deploys published, digest-pinned images with names scoped to the Worker", () => {
+		const r = buildDeployConfig(wrangler({ main: "src/index.ts", containers: [{ class_name: "Api", image: `docker.io/acme/api:1.2@${digest}`, max_instances: 500, instance_type: "standard-1" }] }), "buyer-app");
+		expect(r.ok && r.deploy.config.containers).toEqual([{ class_name: "Api", image: `docker.io/acme/api:1.2@${digest}`, name: "buyer-app-api", max_instances: 100, instance_type: "standard-1" }]);
+		for (const image of ["./Dockerfile", "docker.io/acme/api:latest", "ghcr.io/acme/api@" + digest, `registry.cloudflare.com/123/api@${digest}`]) {
+			expect(buildDeployConfig(wrangler({ main: "src/index.ts", containers: [{ class_name: "Api", image }] }), "w").ok, image).toBe(false);
+		}
+		expect(buildDeployConfig(wrangler({ main: "src/index.ts", containers: [{ class_name: "Api", image: `123456789012.dkr.ecr.us-east-1.amazonaws.com/api@${digest}` }] }), "w").ok).toBe(true);
 	});
 });

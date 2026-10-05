@@ -10,6 +10,9 @@
     @default {
       <form [formGroup]="form" (ngSubmit)="deploy()" id="deploy-form" novalidate>
         <p class="intro">Deploys version {{ data.version }} as a Worker in your account, with the resources it needs.</p>
+        @if (data.container) {
+          <p class="cost" role="note"><strong>Runs in a container.</strong> Your Cloudflare account needs the Workers Paid plan, and container time is billed to you by Cloudflare while the app runs.</p>
+        }
         <mat-form-field appearance="outline">
           <mat-label>Cloudflare account</mat-label>
           <mat-select formControlName="accountId">

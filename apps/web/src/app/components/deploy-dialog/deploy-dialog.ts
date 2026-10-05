@@ -21,6 +21,8 @@ export interface DeployDialogData {
   version: string;
   /** Secret names from the repo's deploy manifest (D3). */
   secrets: string[];
+  /** #54: container apps need Workers Paid and bill container time to the buyer. */
+  container?: boolean;
 }
 
 const ERRORS: Record<string, string> = {
