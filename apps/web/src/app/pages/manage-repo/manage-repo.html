@@ -221,6 +221,9 @@
         <app-sessions-card [path]="path()" />
       }
       <app-export-card [path]="path()" />
+      @if (!l.sessionOf) {
+        <app-price-card [repo]="l" (changed)="repo.set($event)" />
+      }
       <app-releases-card class="wide" [path]="l.fullName" [suggestedTag]="l.publishedTag ?? l.submittedTag" />
       @if (!l.sessionOf) {
         <app-webhooks-card [path]="l.fullName" />

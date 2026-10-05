@@ -26,6 +26,7 @@ import { AndroidCard } from './android-card/android-card';
 import { ChecksCard } from './checks-card/checks-card';
 import { ExportCard } from './export-card/export-card';
 import { PreviewsCard } from './previews-card/previews-card';
+import { PriceCard } from './price-card/price-card';
 import { SessionsCard } from './sessions-card/sessions-card';
 import { WebhooksCard } from './webhooks-card/webhooks-card';
 import { Seo } from '../../seo/seo';
@@ -55,6 +56,7 @@ import { STATE_LABELS } from '../state-labels';
     ChecksCard,
     ExportCard,
     PreviewsCard,
+    PriceCard,
     SessionsCard,
     WebhooksCard,
     ReleasesCard,

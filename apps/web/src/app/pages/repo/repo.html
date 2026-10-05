@@ -17,6 +17,7 @@
         <app-runtime-badge [runtime]="d.repo.runtime" />
         <mat-chip-set aria-label="Details">
           <a mat-chip [routerLink]="['/category', d.repo.category]">{{ categoryName(d.repo.category) }}</a>
+          <mat-chip>{{ d.repo.priceCents > 0 ? '$' + (d.repo.priceCents / 100).toFixed(2) : 'Free' }}</mat-chip>
           @if (d.repo.publishedTag) {
             <mat-chip>{{ d.repo.publishedTag }}</mat-chip>
           }
@@ -45,7 +46,7 @@
     }
 
     @if (d.releases.length > 0) {
-      <app-downloads [releases]="d.releases" [android]="d.repo.android" />
+      <app-downloads [releases]="d.releases" [android]="d.repo.android" [path]="d.repo.fullName" [priceCents]="d.repo.priceCents" />
     }
 
     <div class="columns">

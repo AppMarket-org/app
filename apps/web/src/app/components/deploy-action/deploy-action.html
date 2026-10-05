@@ -9,6 +9,17 @@
     }
   </section>
 }
+@if (forSale()) {
+  <section class="deploy" aria-labelledby="buy-heading">
+    <h2 id="buy-heading">{{ price() }} · one-time purchase</h2>
+    <p>Buy it once to deploy it into your own Cloudflare account, download it and get every future version. Paid securely with Stripe.</p>
+    @if (auth.user()) {
+      <button mat-flat-button type="button" [disabled]="buying()" (click)="buy()"><mat-icon>shopping_cart</mat-icon>Buy for {{ price() }}</button>
+    } @else if (auth.user() === null) {
+      <a mat-flat-button [routerLink]="['/login']" [queryParams]="{ next: '/' + repo().fullName }"><mat-icon>shopping_cart</mat-icon>Sign in to buy</a>
+    }
+  </section>
+}
 @if (guidance(); as text) {
   <section class="deploy" aria-labelledby="deploy-action-heading">
     <h2 id="deploy-action-heading">How to use this app</h2>

@@ -23,6 +23,7 @@ import {
 	revokeGitToken,
 } from "../artifacts/git.ts";
 import { purgeRepoPage } from "../routes/seo.ts";
+import { entitled } from "../payments/routes.ts";
 import { canEdit, canView, isOwner } from "./access.ts";
 import { CONTRACT_FILES, buildRepoMap, checkPwa, checkTemplate, pwaManifestCandidates, wranglerMain } from "@appmarket/template-contract";
 import { storeLanguages } from "./languages.ts";
@@ -136,7 +137,7 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		const source = await store.findByPath(c.req.param("owner"), c.req.param("slug"));
 		if (!source || source.state !== "published" || !source.gitRepo) return c.json({ error: "not_found" }, 404);
 		// Paid apps need an entitlement first (R17, #42).
-		if (source.priceCents > 0) return c.json({ error: "paid", message: "Paid apps can be forked after purchase." }, 402);
+		if (!(await entitled(source, c.get("session")))) return c.json({ error: "paid", message: "Buy this app to use it as a template." }, 402);
 		const body = ((await c.req.json().catch(() => ({}))) as { owner?: unknown; name?: unknown }) ?? {};
 		const session = c.get("session")!;
 		const user = session.user;

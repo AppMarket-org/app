@@ -1,0 +1,50 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Price and payouts</mat-card-title>
+    <mat-card-subtitle>Sell the app as a one-time purchase that includes every future version. Stripe pays you; appmarket.org keeps {{ feePercent }}%.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Working" />
+    }
+    @if (account(); as a) {
+      @if (!a.enabled) {
+        <p class="hint">Payments are not set up on this server yet; the app stays free.</p>
+      } @else if (!a.ready) {
+        <p>{{ a.connected ? 'Finish setting up payouts with Stripe to set a price.' : 'Set up payouts for ' + repo().owner.handle + ' with Stripe to sell this app. Stripe verifies your identity and holds your bank details; appmarket.org never sees them.' }}</p>
+        @if (!a.connected) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="country">
+            <mat-label>Country of the payout account</mat-label>
+            <mat-select [ngModel]="country()" (ngModelChange)="country.set($event)" name="country">
+              @for (c of countries; track c[0]) {
+                <mat-option [value]="c[0]">{{ c[1] }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        <button mat-flat-button type="button" [disabled]="busy()" (click)="connect()"><mat-icon>account_balance</mat-icon>{{ a.connected ? 'Continue with Stripe' : 'Set up payouts' }}</button>
+      } @else {
+        <div class="form">
+          <mat-button-toggle-group [value]="paid()" (change)="paid.set($event.value)" aria-label="Price">
+            <mat-button-toggle [value]="false">Free</mat-button-toggle>
+            <mat-button-toggle [value]="true">Paid</mat-button-toggle>
+          </mat-button-toggle-group>
+          @if (paid()) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="price">
+              <mat-label>Price (USD)</mat-label>
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput type="number" inputmode="decimal" [min]="limits.minCents / 100" [max]="limits.maxCents / 100" step="0.01" [ngModel]="dollars()" (ngModelChange)="dollars.set($event)" name="price" />
+              <mat-hint>You get about ${{ youGet().toFixed(2) }} per sale, before Stripe's processing fees.</mat-hint>
+            </mat-form-field>
+          }
+        </div>
+      }
+    }
+  </mat-card-content>
+  @if (account()?.ready) {
+    <mat-card-actions>
+      <button mat-button type="button" (click)="dashboard()">Payouts on Stripe</button>
+      <button mat-flat-button type="button" [disabled]="busy() || !validPrice()" (click)="save()">Save price</button>
+    </mat-card-actions>
+  }
+</mat-card>

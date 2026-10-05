@@ -53,3 +53,19 @@ export function costUsd(model: string, usage: UsageForCost): number | null {
 	const dollars = (fresh * price.input + read * price.cachedInput + write * (price.cacheWrite ?? price.input) + usage.output_tokens * price.output) / 1_000_000;
 	return Math.round(dollars * 10_000) / 10_000;
 }
+
+/** #42 (R17): appmarket.org's share of each sale (owner decision, 2026-10-04). */
+export const PLATFORM_FEE_RATE = 0.1;
+/** Prices are whole US cents; one-time purchases between $1 and $1,000 to start. */
+export const PRICE_LIMITS = { minCents: 100, maxCents: 100_000, currency: "usd" } as const;
+export const platformFeeCents = (priceCents: number) => Math.round(priceCents * PLATFORM_FEE_RATE);
+
+/** #211: a developer's (or org's) Stripe payouts account as appmarket shows it. */
+export interface PayoutAccount {
+	connected: boolean;
+	/** Can receive transfers from sales; prices can be set only then. */
+	ready: boolean;
+	detailsSubmitted: boolean;
+	payoutsEnabled: boolean;
+	country: string | null;
+}

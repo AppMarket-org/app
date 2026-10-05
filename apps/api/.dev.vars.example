@@ -25,3 +25,6 @@ CF_TOKEN_ENCRYPTION_KEY=
 # workspace snapshots. Not needed locally (local containers use the R2 binding).
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
+
+# #42: Stripe secret key for paid apps (test mode: sk_test_...). Leave empty to keep payments off.
+STRIPE_SECRET_KEY=

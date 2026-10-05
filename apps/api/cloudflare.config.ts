@@ -79,6 +79,8 @@ export default defineConfig(({ mode }) => {
 				CF_TOKEN_ENCRYPTION_KEY: bindings.secret(),
 				// #129: base64 32-byte master key; per-account transcript keys are derived from it.
 				TRANSCRIPT_KEY: bindings.secret(),
+				// #42: Stripe (test or live) secret key; payments stay off while it is a placeholder.
+				STRIPE_SECRET_KEY: bindings.secret(),
 				// Checkpoint uploads per device (approximate is fine at 60/min); deploys use the exact RateLimiter.
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),

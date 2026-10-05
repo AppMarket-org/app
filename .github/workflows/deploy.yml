@@ -66,6 +66,7 @@ jobs:
           CF_OAUTH_CLIENT_SECRET: ${{ secrets.CF_OAUTH_CLIENT_SECRET }}
           CF_TOKEN_ENCRYPTION_KEY: ${{ secrets.CF_TOKEN_ENCRYPTION_KEY }}
           TRANSCRIPT_KEY: ${{ secrets.TRANSCRIPT_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |

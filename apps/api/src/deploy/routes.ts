@@ -9,6 +9,7 @@ import { readFiles } from "../artifacts/git.ts";
 import { accessToken, cloudflareAccounts } from "../cloudflare/oauth.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { attachDomain, detachDomain, domainErrorMessage, listDomains, listZones } from "./domains.ts";
+import { entitled } from "../payments/routes.ts";
 import { runtimeLogs } from "./runtime-logs.ts";
 import { deploymentFor, deploymentLogs, deploymentsFor, insertDeployment } from "./store.ts";
 import { CloudflareApiError, rollbackTo, workerVersions } from "./versions.ts";
@@ -27,7 +28,7 @@ export const repoDeployRoutes = new Hono<Ctx>().post("/:owner/:slug/deployments"
 	const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
 	if (!repo || repo.state !== "published" || !repo.gitRepo || !repo.publishedTag || !repo.publishedCommit) return c.json({ error: "not_found" }, 404);
 	// D4: the same rule the repo page uses to show the Deploy action.
-	const availability = deployAvailability(repo);
+	const availability = deployAvailability(repo, await entitled(repo, c.get("session")));
 	if (!availability.ok) return availability.reason === "paid" ? c.json({ error: "purchase_required" }, 402) : c.json({ error: "not_deployable", reason: DEPLOY_UNAVAILABLE[availability.reason] }, 422);
 
 	const expected = repo.manifest?.secrets ?? [];
