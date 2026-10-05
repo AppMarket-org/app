@@ -24,6 +24,7 @@ import {
 } from "../artifacts/git.ts";
 import { purgeRepoPage } from "../routes/seo.ts";
 import { entitled } from "../payments/routes.ts";
+import { copyGraph, recordGraph } from "../graph/store.ts";
 import { canEdit, canView, isOwner } from "./access.ts";
 import { CONTRACT_FILES, buildRepoMap, checkPwa, checkTemplate, pwaManifestCandidates, wranglerMain } from "@appmarket/template-contract";
 import { storeLanguages } from "./languages.ts";
@@ -158,6 +159,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			const input = repoInputSchema.parse({ name, summary: source.summary, description: source.description, category: source.category, runtime: source.runtime, platforms: source.platforms, license: source.license });
 			const created = await store.insert(ids, owner.id, user.id, input, gitRepo);
 			await store.setForkedFrom(created.id, source);
+			// #67: the fork starts with its source's graph edges.
+			await copyGraph(source.id, created.id);
 			logEvent("repo.forked", { repo: created.fullName, from: source.fullName, tag: source.publishedTag, user: user.id });
 			return c.json(await store.findById(created.id), 201);
 		} catch (error) {
@@ -249,6 +252,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		// G4: generate the repo map for the newly published version (stored beside it, not committed).
 		if (request.data.to === "published" && repo.gitRepo && repo.submittedCommit) {
 			c.executionCtx.waitUntil(storeRepoMap(repo, repo.submittedCommit).catch((e) => logEvent("repo_map.failed", { repo: repo.fullName, error: e }, "error")));
+			// #67: graph edges of the newly published version.
+			c.executionCtx.waitUntil(recordGraph(repo.id, repo.gitRepo!, repo.submittedCommit, repo.submittedChecks?.manifest ?? null).catch((e) => logEvent("graph.failed", { repo: repo.fullName, error: String(e) }, "warn")));
 			// #170: language breakdown of the published version.
 			c.executionCtx.waitUntil(storeLanguages(repo.id, repo.gitRepo, repo.submittedCommit).catch((e) => logEvent("languages.failed", { repo: repo.fullName, error: e }, "error")));
 		}

@@ -102,6 +102,40 @@
     </div>
   </mat-tab>
 
+  <mat-tab label="Graph">
+    <!-- #67 (G1): which apps (forks included) use a package or a binding. -->
+    <div class="tab">
+      <div class="graph-form">
+        <mat-button-toggle-group [value]="graphKind()" (change)="graphKind.set($event.value)" aria-label="Search by">
+          <mat-button-toggle value="packages">Package</mat-button-toggle>
+          <mat-button-toggle value="bindings">Binding</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ graphKind() === 'packages' ? 'npm package' : 'Binding type (d1, kv, r2, durable-object, …)' }}</mat-label>
+          <input matInput [ngModel]="graphQuery()" (ngModelChange)="graphQuery.set($event)" name="graphQuery" autocomplete="off" />
+        </mat-form-field>
+        @if (graphKind() === 'packages') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Version (optional)</mat-label>
+            <input matInput [ngModel]="graphVersion()" (ngModelChange)="graphVersion.set($event)" name="graphVersion" placeholder="4.6.1" autocomplete="off" />
+          </mat-form-field>
+        }
+        <button mat-flat-button type="button" [disabled]="!graphQuery().trim()" (click)="searchGraph()">Search</button>
+      </div>
+      @if (graphResults(); as results) {
+        <p class="muted">{{ results.length }} app{{ results.length === 1 ? '' : 's' }}</p>
+        <mat-list>
+          @for (r of results; track r.repo + r.detail) {
+            <mat-list-item lines="2">
+              <span matListItemTitle>{{ r.repo }} · {{ r.state }}</span>
+              <span matListItemLine>{{ r.kind }}{{ r.detail ? ' ' + r.detail : '' }}{{ r.forkedFrom ? ' · fork of ' + r.forkedFrom : '' }}</span>
+            </mat-list-item>
+          }
+        </mat-list>
+      }
+    </div>
+  </mat-tab>
+
   <mat-tab label="Sales">
     <div class="tab">
       @if (sales() === null) {
