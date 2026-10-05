@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { listBranches, readDirectory, readPath, resolveRef } from "../artifacts/git.ts";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { canEdit, canView } from "./access.ts";
+import { pickBranch } from "./pick-branch.ts";
 import { RepoStore } from "./repository.ts";
 
 type Ctx = { Variables: AuthVariables };
@@ -29,10 +30,12 @@ async function target(c: { req: { param(n: string): string | undefined; query(n:
 		commit = repo.publishedCommit;
 		ref = repo.publishedTag ?? "";
 	} else {
-		using git = await env.ARTIFACTS.get(repo.gitRepo);
-		const info = await git.info();
-		ref = info.defaultBranch;
-		commit = await resolveRef(repo.gitRepo, ref);
+		// The default branch, or, when it has no commits (code pushed to master while the repo's
+		// default is main, as `ng new` does), the first branch that has some.
+		const { defaultBranch, branches } = await listBranches(repo.gitRepo);
+		const pick = pickBranch(defaultBranch, branches);
+		ref = pick?.name ?? defaultBranch;
+		commit = pick?.sha ?? null;
 	}
 	return { repo, editor, commit, ref };
 }
