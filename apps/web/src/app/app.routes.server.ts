@@ -29,6 +29,8 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'dashboard/listings/:slug', renderMode: RenderMode.Client },
   { path: 'dashboard/deployments/:id', renderMode: RenderMode.Client },
   { path: 'dashboard/cloudflare', renderMode: RenderMode.Client },
+  { path: 'dashboard/apps', renderMode: RenderMode.Client },
+  { path: 'dashboard/cowbells', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },
   { path: 'admin/repos/:owner/:slug/checkpoints', renderMode: RenderMode.Client },
   { path: 'admin', renderMode: RenderMode.Client },

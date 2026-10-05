@@ -1,0 +1,66 @@
+  <section class="deployments" aria-labelledby="running-heading">
+    <header class="head">
+      <h2 id="running-heading">Running apps</h2>
+      <a mat-stroked-button routerLink="/dashboard/cloudflare"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Cloudflare account</a>
+    </header>
+    @if (deployments() === undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading running apps" />
+    } @else if (deployments() === null) {
+      <p class="error" role="alert">Could not load your running apps. Reload to try again.</p>
+    } @else if (deployments()?.length) {
+      <mat-card appearance="outlined">
+        <mat-nav-list aria-labelledby="running-heading">
+          @for (d of deployments(); track d.id) {
+            <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
+              <mat-icon matListItemIcon aria-hidden="true">{{
+                d.status === 'succeeded'
+                  ? 'check_circle'
+                  : d.status === 'failed'
+                    ? 'error'
+                    : 'pending'
+              }}</mat-icon>
+              <span matListItemTitle>{{ d.repoName }} → {{ d.workerName }}</span>
+              <span matListItemLine
+                >{{ deployStatus[d.status] }} ·
+                {{ d.previewBranch ? 'from branch ' + d.previewBranch : d.versionTag }} ·
+                {{ d.createdAt | date: 'medium' }}</span
+              >
+            </a>
+          }
+        </mat-nav-list>
+      </mat-card>
+    } @else {
+      <div class="empty-state">
+        <p class="explain">
+          Apps you deployed to your own Cloudflare account. Find one and choose
+          <strong>Deploy to Cloudflare</strong>. Your apps run in your account.
+        </p>
+        <a mat-stroked-button routerLink="/search"
+          >Browse apps<mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+        >
+      </div>
+    }
+  </section>
+
+@if (purchases()?.length) {
+  <!-- #213: paid apps the user bought. -->
+  <section class="purchases" aria-labelledby="purchases-heading">
+    <h2 id="purchases-heading">Purchased apps</h2>
+    <mat-card appearance="outlined">
+      <mat-nav-list aria-labelledby="purchases-heading">
+        @for (p of purchases(); track p.repo + p.purchasedAt) {
+          <a mat-list-item [routerLink]="'/' + p.repo">
+            <mat-icon matListItemIcon aria-hidden="true">{{
+              p.status === 'paid' ? 'shopping_bag' : 'money_off'
+            }}</mat-icon>
+            <span matListItemTitle>{{ p.name }}</span>
+            <span matListItemLine
+              >{{ '$' + (p.amountCents / 100).toFixed(2) }} · {{ p.purchasedAt | date: 'mediumDate'
+              }}{{ p.status === 'paid' ? '' : ' · ' + p.status }}</span
+            >
+          </a>
+        }
+      </mat-nav-list>
+    </mat-card>
+  </section>
+}

@@ -1,0 +1,161 @@
+@use '../state-chips';
+@include state-chips.state-chip-colours;
+:host {
+  display: block;
+  padding: 0.5rem 0 2rem;
+}
+.head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+h2 {
+  font: 600 1.375rem/1.4 var(--app-font-display);
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+.count {
+  font: 400 0.75rem/1.5 var(--app-font-mono);
+  color: var(--app-muted);
+}
+.explain {
+  font-size: 0.875rem;
+  color: var(--app-muted);
+  margin: 0 0 1.5rem;
+  max-width: 46rem;
+}
+.repositories {
+  margin-bottom: 2rem;
+}
+.repo-row {
+  padding: 1.5rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+}
+.repo-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.repo-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  color: var(--mat-sys-primary);
+  background: var(--mat-sys-primary-container);
+}
+.repo-info {
+  flex: 1;
+  min-width: 0;
+}
+h3 {
+  font: 600 1.125rem/1.4 var(--app-font-display);
+  letter-spacing: -0.025em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.repo-path {
+  font: 400 0.75rem/1.5 var(--app-font-mono);
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+  margin: 0.25rem 0 0;
+}
+.repo-summary {
+  font-size: 0.875rem;
+  color: var(--app-muted);
+  margin: 0.5rem 0 0;
+}
+.manage {
+  flex-shrink: 0;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin: 1.25rem 0 0 3.75rem;
+}
+.updated {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--app-muted);
+}
+.empty-state {
+  padding-top: 0.25rem;
+}
+.empty-state .explain {
+  margin-bottom: 1.25rem;
+  line-height: 1.7;
+}
+ .saved h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.cowbell {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: #bc8b24;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+  gap: 1rem;
+}
+.error {
+  color: var(--mat-sys-error);
+}
+@media (max-width: 37.5rem) {
+  .repo-row {
+    padding: 1.25rem;
+  }
+  .repo-top {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .repo-symbol {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  .repo-info {
+    flex-basis: calc(100% - 3rem);
+  }
+  .manage {
+    margin-left: 3rem;
+  }
+  .meta {
+    margin-left: 0;
+  }
+  .updated {
+    width: 100%;
+    margin-left: 0;
+  }
+
+}
+
+.purchases > h2 {
+  margin-bottom: 1rem;
+}
+
+.notices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notice mat-icon[mat-card-avatar] {
+  color: var(--mat-sys-error);
+}
+
+.guidance {
+  white-space: pre-line;
+}
+
+.deployments { margin-bottom: 2rem; }
+.notices { margin-bottom: 1.5rem; }
