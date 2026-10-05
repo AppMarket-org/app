@@ -212,3 +212,17 @@ h3 {
 .purchases > h2 {
   margin-bottom: 1rem;
 }
+
+.notices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notice mat-icon[mat-card-avatar] {
+  color: var(--mat-sys-error);
+}
+
+.guidance {
+  white-space: pre-line;
+}

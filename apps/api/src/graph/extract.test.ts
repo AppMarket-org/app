@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { graphEdges, rangeAllows } from "./extract";
+import { graphEdges, rangeAllows, rangeOverlaps } from "./extract";
 
 describe("graph edges (#67)", () => {
 	it("records dependencies with their ranges and bindings by type", () => {
@@ -23,5 +23,15 @@ describe("version ranges (#67)", () => {
 		expect(rangeAllows("~1.2.3", "1.2.9")).toBe(true);
 		expect(rangeAllows("github:acme/lib", "1.0.0")).toBe(true);
 		expect(rangeAllows(null, "1.0.0")).toBe(true);
+	});
+});
+
+describe("vulnerable range overlap (#69)", () => {
+	it("flags declared ranges that can resolve into the vulnerable range", () => {
+		expect(rangeOverlaps("^4.6.0", "<4.6.2")).toBe(true);
+		expect(rangeOverlaps("^4.6.2", "<4.6.2")).toBe(false);
+		expect(rangeOverlaps("~1.2.0", ">=1.3.0 <1.4.0")).toBe(false);
+		expect(rangeOverlaps("latest", "<2.0.0")).toBe(true);
+		expect(rangeOverlaps("^4", "<4.0.0")).toBe(false);
 	});
 });

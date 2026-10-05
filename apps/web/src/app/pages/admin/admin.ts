@@ -69,6 +69,14 @@ export class Admin {
   protected readonly reportStatus = signal<'open' | 'resolved'>('open');
   protected readonly readmes = signal<Record<string, string | null>>({});
   protected readonly busy = signal(false);
+  /** #69 */
+  protected readonly impactKind = signal<'package' | 'rule'>('package');
+  protected readonly impactTarget = signal('');
+  protected readonly impactAffected = signal('');
+  protected readonly impactTitle = signal('');
+  protected readonly impactGuidance = signal('');
+  protected readonly impacts = signal<{ id: string; kind: string; target: string; affected: string | null; title: string; open_repos: number; resolved_repos: number; closed_at: string | null }[] | null>(null);
+  protected readonly impactRepos = signal<Record<string, { repo: string; state: string; detail: string | null; forked_from: string | null; resolved_at: string | null }[]>>({});
   /** #67 */
   protected readonly graphKind = signal<'packages' | 'bindings'>('packages');
   protected readonly graphQuery = signal('');
@@ -137,6 +145,43 @@ export class Admin {
         await firstValueFrom(this.api.resolveReport(report.id, 'taken_down'));
       });
     }
+  }
+
+  protected async loadImpacts(): Promise<void> {
+    this.impacts.set((await firstValueFrom(this.http.get<{ items: never[] }>('/api/admin/impacts')).catch(() => ({ items: [] }))).items);
+  }
+
+  protected async fileImpact(): Promise<void> {
+    await this.run(async () => {
+      const r = await firstValueFrom(
+        this.http.post<{ affected: number }>('/api/admin/impacts', { kind: this.impactKind(), target: this.impactTarget().trim(), affected: this.impactAffected().trim() || undefined, title: this.impactTitle().trim(), guidance: this.impactGuidance().trim() }),
+      );
+      this.snackBar.open(`Filed: ${r.affected} repo${r.affected === 1 ? '' : 's'} affected; their owners see a notice`, undefined, { duration: 5000 });
+      this.impactTarget.set('');
+      this.impactAffected.set('');
+      this.impactTitle.set('');
+      this.impactGuidance.set('');
+      await this.loadImpacts();
+    });
+  }
+
+  protected async showImpact(id: string): Promise<void> {
+    const r = await firstValueFrom(this.http.get<{ repos: never[] }>(`/api/admin/impacts/${id}`)).catch(() => ({ repos: [] }));
+    this.impactRepos.update((all) => ({ ...all, [id]: r.repos }));
+  }
+
+  protected async recheckImpact(id: string): Promise<void> {
+    await this.run(async () => {
+      await firstValueFrom(this.http.post(`/api/admin/impacts/${id}/recheck`, {}));
+      await Promise.all([this.loadImpacts(), this.showImpact(id)]);
+    });
+  }
+
+  protected async closeImpact(id: string): Promise<void> {
+    await this.run(async () => {
+      await firstValueFrom(this.http.post(`/api/admin/impacts/${id}/close`, {}));
+      await this.loadImpacts();
+    });
   }
 
   protected async searchGraph(): Promise<void> {

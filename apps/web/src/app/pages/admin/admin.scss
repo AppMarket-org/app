@@ -41,3 +41,10 @@ mat-accordion {
   align-items: center;
   gap: 0.75rem;
 }
+
+.impact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 40rem;
+}

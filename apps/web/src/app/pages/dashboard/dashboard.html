@@ -10,6 +10,35 @@
     <a mat-flat-button routerLink="/dashboard/new"><mat-icon>add</mat-icon>New repo</a>
   </div>
 </header>
+@if (impacts()?.length) {
+  <!-- #69: problems found in the user's repos (vulnerable packages, failing rules), with fixes. -->
+  <section aria-labelledby="notices-heading" class="notices">
+    <h2 id="notices-heading">Notices</h2>
+    @for (n of impacts(); track n.id) {
+      <mat-card appearance="outlined" class="notice">
+        <mat-card-header>
+          <mat-icon mat-card-avatar aria-hidden="true">warning</mat-icon>
+          <mat-card-title>{{ n.title }}</mat-card-title>
+          <mat-card-subtitle>{{ n.kind === 'package' ? n.target + (n.affected ? ' ' + n.affected : '') : 'Rule ' + n.target }} · {{ n.repos.length }} of your repos</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="guidance">{{ n.guidance }}</p>
+          <mat-nav-list aria-label="Affected repos">
+            @for (r of n.repos; track r.repo) {
+              <a mat-list-item [routerLink]="['/dashboard/repos', r.repo]">
+                <span matListItemTitle>{{ r.repo }}</span>
+                @if (r.detail) {
+                  <span matListItemLine>{{ r.detail }}</span>
+                }
+              </a>
+            }
+          </mat-nav-list>
+        </mat-card-content>
+      </mat-card>
+    }
+  </section>
+}
+
 <section class="repositories" aria-labelledby="repos-heading">
   <header class="head">
     <h2 id="repos-heading">Your repos</h2>

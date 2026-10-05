@@ -40,6 +40,12 @@ export class Dashboard {
 
   /** D6: the user's deploys into Cloudflare; empty on error. */
   protected readonly deployments = toSignal(inject(DeploymentsApi).mine().pipe(catchError(() => of([]))));
+  /** #69 */
+  protected readonly impacts = toSignal(
+    inject(HttpClient)
+      .get<{ items: { id: string; kind: string; target: string; affected: string | null; title: string; guidance: string; repos: { repo: string; detail: string | null }[] }[] }>('/api/me/impacts')
+      .pipe(map((r) => r.items), catchError(() => of([]))),
+  );
   protected readonly purchases = toSignal(
     inject(HttpClient)
       .get<{ items: { repo: string; name: string; amountCents: number; status: string; purchasedAt: string }[] }>('/api/me/purchases')
