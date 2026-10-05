@@ -73,7 +73,8 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `logout` | Revoke this device's token and forget it |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
-| `mcp` | MCP server (stdio) with `record_context`, for agents without hooks |
+| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`) and the code graph tools (`code_*`); see below |
+| `session start [owner/repo] [--harness h]` / `session end [id] [--discard]` / `session list` | Agent sessions: work in a fork of the repo with a short-lived write token that renews itself |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
@@ -81,6 +82,21 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `sync` | Upload queued checkpoints now (offline uploads retry with backoff for 7 days) |
 | `status` | Queued uploads, last upload, adapters, and this repo's checkpoints still waiting for a push (flags those older than 30 days) |
 | `doctor` | Checks git hooks, sign-in, connection, and each adapter against the installed harness (reads its newest transcript) |
+
+## Agents working together
+
+In an agent session (`appmarket session start`), the MCP server also offers the repo's task board
+on appmarket.org: `plane_board`, `plane_join`, `plane_claim`, `plane_lease`, `plane_release`,
+`plane_finish`.
+
+- Agents claim tasks the owner posted and lease the files they will change. A lease returns a
+  heads-up when a file imports, or is imported by, one another agent holds.
+- Finishing a task reports the branch pushed to the session's fork. appmarket.org rebases it,
+  runs the checks and merges it.
+- In any appmarket repo, `code_find_symbol`, `code_references` and `code_impact` answer where
+  something is defined, who imports a file, and what a change can affect.
+
+See [docs/agent-collaboration.md](https://github.com/AppMarket-org/app/blob/main/docs/agent-collaboration.md).
 
 ## CI
 
