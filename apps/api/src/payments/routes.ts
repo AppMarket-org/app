@@ -1,4 +1,4 @@
-import { PRICE_LIMITS, type Repo, platformFeeCents } from "@appmarket/shared";
+import { PRICE_LIMITS, type Repo, type Sale, platformFeeCents } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
@@ -112,6 +112,17 @@ export const payoutRoutes = new Hono<Ctx>()
 		}
 	});
 
+const toSale = (r: Awaited<ReturnType<typeof payments.sales>>[number]): Sale => ({
+	id: r.id,
+	repo: r.full_name,
+	buyer: r.buyer,
+	amountCents: r.amount_cents,
+	feeCents: r.fee_cents,
+	currency: r.currency,
+	status: r.status as Sale["status"],
+	createdAt: r.created_at,
+});
+
 /** Whether the user may use a paid app: editors and buyers whose purchase stands. */
 export async function entitled(repo: Repo, session: AuthVariables["session"]): Promise<boolean> {
 	if (repo.priceCents <= 0) return true;
@@ -138,6 +149,14 @@ export const checkoutRoutes = new Hono<Ctx>()
 		await env.DB.prepare("UPDATE repos SET price_cents = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(price, repo.id).run();
 		logEvent("payments.price_set", { repo: repo.fullName, priceCents: price });
 		return c.json(await store.findById(repo.id));
+	})
+	// #214: the repo's sales for owners and org members.
+	.get("/:owner/:slug/sales", requireRole(), async (c) => {
+		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
+		if (!repo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const items = (await payments.sales(repo.id)).map(toSale);
+		const paid = items.filter((s) => s.status === "paid");
+		return c.json({ items, totals: { sales: paid.length, grossCents: paid.reduce((n, s) => n + s.amountCents, 0), netCents: paid.reduce((n, s) => n + s.amountCents - s.feeCents, 0) } });
 	})
 	.get("/:owner/:slug/ownership", async (c) => {
 		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
@@ -271,8 +290,28 @@ export async function ensureWebhookEndpoints(): Promise<void> {
 	await createWebhookEndpoints(sk);
 }
 
-/** #212: re-creates the webhook endpoints (e.g. after rotating them in Stripe). Mounted under /api/admin. */
-export const paymentsAdminRoutes = new Hono<Ctx>().use(requireRole("admin")).post("/payments/webhook-endpoints", async (c) => {
+/** #212: re-creates the webhook endpoints (e.g. after rotating them in Stripe); #214: sales and refunds. Mounted under /api/admin. */
+export const paymentsAdminRoutes = new Hono<Ctx>()
+	.use(requireRole("admin"))
+	.get("/purchases", async (c) => c.json({ items: (await payments.sales(null, 200)).map(toSale) }))
+	// Full refund: the developer's transfer and appmarket's fee are reversed; ownership ends now
+	// (the charge.refunded webhook would do the same).
+	.post("/purchases/:id/refund", async (c) => {
+		const sk = key(c);
+		if (sk instanceof Response) return sk;
+		const purchase = await payments.purchase(c.req.param("id"));
+		if (!purchase?.payment_intent_id) return c.json({ error: "not_found" }, 404);
+		if (purchase.status !== "paid") return c.json({ error: "not_refundable", message: `This purchase is ${purchase.status}.` }, 409);
+		try {
+			await stripe(sk, "POST", "/refunds", { payment_intent: purchase.payment_intent_id, reverse_transfer: true, refund_application_fee: true, metadata: { refunded_by: c.get("session")!.user.id } }, { idempotencyKey: `refund:${purchase.id}` });
+		} catch (error) {
+			return stripeFailure(c, error);
+		}
+		await payments.setStatusByPayment(purchase.payment_intent_id, "refunded");
+		logEvent("payments.refunded", { purchase: purchase.id, admin: c.get("session")!.user.id });
+		return c.json({ ok: true });
+	})
+	.post("/payments/webhook-endpoints", async (c) => {
 	const sk = key(c);
 	if (sk instanceof Response) return sk;
 	if (!env.PUBLIC_ORIGIN.startsWith("https://")) return c.json({ error: "invalid", message: "Stripe needs a public https URL; set up webhooks on staging or production." }, 400);

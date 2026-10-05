@@ -102,6 +102,29 @@
     </div>
   </mat-tab>
 
+  <mat-tab label="Sales">
+    <div class="tab">
+      @if (sales() === null) {
+        <button mat-stroked-button type="button" (click)="loadSales()">Load sales</button>
+      }
+      @for (s of sales() ?? []; track s.id) {
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ money(s.amountCents) }} · {{ s.repo }}</mat-card-title>
+            <mat-card-subtitle>Bought by {{ s.buyer }} · {{ s.createdAt | date: 'medium' }} · appmarket fee {{ money(s.feeCents) }} · {{ s.status }}</mat-card-subtitle>
+          </mat-card-header>
+          @if (s.status === 'paid') {
+            <mat-card-actions align="end">
+              <button mat-button type="button" class="danger" [disabled]="busy()" (click)="refund(s)">Refund</button>
+            </mat-card-actions>
+          }
+        </mat-card>
+      } @empty {
+        <p class="empty">No sales yet.</p>
+      }
+    </div>
+  </mat-tab>
+
   <mat-tab [label]="'Reports' + (reportStatus() === 'open' && reports()?.length ? ' (' + reports()!.length + ')' : '')">
     <div class="tab">
       <mat-button-toggle-group [value]="reportStatus()" (change)="showReports($event.value)" aria-label="Report status">

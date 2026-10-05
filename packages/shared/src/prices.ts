@@ -69,3 +69,16 @@ export interface PayoutAccount {
 	payoutsEnabled: boolean;
 	country: string | null;
 }
+
+/** #214: one sale as developers and admins see it. */
+export interface Sale {
+	id: string;
+	repo: string;
+	/** Buyer's handle (or name); never their email. */
+	buyer: string;
+	amountCents: number;
+	feeCents: number;
+	currency: string;
+	status: "paid" | "refunded" | "disputed";
+	createdAt: string;
+}

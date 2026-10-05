@@ -40,6 +40,20 @@
         </div>
       }
     }
+    @if (sales(); as s) {
+      @if (s.items.length) {
+        <h3 class="sales-head">Sales</h3>
+        <p>{{ s.totals.sales }} sale{{ s.totals.sales === 1 ? '' : 's' }} · {{ money(s.totals.grossCents) }} gross · about {{ money(s.totals.netCents) }} to you before Stripe's fees</p>
+        <mat-list role="list" aria-label="Sales">
+          @for (sale of s.items.slice(0, 20); track sale.id) {
+            <mat-list-item role="listitem">
+              <span matListItemTitle>{{ money(sale.amountCents) }} · {{ sale.buyer }}</span>
+              <span matListItemLine>{{ sale.createdAt | date: 'medium' }}{{ sale.status === 'paid' ? '' : ' · ' + sale.status }}</span>
+            </mat-list-item>
+          }
+        </mat-list>
+      }
+    }
   </mat-card-content>
   @if (account()?.ready) {
     <mat-card-actions>

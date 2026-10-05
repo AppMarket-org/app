@@ -68,6 +68,22 @@ export const payments = {
 				.all<{ repo_id: string; amount_cents: number; currency: string; status: string; created_at: string; full_name: string; name: string }>()
 		).results,
 
+	/** #214: sales with the buyer's handle, newest first. repoId null = all repos (admins). */
+	sales: async (repoId: string | null, limit = 100) =>
+		(
+			await env.DB.prepare(
+				`SELECT p.id, p.amount_cents, p.fee_cents, p.currency, p.status, p.created_at, p.payment_intent_id, o.handle || '/' || r.slug AS full_name,
+				   COALESCE(bo.handle, u.name) AS buyer
+				 FROM purchases p JOIN repos r ON r.id = p.repo_id JOIN owners o ON o.id = r.owner_id JOIN "user" u ON u.id = p.user_id
+				 LEFT JOIN owners bo ON bo.user_id = p.user_id AND bo.kind = 'user'
+				 WHERE (?1 IS NULL OR p.repo_id = ?1) ORDER BY p.created_at DESC LIMIT ?2`,
+			)
+				.bind(repoId, limit)
+				.all<{ id: string; amount_cents: number; fee_cents: number; currency: string; status: string; created_at: string; payment_intent_id: string | null; full_name: string; buyer: string }>()
+		).results,
+
+	purchase: (id: string) => env.DB.prepare("SELECT * FROM purchases WHERE id = ?").bind(id).first<{ id: string; status: string; payment_intent_id: string | null; repo_id: string }>(),
+
 	secret: async (name: string) => (await env.DB.prepare("SELECT value_enc FROM app_secrets WHERE name = ?").bind(name).first<{ value_enc: string }>())?.value_enc ?? null,
 	setSecret: (name: string, valueEnc: string) =>
 		env.DB.prepare("INSERT INTO app_secrets (name, value_enc) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET value_enc = excluded.value_enc, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')").bind(name, valueEnc).run(),
