@@ -9,6 +9,7 @@ import { entitled } from "../payments/routes.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { OwnerStore } from "../owners/store.ts";
+import { processPush } from "../contributions/scan.ts";
 import { updatedRefs, withMessages } from "./sideband.ts";
 import { credentialOf, FORWARD_REQUEST_HEADERS, FORWARD_RESPONSE_HEADERS, type GitRoute, isArtifactsToken, parseGitPath } from "./access.ts";
 
@@ -132,6 +133,8 @@ async function forward(c: Context, gitRepo: string, route: GitRoute, token: stri
 			.filter((r) => r.startsWith("refs/heads/"))
 			.map((r) => r.slice("refs/heads/".length));
 		logEvent("git.pushed", { repo: repo.fullName, branches: branches.length });
+		// Checks, conformance, runtime and contributions right away (the minute scan is the fallback).
+		c.executionCtx.waitUntil(processPush(repo.id).catch((e: unknown) => logEvent("git.push_processing_failed", { repo: repo.fullName, error: String(e) }, "warn")));
 		const lines = branches.length ? await pullLinks(repo, branches).catch(() => []) : [];
 		return new Response(withMessages(body, lines), { status: upstream.status, headers: out });
 	}

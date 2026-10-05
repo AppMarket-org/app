@@ -295,12 +295,13 @@ export class CheckpointStore {
 				missing += results.reduce((n, r) => n + r.meta.changes, 0);
 			}
 		}
-		await this.db.prepare("UPDATE repos SET checkpoints_reconciled_at = ? WHERE id = ?").bind(pushedAt, repo.id).run();
+		await this.db.prepare("UPDATE repos SET checkpoints_reconciled_at = ?, checkpoints_reconciled_head = ? WHERE id = ?").bind(pushedAt, commits[0]?.hash ?? null, repo.id).run();
 		return { attached, missing };
 	}
 
-	async reconciledAt(repoId: string): Promise<string | null> {
-		return (await this.db.prepare("SELECT checkpoints_reconciled_at AS t FROM repos WHERE id = ?").bind(repoId).first<{ t: string | null }>())?.t ?? null;
+	/** The default-branch head last reconciled (push times are not reported by Artifacts). */
+	async reconciledHead(repoId: string): Promise<string | null> {
+		return (await this.db.prepare("SELECT checkpoints_reconciled_head AS h FROM repos WHERE id = ?").bind(repoId).first<{ h: string | null }>())?.h ?? null;
 	}
 
 	/** #131: every checkpoint in these owners' repos, oldest first, as JSONL lines (owner view). */

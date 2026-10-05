@@ -67,7 +67,9 @@ export function checkTemplate({ runtime, rootEntries, files }: TemplateInput): C
 	checkBindings(config, path, error, warn);
 
 	const secretsFile = files.has(".dev.vars.example") ? ".dev.vars.example" : files.has(".env.example") ? ".env.example" : null;
-	if (!secretsFile) warn("secrets-documented", ".dev.vars.example", "If the app needs secrets, list their names in .dev.vars.example so buyers are asked for them.");
+	// A static site (assets, no Worker entry) has no code that could read a secret.
+	const hasCode = typeof config.main === "string";
+	if (!secretsFile && hasCode) warn("secrets-documented", ".dev.vars.example", "If the app needs secrets, list their names in .dev.vars.example so buyers are asked for them.");
 
 	// #54 (R27): container apps deploy a published image; buyers' deploys cannot build a Dockerfile.
 	const containers = list(config.containers);

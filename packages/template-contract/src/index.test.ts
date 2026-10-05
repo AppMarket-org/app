@@ -118,4 +118,15 @@ describe("container apps (#54)", () => {
 	it("warns when no Durable Object binding uses the container class", () => {
 		expect(checkTemplate({ runtime: "container", rootEntries: [], files: config(pinned, false) }).warnings.map((w) => w.rule)).toContain("container-binding");
 	});
+
+	it("does not ask a static site (assets, no Worker entry) to document secrets", () => {
+		const site = new Map([
+			["wrangler.jsonc", JSON.stringify({ name: "bombfind", compatibility_date: "2026-10-01", assets: { directory: "./public" } })],
+			["package.json", JSON.stringify({ name: "bombfind", scripts: { test: "node --test" } })],
+			["AGENTS.md", "# BombFind\n\nA Minesweeper-style puzzle served as static files.\n\n## Run and test\n\n- `npm test` runs the rule tests.\n- `npx wrangler dev` plays it locally.\n"],
+		]);
+		const result = checkTemplate({ runtime: "workers-js", rootEntries: ["wrangler.jsonc", "package.json", "AGENTS.md", "public"], files: site });
+		expect(result.warnings.map((w) => w.rule)).not.toContain("secrets-documented");
+		expect(result.errors).toEqual([]);
+	});
 });

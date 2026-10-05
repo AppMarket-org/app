@@ -31,11 +31,11 @@ async function reconcilePushes(repo: Repo): Promise<void> {
 	if (!repo.gitRepo) return;
 	try {
 		const store = checkpoints();
-		const { lastPushAt, commits } = await pushedCommits(repo.gitRepo);
-		if (!lastPushAt) return;
-		const done = await store.reconciledAt(repo.id);
-		if (done && done >= lastPushAt) return;
-		const result = await store.reconcilePushed({ id: repo.id, defaultVisibility: repo.checkpointVisibility }, commits, lastPushAt);
+		const { commits } = await pushedCommits(repo.gitRepo);
+		const head = commits[0]?.hash;
+		// Only when the default branch moved since the last reconcile.
+		if (!head || head === (await store.reconciledHead(repo.id))) return;
+		const result = await store.reconcilePushed({ id: repo.id, defaultVisibility: repo.checkpointVisibility }, commits, new Date().toISOString());
 		if (result.attached || result.missing) logEvent("checkpoint.reconciled", { repo: repo.fullName, ...result });
 	} catch (error) {
 		// Reading checkpoints must not fail because Artifacts is slow; the next read retries.
