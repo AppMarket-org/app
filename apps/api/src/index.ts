@@ -23,6 +23,8 @@ import { emailImpacts } from "./email/impacts.ts";
 import { emailPreferenceRoutes, unsubscribeRoutes } from "./email/routes.ts";
 import { a2aRoutes, planeRoutes } from "./plane/routes.ts";
 import { codeGraphRoutes } from "./codegraph/routes.ts";
+import { memoryRoutes } from "./memory/routes.ts";
+import { purgeRemovedRepoMemory } from "./memory/store.ts";
 import { adminImpactRoutes, myImpactRoutes } from "./impacts/routes.ts";
 import { syncOpenImpacts } from "./impacts/store.ts";
 import { adminGraphRoutes, repoGraphRoutes } from "./graph/routes.ts";
@@ -83,6 +85,7 @@ api.route("/repos", codeRoutes);
 api.route("/repos", planeRoutes);
 api.route("/repos", a2aRoutes);
 api.route("/repos", codeGraphRoutes);
+api.route("/repos", memoryRoutes);
 api.route("/repos", checkoutRoutes);
 api.route("/owners", payoutRoutes);
 api.route("/stripe", stripeWebhookRoutes);
@@ -132,6 +135,8 @@ export default {
 	async scheduled(_controller: ScheduledController, _env: unknown, ctx: ExecutionContext): Promise<void> {
 		// #131: checkpoints of removed repos are deleted (well within the 24 h promise).
 		ctx.waitUntil(new CheckpointStore(env.DB).purgeRemovedRepos(deleteTranscript).then((n) => n && logEvent("checkpoints.purged", { count: n })).catch(() => undefined));
+		// #194: and their memory.
+		ctx.waitUntil(purgeRemovedRepoMemory().then((n) => n && logEvent("memory.purged", { count: n })).catch(() => undefined));
 		// #69: keep open impacts current (new matches, resolved repos).
 		// #230: then email owners about repos newly affected.
 		ctx.waitUntil(

@@ -92,4 +92,6 @@ export const RATE_LIMITS = {
 	CHECKPOINT: { offset: 7, limit: 60, period: 60 },
 	/** #132: device codes, per IP. */
 	DEVICE_CODE: { offset: 8, limit: 10, period: 60 },
+	/** #194: memory writes, per user (agents write in bursts). */
+	MEMORY: { offset: 9, limit: 60, period: 60 },
 } as const;

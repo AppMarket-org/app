@@ -5,9 +5,10 @@ const all = ["checkpoints:write", "checkpoints:read", "repos:read"];
 
 describe("grantScopes", () => {
 	it("defaults to the client's scopes and refuses anything wider or unknown", () => {
-		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write"]);
-		expect(grantScopes("appmarket-ci", undefined)).toEqual([...all, "releases:write"]);
+		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write"]);
+		expect(grantScopes("appmarket-ci", undefined)).toEqual([...all, "releases:write", "memory:read"]);
 		expect(grantScopes("appmarket-ci", "sessions:write")).toBeNull();
+		expect(grantScopes("appmarket-ci", "memory:write")).toBeNull();
 		expect(grantScopes("appmarket-cli", "repos:read")).toEqual(["repos:read"]);
 		expect(grantScopes("appmarket-cli", "repos:read repos:write")).toBeNull();
 		expect(grantScopes("evil", "repos:read")).toBeNull();
@@ -21,6 +22,17 @@ describe("deviceMayCall", () => {
 		expect(deviceMayCall(all, "POST", "/api/repos/acme/todo/checkpoints")).toBe(true);
 		expect(deviceMayCall(all, "PATCH", "/api/repos/acme/todo/checkpoints/abc123")).toBe(true);
 		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/acme/todo/checkpoints")).toBe(false);
+	});
+
+	it("memory: reads with memory:read, writes with memory:write only (#194)", () => {
+		const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+		expect(deviceMayCall(["memory:read"], "GET", "/api/repos/dev/app/memory")).toBe(true);
+		expect(deviceMayCall(["memory:read"], "GET", `/api/repos/dev/app/memory/${id}/history`)).toBe(true);
+		expect(deviceMayCall(["memory:read"], "POST", "/api/repos/dev/app/memory")).toBe(false);
+		expect(deviceMayCall(["memory:write"], "POST", "/api/repos/dev/app/memory")).toBe(true);
+		expect(deviceMayCall(["memory:write"], "PATCH", `/api/repos/dev/app/memory/${id}`)).toBe(true);
+		expect(deviceMayCall(["memory:write"], "DELETE", `/api/repos/dev/app/memory/${id}`)).toBe(true);
+		expect(deviceMayCall(["checkpoints:write", "repos:read"], "GET", "/api/repos/dev/app/memory")).toBe(false);
 	});
 
 	it("lets device tokens read the code graph (#240)", () => {
