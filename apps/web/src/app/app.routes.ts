@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth-guard';
+import { homeGuard } from './auth/home-guard';
 import { categoryResolver, latestResolver, searchResolver } from './pages/catalog-resolvers';
 import { historyResolver } from './pages/history/history-resolver';
 import { ownerResolver } from './pages/owner/owner-resolver';
@@ -9,7 +10,7 @@ import { repoResolver } from './pages/repo/repo-resolver';
 // and /login are client-only. Owner and repo pages (#102) come last: their first segment is a
 // handle, so every site path above is a reserved handle (RESERVED_HANDLES).
 export const routes: Routes = [
-  { path: '', resolve: { latest: latestResolver }, loadComponent: () => import('./pages/home/home').then((m) => m.Home) },
+  { path: '', pathMatch: 'full', canActivate: [homeGuard], resolve: { latest: latestResolver }, loadComponent: () => import('./pages/home/home').then((m) => m.Home) },
   { path: 'category/:slug', resolve: { results: categoryResolver }, runGuardsAndResolvers: 'paramsOrQueryParamsChange', loadComponent: () => import('./pages/category/category').then((m) => m.Category) },
   { path: 'search', resolve: { results: searchResolver }, runGuardsAndResolvers: 'paramsOrQueryParamsChange', loadComponent: () => import('./pages/search/search').then((m) => m.Search) },
   { path: 'email/unsubscribe', loadComponent: () => import('./pages/unsubscribe/unsubscribe').then((m) => m.UnsubscribePage) },
