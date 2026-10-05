@@ -16,6 +16,7 @@ import { deploymentFor, deploymentLogs, deploymentsFor, insertDeployment } from 
 import { CloudflareApiError, rollbackTo, workerVersions } from "./versions.ts";
 import type { DeployParams } from "./workflow.ts";
 import { logEvent } from "../observability/log.ts";
+import { startPreview } from "../previews/scan.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -178,6 +179,28 @@ export const deploymentRoutes = new Hono<Ctx>()
 		} catch (error) {
 			return cloudflareError(c, error);
 		}
+	})
+	// An automatic deploy (auto deploy or a branch preview) that failed: deploy the same branch and
+	// commit again into the same Worker. Marketplace deploys are retried from the app page instead.
+	.post("/:id/retry", async (c) => {
+		const userId = c.get("session")!.user.id;
+		const row = await env.DB.prepare(
+			`SELECT d.status, d.preview_branch, d.commit_sha, d.worker_name, d.account_id, d.repo_id, r.git_repo, r.slug, r.state
+			 FROM deployments d JOIN repos r ON r.id = d.repo_id WHERE d.id = ? AND d.user_id = ?`,
+		)
+			.bind(c.req.param("id"), userId)
+			.first<{ status: string; preview_branch: string | null; commit_sha: string | null; worker_name: string; account_id: string; repo_id: string; git_repo: string | null; slug: string; state: string }>();
+		if (!row) return c.json({ error: "not_found" }, 404);
+		if (!row.preview_branch || !row.commit_sha) return c.json({ error: "invalid", message: "Deploy this app again from its page." }, 400);
+		if (row.status !== "failed") return c.json({ error: "conflict", message: "Only a failed deploy can be tried again." }, 409);
+		if (!row.git_repo || row.state === "removed") return c.json({ error: "gone", message: "The repo no longer exists." }, 409);
+		const running = await env.DB.prepare("SELECT id FROM deployments WHERE repo_id = ? AND preview_branch = ? AND status IN ('queued', 'building', 'deploying') LIMIT 1")
+			.bind(row.repo_id, row.preview_branch)
+			.first<{ id: string }>();
+		if (running) return c.json({ id: running.id, already: true });
+		const id = await startPreview({ repo_id: row.repo_id, user_id: userId, account_id: row.account_id, git_repo: row.git_repo, slug: row.slug }, row.preview_branch, row.commit_sha, row.worker_name);
+		logEvent("deploy.retried", { from: c.req.param("id"), deployment: id });
+		return c.json({ id }, 201);
 	})
 	.post("/:id/rollback", async (c) => {
 		const body = (await c.req.json().catch(() => null)) as { versionId?: unknown } | null;

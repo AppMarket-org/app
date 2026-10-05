@@ -7,7 +7,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import type { Deployment, DeploymentStatus } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { ConfigCard } from './config-card/config-card';
@@ -37,7 +39,10 @@ const POLL_MS = 3000;
 })
 export class DeploymentPage {
   private readonly api = inject(DeploymentsApi);
-  private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+  private id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+  protected readonly retrying = signal(false);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -65,6 +70,24 @@ export class DeploymentPage {
 
   ngOnInit(): void {
     if (this.isBrowser) void this.poll();
+  }
+
+  /** Automatic deploys are retried in place: same branch, commit and Worker. */
+  protected async retry(): Promise<void> {
+    this.retrying.set(true);
+    try {
+      const { id } = await firstValueFrom(this.api.retry(this.id));
+      clearTimeout(this.timer);
+      this.id = id;
+      this.deployment.set(undefined);
+      await this.router.navigate(['/dashboard/deployments', id]);
+      await this.poll();
+    } catch (e) {
+      const message = e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'Could not start the deploy again.';
+      this.snackBar.open(message, undefined, { duration: 5000 });
+    } finally {
+      this.retrying.set(false);
+    }
   }
 
   private async poll(): Promise<void> {

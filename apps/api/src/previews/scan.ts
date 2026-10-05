@@ -44,13 +44,14 @@ export async function scanPreviews(): Promise<number> {
 	return started;
 }
 
-async function startPreview(s: { repo_id: string; user_id: string; account_id: string; git_repo: string; slug: string }, branch: string, sha: string, workerName: string): Promise<void> {
+/** Starts an automatic deploy (#37 default branch, #28 preview) of a branch head; returns its id. */
+export async function startPreview(s: { repo_id: string; user_id: string; account_id: string; git_repo: string; slug: string }, branch: string, sha: string, workerName: string): Promise<string> {
 	const id = crypto.randomUUID();
 	const plan = buildDeployConfig(await readFiles(s.git_repo, sha, CONTRACT_FILES), workerName);
 	await insertDeployment({ id, userId: s.user_id, repoId: s.repo_id, versionTag: branch, commitSha: sha, accountId: s.account_id, workerName, deploy: plan.ok ? plan.deploy : ({} as never), secrets: {}, previewBranch: branch });
 	if (!plan.ok) {
 		await finishDeployment(id, "failed", { error: plan.reason });
-		return;
+		return id;
 	}
 	const params: DeployParams = {
 		provider: "cloudflare-artifacts",
@@ -65,4 +66,5 @@ async function startPreview(s: { repo_id: string; user_id: string; account_id: s
 	};
 	await env.DEPLOY_WORKFLOW.create({ id, params });
 	logEvent("preview.started", { deployment: id, repo: s.repo_id, branch });
+	return id;
 }
