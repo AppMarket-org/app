@@ -30,6 +30,8 @@ export const routes: Routes = [
   { path: 'dashboard', canActivate: [authGuard()], loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
   { path: 'admin/repos/:owner/:slug/checkpoints', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin-checkpoints/admin-checkpoints').then((m) => m.AdminCheckpointsPage) },
   { path: 'admin', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },
+  // Code browser (read-only; Shiki loads in the browser).
+  { path: ':owner/:slug/code', loadComponent: () => import('./pages/code/code').then((m) => m.CodePage) },
   { path: ':owner/:slug/history', resolve: { history: historyResolver }, loadComponent: () => import('./pages/history/history').then((m) => m.HistoryPage) },
   { path: ':owner/:slug', resolve: { details: repoResolver }, loadComponent: () => import('./pages/repo/repo').then((m) => m.RepoPage) },
   { path: ':owner', resolve: { page: ownerResolver }, loadComponent: () => import('./pages/owner/owner').then((m) => m.OwnerPage) },

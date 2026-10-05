@@ -80,6 +80,9 @@
         @if (d.repo.state === 'published' && !d.repo.priceCents) {
           <button mat-stroked-button type="button" class="fork" (click)="useTemplate(d.repo)"><mat-icon>fork_right</mat-icon>Use this template</button>
         }
+        @if (d.repo.state === 'published') {
+          <a mat-stroked-button [routerLink]="['/', d.repo.owner.handle, d.repo.slug, 'code']"><mat-icon>code</mat-icon>Browse code</a>
+        }
         <app-get-code [path]="d.repo.fullName" />
         @if (d.repo.state === 'published') {
           <app-repo-map [path]="d.repo.fullName" />
