@@ -25,6 +25,18 @@ mat-toolbar {
     margin-right: 0.625rem;
   }
 }
+.brand-mark {
+  margin-right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  .logo {
+    width: 2rem;
+    height: auto;
+  }
+}
 .wordmark {
   font-family: var(--app-font-display);
   font-size: 1.25rem;

@@ -44,7 +44,7 @@ At narrow widths, navigation switches to labelled search/dashboard icon buttons.
 
 Repository workspaces group tools into Code & agents, Deployment, Marketplace, and Access & history, with in-page navigation. Use a two-column grid that aligns cards at the top and stacks on phones. Git credentials use the dark olive surface; destructive repository controls come last. Keep card descriptions at body weight, and use dynamic Material field subscripts so wrapped hints reserve their own space. Workspace-specific Material presentation lives in `apps/web/src/repo-workspace.scss`.
 
-Interior pages replace the header brand with the current page or repository breadcrumb. Dashboard and workspace forms show their page heading once in the toolbar. Dashboard repositories use compact rows with the Git path, status, and management action; hide summaries that repeat the repository name. Running apps and cowbelled apps share a responsive two-column area beneath the repositories.
+Interior pages retain the cow logo as a home link, followed by the current page or repository breadcrumb. The appmarket.org wordmark appears in the homepage header. Dashboard and workspace forms show their page heading once in the toolbar. Dashboard repositories use compact rows with the Git path, status, and management action; hide summaries that repeat the repository name. Running apps and cowbelled apps share a responsive two-column area beneath the repositories.
 
 ## Verification
 

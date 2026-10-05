@@ -7,6 +7,9 @@
       ></a
     >
   } @else {
+    <a mat-icon-button class="brand-mark" routerLink="/" aria-label="appmarket.org home">
+      <img class="logo" src="/brand/logo.png" alt="" />
+    </a>
     <nav class="heading" aria-label="Current page">
       @for (part of seo.heading(); track $index; let last = $last) {
         @if (part.link) {
