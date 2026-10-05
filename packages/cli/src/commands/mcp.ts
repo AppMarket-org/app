@@ -5,6 +5,7 @@ import { gitOr, repoRoot } from "../git.ts";
 import { log } from "../log.ts";
 import { CODE_TOOL_NAMES, CODE_TOOLS, callCodeTool } from "./code-tools.ts";
 import { callPlaneTool, PLANE_TOOL_NAMES, PLANE_TOOLS } from "./plane-tools.ts";
+import { callPrTool, PR_TOOL_NAMES, PR_TOOLS } from "./pr-tools.ts";
 
 /** #121: the one tool every harness gets, with the same name and behaviour everywhere. */
 export const RECORD_CONTEXT = {
@@ -44,7 +45,7 @@ export function handle(message: Request, cwd = process.cwd(), now = () => new Da
 		case "ping":
 			return reply({});
 		case "tools/list":
-			return reply({ tools: [RECORD_CONTEXT, ...PLANE_TOOLS, ...CODE_TOOLS] });
+			return reply({ tools: [RECORD_CONTEXT, ...PLANE_TOOLS, ...CODE_TOOLS, ...PR_TOOLS] });
 		case "tools/call": {
 			const name = message.params?.name;
 			const args = (message.params?.arguments ?? {}) as { prompt?: unknown; summary?: unknown };
@@ -52,6 +53,8 @@ export function handle(message: Request, cwd = process.cwd(), now = () => new Da
 			if (typeof name === "string" && PLANE_TOOL_NAMES.has(name)) return callPlaneTool(name, args, cwd).then(reply);
 			// #240: the code graph.
 			if (typeof name === "string" && CODE_TOOL_NAMES.has(name)) return callCodeTool(name, args, cwd).then(reply);
+			// #260: pull requests.
+			if (typeof name === "string" && PR_TOOL_NAMES.has(name)) return callPrTool(name, args, cwd).then(reply);
 			if (name !== RECORD_CONTEXT.name) return { jsonrpc: "2.0", id: message.id ?? null, error: { code: -32602, message: `Unknown tool: ${String(name)}` } };
 			if (typeof args.prompt !== "string" || !args.prompt.trim()) return reply(text("prompt is required.", true));
 			const root = repoRoot(cwd);

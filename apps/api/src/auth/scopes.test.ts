@@ -5,7 +5,7 @@ const all = ["checkpoints:write", "checkpoints:read", "repos:read"];
 
 describe("grantScopes", () => {
 	it("defaults to the client's scopes and refuses anything wider or unknown", () => {
-		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write", "git:write"]);
+		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write", "git:write", "pulls:write"]);
 		expect(grantScopes("appmarket-ci", undefined)).toEqual([...all, "releases:write", "memory:read"]);
 		expect(grantScopes("appmarket-ci", "sessions:write")).toBeNull();
 		expect(grantScopes("appmarket-ci", "memory:write")).toBeNull();
@@ -22,6 +22,18 @@ describe("deviceMayCall", () => {
 		expect(deviceMayCall(all, "POST", "/api/repos/acme/todo/checkpoints")).toBe(true);
 		expect(deviceMayCall(all, "PATCH", "/api/repos/acme/todo/checkpoints/abc123")).toBe(true);
 		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/acme/todo/checkpoints")).toBe(false);
+	});
+
+	it("pull requests: read with repos:read, change with pulls:write (#260)", () => {
+		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/pulls")).toBe(true);
+		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/pulls/3/files")).toBe(true);
+		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/compare")).toBe(true);
+		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/dev/app/pulls")).toBe(false);
+		expect(deviceMayCall(["pulls:write"], "POST", "/api/repos/dev/app/pulls")).toBe(true);
+		expect(deviceMayCall(["pulls:write"], "POST", "/api/repos/dev/app/pulls/3/merge")).toBe(true);
+		expect(deviceMayCall(["pulls:write"], "POST", "/api/repos/dev/app/pulls/3/reviews")).toBe(true);
+		expect(deviceMayCall(["pulls:write"], "PATCH", "/api/repos/dev/app/pulls/3")).toBe(true);
+		expect(deviceMayCall(["pulls:write"], "PUT", "/api/repos/dev/app/pull-settings")).toBe(false);
 	});
 
 	it("memory: reads with memory:read, writes with memory:write only (#194)", () => {
