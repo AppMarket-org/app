@@ -65,6 +65,11 @@
                 </mat-expansion-panel>
               }
             </mat-accordion>
+            <!-- #72: provenance of the version in review: conformance of the submitted commit and its checkpoints. -->
+            @if (l.submittedCommit) {
+              <app-conformance [path]="l.fullName" [commit]="l.submittedCommit" />
+            }
+            <a mat-button [routerLink]="['/admin/repos', l.owner.handle, l.slug, 'checkpoints']"><mat-icon>history_edu</mat-icon>Checkpoints (all, including private)</a>
             <!-- #27: publishing needs passing checks on the submitted commit. -->
             <app-checks-card [path]="l.fullName" />
           </mat-card-content>

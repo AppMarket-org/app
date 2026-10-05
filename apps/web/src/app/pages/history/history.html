@@ -13,6 +13,14 @@
       }
     </header>
 
+    @if (d.unattributed; as u) {
+      <!-- #72: commits of the published version without any checkpoint (G5 backstop; informational). -->
+      <p class="unattributed" role="note">
+        <mat-icon aria-hidden="true">help_outline</mat-icon>
+        {{ u.count }} of the last {{ u.of }} commits in this version are unattributed: they have no checkpoint, so it is not recorded who or which agent made them.
+      </p>
+    }
+
     @for (g of groups(); track g.items[0]!.commit) {
       <mat-card appearance="outlined" class="session">
         <mat-card-header>

@@ -16,7 +16,12 @@ export const conformanceRoutes = new Hono<Ctx>().get("/:owner/:slug/conformance"
 	const session = c.get("session");
 	if (!repo?.gitRepo || !canView(repo, session)) return c.json({ error: "not_found" }, 404);
 	let commit = repo.publishedCommit;
-	if (c.req.query("commit") === "latest") {
+	const asked = c.req.query("commit");
+	// #72: editors and admins can read any commit, e.g. the version under review.
+	if (asked && /^[0-9a-f]{40}$/.test(asked)) {
+		if (!canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
+		commit = asked;
+	} else if (asked === "latest") {
 		if (!canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
 		using git = await env.ARTIFACTS.get(repo.gitRepo);
 		commit = (await git.log({ limit: 1 }).catch(() => []))[0]?.hash ?? null;

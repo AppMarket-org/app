@@ -17,6 +17,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { ChecksCard } from '../manage-repo/checks-card/checks-card';
+import { Conformance } from '../../components/conformance/conformance';
 import { REPORT_REASONS, type Repo, type RepoReport, type Sale, type TransitionRequest } from '@appmarket/shared';
 import { HttpClient } from '@angular/common/http';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
@@ -33,6 +34,7 @@ import { Seo } from '../../seo/seo';
   selector: 'app-admin',
   imports: [
     ChecksCard,
+    Conformance,
     MatInputModule,
     MatFormFieldModule,
     FormsModule,
