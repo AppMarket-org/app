@@ -1,0 +1,25 @@
+  <section class="saved" aria-labelledby="cowbells-heading">
+    <header class="head">
+      <h2 id="cowbells-heading">
+        <mat-icon svgIcon="cowbell" class="cowbell" aria-hidden="true" />Your cowbells
+      </h2>
+    </header>
+    @if (cowbelled() === undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading cowbells" />
+    } @else if (cowbelled() === null) {
+      <p class="error" role="alert">Could not load your cowbells. Reload to try again.</p>
+    } @else if (cowbelled()?.length) {
+      <div class="cards">
+        @for (r of cowbelled(); track r.id) {
+          <app-repo-card [repo]="r" />
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <p class="explain">Ring the cowbell on any app to keep it here, like a star on GitHub.</p>
+        <a mat-button routerLink="/search"
+          >Discover apps<mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+        >
+      </div>
+    }
+  </section>

@@ -30,7 +30,11 @@ export const routes: Routes = [
   { path: 'dashboard/listings/:slug', redirectTo: 'dashboard' },
   { path: 'dashboard/deployments/:id', canActivate: [authGuard()], loadComponent: () => import('./pages/deployment/deployment').then((m) => m.DeploymentPage) },
   { path: 'dashboard/cloudflare', canActivate: [authGuard()], loadComponent: () => import('./pages/cloudflare-account/cloudflare-account').then((m) => m.CloudflareAccountPage) },
-  { path: 'dashboard', canActivate: [authGuard()], loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
+  { path: 'dashboard', canActivate: [authGuard()], loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard), children: [
+    { path: '', pathMatch: 'full', loadComponent: () => import('./pages/dashboard/dashboard-pages').then((m) => m.DashboardRepositories) },
+    { path: 'apps', loadComponent: () => import('./pages/dashboard/dashboard-pages').then((m) => m.DashboardRunningApps) },
+    { path: 'cowbells', loadComponent: () => import('./pages/dashboard/dashboard-pages').then((m) => m.DashboardCowbells) },
+  ] },
   { path: 'admin/repos/:owner/:slug/checkpoints', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin-checkpoints/admin-checkpoints').then((m) => m.AdminCheckpointsPage) },
   { path: 'admin', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },
   // Code browser (read-only; Shiki loads in the browser).
