@@ -24,7 +24,7 @@ const commit = { commit: "b".repeat(40), parents: [], branch: "main", author: { 
 describe("appmarket mcp", () => {
 	it("speaks MCP: initialize, tools/list, notifications", () => {
 		expect(handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } })).toMatchObject({ result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "appmarket" } } });
-		expect(handle({ jsonrpc: "2.0", id: 2, method: "tools/list" })).toMatchObject({ result: { tools: [{ name: "record_context" }] } });
+		expect(handle({ jsonrpc: "2.0", id: 2, method: "tools/list" })).toMatchObject({ result: { tools: expect.arrayContaining([expect.objectContaining({ name: "record_context" }), expect.objectContaining({ name: "plane_claim" })]) } });
 		expect(handle({ jsonrpc: "2.0", method: "notifications/initialized" })).toBeUndefined();
 		expect(handle({ jsonrpc: "2.0", id: 4, method: "resources/list" })).toMatchObject({ error: { code: -32601 } });
 	});

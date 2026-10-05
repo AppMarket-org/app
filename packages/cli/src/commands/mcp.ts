@@ -3,6 +3,7 @@ import { append, bufferKey } from "../buffer.ts";
 import { VERSION } from "../config.ts";
 import { gitOr, repoRoot } from "../git.ts";
 import { log } from "../log.ts";
+import { callPlaneTool, PLANE_TOOL_NAMES, PLANE_TOOLS } from "./plane-tools.ts";
 
 /** #121: the one tool every harness gets, with the same name and behaviour everywhere. */
 export const RECORD_CONTEXT = {
@@ -29,8 +30,8 @@ interface Request {
 
 const text = (t: string, isError = false) => ({ content: [{ type: "text", text: t }], ...(isError ? { isError: true } : {}) });
 
-/** Handles one JSON-RPC message; returns the response, or undefined for notifications. */
-export function handle(message: Request, cwd = process.cwd(), now = () => new Date().toISOString()): object | undefined {
+/** Handles one JSON-RPC message; returns the response (a promise for tools that call the API), or undefined for notifications. */
+export function handle(message: Request, cwd = process.cwd(), now = () => new Date().toISOString()): object | Promise<object> | undefined {
 	const reply = (result: unknown) => ({ jsonrpc: "2.0", id: message.id ?? null, result });
 	switch (message.method) {
 		case "initialize":
@@ -42,10 +43,12 @@ export function handle(message: Request, cwd = process.cwd(), now = () => new Da
 		case "ping":
 			return reply({});
 		case "tools/list":
-			return reply({ tools: [RECORD_CONTEXT] });
+			return reply({ tools: [RECORD_CONTEXT, ...PLANE_TOOLS] });
 		case "tools/call": {
 			const name = message.params?.name;
 			const args = (message.params?.arguments ?? {}) as { prompt?: unknown; summary?: unknown };
+			// #237: the collaboration plane's tools call appmarket.org.
+			if (typeof name === "string" && PLANE_TOOL_NAMES.has(name)) return callPlaneTool(name, args, cwd).then(reply);
 			if (name !== RECORD_CONTEXT.name) return { jsonrpc: "2.0", id: message.id ?? null, error: { code: -32602, message: `Unknown tool: ${String(name)}` } };
 			if (typeof args.prompt !== "string" || !args.prompt.trim()) return reply(text("prompt is required.", true));
 			const root = repoRoot(cwd);
@@ -70,8 +73,15 @@ export function mcp(): Promise<number> {
 		lines.on("line", (line) => {
 			if (!line.trim()) return;
 			try {
-				const response = handle(JSON.parse(line) as Request);
-				if (response) process.stdout.write(JSON.stringify(response) + "\n");
+				const request = JSON.parse(line) as Request;
+				void Promise.resolve(handle(request))
+					.then((response) => {
+						if (response) process.stdout.write(JSON.stringify(response) + "\n");
+					})
+					.catch((error: unknown) => {
+						log("mcp tool failed", error);
+						process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: request.id ?? null, error: { code: -32603, message: "Internal error" } }) + "\n");
+					});
 			} catch (error) {
 				log("mcp message failed", error);
 				process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }) + "\n");
