@@ -25,6 +25,7 @@
   border: 0.0625rem solid var(--mat-sys-outline-variant);
   border-radius: var(--mat-sys-corner-medium);
   padding: 1rem;
+  background: var(--mat-sys-surface-bright);
 }
 
 // Phones: the calendar scrolls inside its frame, never the page.
@@ -39,9 +40,9 @@
 }
 
 .calendar {
-  // Cells grow to fill the frame (53 weeks plus the weekday labels), between 0.5 and 0.875 rem;
+  // Cells fill the frame; small screens scroll to the most recent weeks.
   // below that (phones) the calendar scrolls inside the frame.
-  --cell: clamp(0.5rem, calc((100cqw - 2.25rem) / 53 - var(--gap)), 0.875rem);
+  --cell: max(0.625rem, calc((100cqw - 2.25rem - (var(--weeks) - 1) * var(--gap)) / var(--weeks)));
   display: grid;
   grid-template-columns: auto max-content;
   grid-template-rows: auto auto;

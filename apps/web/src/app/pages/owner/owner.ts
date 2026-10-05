@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -66,41 +66,43 @@ export class OwnerPage {
   }
 
   constructor() {
-    const route = inject(ActivatedRoute).snapshot;
-    const data = route.data['page'] as OwnerPageData;
-    const handle = route.paramMap.get('owner') ?? '';
+    const route = inject(ActivatedRoute);
     const seo = inject(Seo);
-    if (!data) {
-      seo.set({ title: 'Not found', description: 'This user or organization does not exist.', path: `/${handle}`, noindex: true });
-      return;
-    }
-    const { owner, profile, repos } = data;
-    const site = 'https://appmarket.org';
-    const url = `${site}/${owner.handle}`;
-    const image = owner.avatarUrl ? (owner.avatarUrl.startsWith('/') ? site + owner.avatarUrl : owner.avatarUrl) : undefined;
-    seo.set({
-      title: `${owner.name} (${owner.handle})`,
-      description: profile?.bio ?? `${repos.length} app${repos.length === 1 ? '' : 's'} by ${owner.name} on appmarket.org.`,
-      path: `/${owner.handle}`,
-      heading: [{ label: owner.handle }],
-      image,
-      // #141: schema.org ProfilePage with the person or organization as its main entity.
-      jsonLd: {
-        '@type': 'ProfilePage',
-        url,
-        ...(profile?.memberSince ? { dateCreated: profile.memberSince } : {}),
-        mainEntity: {
-          '@type': owner.kind === 'org' ? 'Organization' : 'Person',
-          name: owner.name,
-          alternateName: owner.handle,
+    effect(() => {
+      const data = this.page();
+      const handle = route.snapshot.paramMap.get('owner') ?? '';
+      if (!data) {
+        seo.set({ title: 'Not found', description: 'This user or organization does not exist.', path: `/${handle}`, noindex: true });
+        return;
+      }
+      const { owner, profile, repos } = data;
+      const site = 'https://appmarket.org';
+      const url = `${site}/${owner.handle}`;
+      const image = owner.avatarUrl ? (owner.avatarUrl.startsWith('/') ? site + owner.avatarUrl : owner.avatarUrl) : undefined;
+      seo.set({
+        title: `${owner.name} (${owner.handle})`,
+        description: profile?.bio ?? `${repos.length} app${repos.length === 1 ? '' : 's'} by ${owner.name} on appmarket.org.`,
+        path: `/${owner.handle}`,
+        heading: [{ label: owner.handle }],
+        image,
+        // #141: schema.org ProfilePage with the person or organization as its main entity.
+        jsonLd: {
+          '@type': 'ProfilePage',
           url,
-          ...(image ? { image } : {}),
-          ...(profile?.bio ? { description: profile.bio } : {}),
-          ...(profile?.website ? { sameAs: [profile.website] } : {}),
-          ...(owner.kind === 'user' && profile?.location ? { homeLocation: { '@type': 'Place', name: profile.location } } : {}),
-          ...(owner.kind === 'org' && profile?.location ? { location: { '@type': 'Place', name: profile.location } } : {}),
+          ...(profile?.memberSince ? { dateCreated: profile.memberSince } : {}),
+          mainEntity: {
+            '@type': owner.kind === 'org' ? 'Organization' : 'Person',
+            name: owner.name,
+            alternateName: owner.handle,
+            url,
+            ...(image ? { image } : {}),
+            ...(profile?.bio ? { description: profile.bio } : {}),
+            ...(profile?.website ? { sameAs: [profile.website] } : {}),
+            ...(owner.kind === 'user' && profile?.location ? { homeLocation: { '@type': 'Place', name: profile.location } } : {}),
+            ...(owner.kind === 'org' && profile?.location ? { location: { '@type': 'Place', name: profile.location } } : {}),
+          },
         },
-      },
+      });
     });
   }
 }
