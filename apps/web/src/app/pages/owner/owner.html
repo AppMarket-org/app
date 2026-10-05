@@ -63,19 +63,21 @@
       @if (pinned().length || canEdit()) {
         <section aria-labelledby="pinned-heading" class="pinned">
           <div class="section-head">
-            <h2 id="pinned-heading">{{ pinnedFallback() ? 'Popular apps' : 'Pinned' }}</h2>
+            <!-- Without pins, the fallback cards get no title: they are not "popular", just the owner's repos. -->
+            <h2 id="pinned-heading" [class.sr-only]="pinnedFallback()">{{ pinnedFallback() ? 'Repositories' : 'Pinned' }}</h2>
             @if (canEdit()) {
               <button mat-button type="button" (click)="customizePins()"><mat-icon>push_pin</mat-icon>Customize your pins</button>
             }
           </div>
+          @if (pinnedFallback() && canEdit()) {
+            <p class="empty">Pin up to six repositories to show them here.</p>
+          }
           @if (pinned().length) {
             <div class="cards">
               @for (r of pinned(); track r.id) {
                 <app-repo-card [repo]="r" />
               }
             </div>
-          } @else {
-            <p class="empty">Pin up to six public apps to show them here.</p>
           }
         </section>
       }

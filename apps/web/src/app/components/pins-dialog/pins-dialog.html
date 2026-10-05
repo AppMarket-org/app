@@ -3,7 +3,7 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" aria-label="Loading repos" />
   } @else {
-    <p class="hint">Pin up to {{ max }} public apps. They appear first on the profile, in this order.</p>
+    <p class="hint">Pin up to {{ max }} repositories. They appear first on the profile, in this order.</p>
 
     @if (selected().length) {
       <h3 id="order-heading">Order</h3>
@@ -35,7 +35,7 @@
         }
       </mat-list>
     } @else {
-      <p class="hint">Nothing to pin yet: only published apps can be pinned.</p>
+      <p class="hint">Nothing to pin yet: only published repositories can be pinned.</p>
     }
     @if (error(); as message) {
       <p class="error" role="alert">{{ message }}</p>
