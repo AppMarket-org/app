@@ -14,7 +14,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
 import { ChecksCard } from '../manage-repo/checks-card/checks-card';
-import { REPORT_REASONS, type Repo, type RepoReport, type TransitionRequest } from '@appmarket/shared';
+import { REPORT_REASONS, type Repo, type RepoReport, type Sale, type TransitionRequest } from '@appmarket/shared';
+import { HttpClient } from '@angular/common/http';
+import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
 import { firstValueFrom } from 'rxjs';
 import { Admin as AdminApi } from '../../api/admin';
 import { DeployManifest } from '../../components/deploy-manifest/deploy-manifest';
@@ -61,6 +63,10 @@ export class Admin {
   protected readonly reportStatus = signal<'open' | 'resolved'>('open');
   protected readonly readmes = signal<Record<string, string | null>>({});
   protected readonly busy = signal(false);
+  /** #214: null until loaded. */
+  protected readonly sales = signal<Sale[] | null>(null);
+  protected readonly money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  private readonly http = inject(HttpClient);
 
   constructor() {
     inject(Seo).set({ title: 'Moderation', description: 'Moderation.', path: '/admin', noindex: true });
@@ -120,6 +126,28 @@ export class Admin {
         await firstValueFrom(this.api.resolveReport(report.id, 'taken_down'));
       });
     }
+  }
+
+  protected async loadSales(): Promise<void> {
+    this.sales.set((await firstValueFrom(this.http.get<{ items: Sale[] }>('/api/admin/purchases')).catch(() => ({ items: [] }))).items);
+  }
+
+  /** #214: full refund; the developer's share and appmarket's fee are reversed and the buyer loses the app. */
+  protected async refund(s: Sale): Promise<void> {
+    const ok = await firstValueFrom(
+      this.dialog
+        .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, {
+          data: { title: `Refund ${this.money(s.amountCents)} to ${s.buyer}?`, message: `${s.buyer} loses access to ${s.repo}. The developer's share and appmarket's fee are reversed. This cannot be undone.`, confirm: 'Refund' },
+          width: '30rem',
+        })
+        .afterClosed(),
+    );
+    if (!ok) return;
+    await this.run(async () => {
+      await firstValueFrom(this.http.post(`/api/admin/purchases/${s.id}/refund`, {}));
+      this.snackBar.open('Refunded', undefined, { duration: 3000 });
+      await this.loadSales();
+    });
   }
 
   protected async showReports(status: 'open' | 'resolved'): Promise<void> {

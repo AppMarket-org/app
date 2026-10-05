@@ -10,7 +10,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { PLATFORM_FEE_RATE, PRICE_LIMITS, type PayoutAccount, type Repo, platformFeeCents } from '@appmarket/shared';
+import { PLATFORM_FEE_RATE, PRICE_LIMITS, type PayoutAccount, type Repo, type Sale, platformFeeCents } from '@appmarket/shared';
+import { DatePipe } from '@angular/common';
+import { MatListModule } from '@angular/material/list';
 import { firstValueFrom } from 'rxjs';
 
 const COUNTRIES: [string, string][] = [
@@ -25,7 +27,7 @@ const COUNTRIES: [string, string][] = [
  */
 @Component({
   selector: 'app-price-card',
-  imports: [FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule],
+  imports: [DatePipe, MatListModule, FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule],
   templateUrl: './price-card.html',
   styleUrl: './price-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,9 @@ export class PriceCard {
   protected readonly limits = PRICE_LIMITS;
   protected readonly account = signal<(PayoutAccount & { enabled: boolean }) | null>(null);
   protected readonly busy = signal(false);
+  /** #214 */
+  protected readonly sales = signal<{ items: Sale[]; totals: { sales: number; grossCents: number; netCents: number } } | null>(null);
+  protected readonly money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
   protected readonly country = signal('US');
   protected readonly paid = signal(false);
   protected readonly dollars = signal('');
@@ -94,5 +99,6 @@ export class PriceCard {
 
   private async load(): Promise<void> {
     this.account.set(await firstValueFrom(this.http.get<PayoutAccount & { enabled: boolean }>(`/api/owners/${this.repo().owner.handle}/payouts`)).catch(() => null));
+    this.sales.set(await firstValueFrom(this.http.get<{ items: Sale[]; totals: { sales: number; grossCents: number; netCents: number } }>(`/api/repos/${this.repo().fullName}/sales`)).catch(() => null));
   }
 }
