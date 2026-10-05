@@ -59,18 +59,20 @@ export class NewPullPage implements OnInit {
       const wanted = this.route.snapshot.queryParamMap.get('source');
       const first = s.sources.find((x) => x.repo === wanted) ?? s.sources.find((x) => x.fork) ?? s.sources[0];
       this.form.controls.targetBranch.setValue(s.target.defaultBranch);
-      if (first) this.pickSource(first.repo);
+      // From the link git prints after a push: ?source=<repo>&branch=<branch>.
+      const branch = this.route.snapshot.queryParamMap.get('branch');
+      if (first) this.pickSource(first.repo, branch && first.branches.includes(branch) ? branch : undefined);
     } catch {
       this.sources.set(null);
     }
   }
 
-  protected pickSource(repo: string): void {
+  protected pickSource(repo: string, preferred?: string): void {
     this.source.set(repo);
     this.form.controls.source.setValue(repo);
     const s = this.sources()?.sources.find((x) => x.repo === repo);
     // A fork proposes its default branch by default; this repo, its first other branch.
-    const branch = s?.fork ? s.defaultBranch : (s?.branches.find((b) => b !== this.form.controls.targetBranch.value) ?? '');
+    const branch = preferred ?? (s?.fork ? s.defaultBranch : (s?.branches.find((b) => b !== this.form.controls.targetBranch.value) ?? ''));
     this.form.controls.sourceBranch.setValue(branch);
     void this.compare();
   }

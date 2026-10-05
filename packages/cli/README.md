@@ -71,6 +71,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | --- | --- |
 | `login [--no-browser] [--device-name n] [--no-keychain]` | Sign in with a device code |
 | `logout` | Revoke this device's token and forget it |
+| `setup-git [--remove]` | Let plain `git` sign in to appmarket.org remotes with this login (no tokens to copy, nothing in the keychain) |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
 | `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`) and the code graph tools (`code_*`); see below |

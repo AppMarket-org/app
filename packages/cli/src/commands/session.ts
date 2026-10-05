@@ -1,7 +1,8 @@
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ApiError, call } from "../api.ts";
-import { HOME } from "../config.ts";
+import { apiBase, HOME } from "../config.ts";
+import { tokenForRemote } from "./setup-git.ts";
 import { loadCredentials } from "../credentials.ts";
 import { gitOr, repoRoot } from "../git.ts";
 import { resolveRepo } from "./init.ts";
@@ -123,12 +124,19 @@ When you are happy with the work, merge it into ${repo} yourself; then run \`app
 	}
 }
 
-/** `git credential` helper: answers only for active session remotes; renews expired tokens. */
-export async function gitCredential(action: string | undefined, input: string): Promise<number> {
+/**
+ * `git credential` helper: agent session remotes get the session's token (renewed when it is about
+ * to expire); other appmarket.org remotes get this machine's sign-in (`appmarket setup-git`).
+ */
+export async function gitCredential(action: string | undefined, input: string, api = apiBase()): Promise<number> {
 	if (action !== "get") return 0;
 	const url = credentialUrl(input);
 	const stored = url ? sessionFor(url, storedSessions()) : null;
-	if (!stored) return 0;
+	if (!stored) {
+		const token = url ? await tokenForRemote(url, api).catch(() => null) : null;
+		if (token) process.stdout.write(`username=appmarket\npassword=${token}\n`);
+		return 0;
+	}
 	let session = stored;
 	if (Date.parse(stored.expiresAt) - Date.now() < 5 * 60_000) {
 		try {

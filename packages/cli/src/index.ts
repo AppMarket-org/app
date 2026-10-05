@@ -14,6 +14,7 @@ import { rewritten } from "./commands/rewritten.ts";
 import { pushNotes } from "./commands/notes.ts";
 import { doctor, status, updateNotice } from "./commands/doctor.ts";
 import { gitCredential, sessionEnd, sessionList, sessionStart } from "./commands/session.ts";
+import { setupGit } from "./commands/setup-git.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
 
@@ -34,7 +35,8 @@ Usage: appmarket <command> [options]
   session start [<owner>/<repo>] [--harness <name>]              Start an agent session in its own fork (short-lived write token)
   session end [<id>] [--discard]                                 End it (revokes the token) or discard it (deletes the fork)
   session list [<owner>/<repo>]                                  Agent sessions of this repo
-  git-credential get                                             Git credential helper for session remotes (set up by session start)
+  setup-git [--remove]                                           Let plain git sign in to appmarket.org remotes with this login (no tokens to copy)
+  git-credential get                                             Git credential helper (set up by setup-git and session start)
   status                                                         Queue, last upload, checkpoints waiting for a push
   doctor                                                         Check hooks, sign-in, connection and adapters
 
@@ -62,6 +64,7 @@ async function main(argv: string[]): Promise<number> {
 			force: { type: "boolean" },
 			plugin: { type: "boolean" },
 			discard: { type: "boolean" },
+			remove: { type: "boolean" },
 			"agents-md": { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
@@ -130,7 +133,9 @@ async function main(argv: string[]): Promise<number> {
 			console.error("Usage: appmarket session start|end|list");
 			return 1;
 		case "git-credential":
-			return gitCredential(rest[0], await readStdin());
+			return gitCredential(rest[0], await readStdin(), api);
+		case "setup-git":
+			return setupGit(api, !!values.remove);
 		case "status":
 			return status(api);
 		case "doctor":
