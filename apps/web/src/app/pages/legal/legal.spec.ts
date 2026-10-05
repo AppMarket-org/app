@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { Legal } from './legal';
 
-it('switches legal documents on the reused route and keeps draft status visible', async () => {
+it('switches legal documents on the reused route', async () => {
   TestBed.configureTestingModule({
     providers: [provideRouter([{ path: 'legal/:page', component: Legal }])],
   });
@@ -23,5 +23,4 @@ it('switches legal documents on the reused route and keeps draft status visible'
   await harness.navigateByUrl('/legal/developer-agreement', Legal);
   expect(harness.routeNativeElement?.textContent).toContain('10%');
   expect(harness.routeNativeElement?.textContent).not.toContain('Paid apps are not available yet');
-  expect(harness.routeNativeElement?.textContent).toContain('Draft, not yet in effect');
 });

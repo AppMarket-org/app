@@ -16,21 +16,7 @@
       <p class="nav-note">How we work together, protect information, and publish responsibly.</p>
     </aside>
     <article class="legal-document" [attr.aria-label]="p.title">
-      <p class="document-meta">
-        Updated October 5, 2026 <span aria-hidden="true">·</span> Draft for review
-      </p>
-      <mat-card appearance="outlined" class="draft" role="note">
-        <mat-card-content>
-          <mat-icon aria-hidden="true">gavel</mat-icon>
-          <div>
-            <strong>Draft, not yet in effect</strong>
-            <p>
-              Pending confirmation of operator details and legal review. Bracketed fields identify
-              information still to be finalized.
-            </p>
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <p class="document-meta">Updated October 5, 2026</p>
       <app-markdown class="legal-copy" [source]="p.markdown" [shiftHeadings]="false" />
     </article>
   </div>

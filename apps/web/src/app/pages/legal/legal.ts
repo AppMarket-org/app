@@ -2,8 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Markdown } from '../../components/markdown/markdown';
 import { Seo } from '../../seo/seo';
@@ -36,12 +34,12 @@ const PAGES: Record<string, { title: string; description: string; markdown: stri
 };
 
 /**
- * Legal drafts describe the implemented platform. Operator, contacts, governing law, retention,
+ * Legal documents describe the implemented platform. Operator, contacts, governing law, retention,
  * and liability details remain placeholders until confirmed and reviewed before taking effect.
  */
 @Component({
   selector: 'app-legal',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, Markdown, RouterLink],
+  imports: [MatButtonModule, Markdown, RouterLink],
   templateUrl: './legal.html',
   styleUrl: './legal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
