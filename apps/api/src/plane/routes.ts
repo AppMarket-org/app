@@ -1,9 +1,10 @@
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AuthVariables } from "../auth/middleware.ts";
-import { canEdit } from "../repos/access.ts";
+import { canEdit, canView } from "../repos/access.ts";
 import { logEvent } from "../observability/log.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { agentCard, dispatch } from "./a2a.ts";
 import { startMerge } from "./merge.ts";
 import type { PlaneResult, RepoPlane } from "./coordinator.ts";
 import { cleanTags, normalizePath } from "./model.ts";
@@ -129,6 +130,48 @@ export const planeRoutes = new Hono<Ctx>()
 		const paths = Array.isArray(body.paths) ? body.paths.map((x) => (typeof x === "string" ? normalizePath(x) : null)).filter((x): x is string => !!x) : undefined;
 		return reply(c, await p.stub.release(s.id, paths));
 	});
+
+/**
+ * #239: the board as an A2A agent. The Agent Card is public for published repos (so other agents
+ * can find the board); the JSON-RPC endpoint is for the repo's owners and members (their device
+ * token or browser session). Mounted under /api/repos.
+ */
+export const a2aRoutes = new Hono<Ctx>()
+	.get("/:owner/:slug/a2a", (c) => card(c))
+	.get("/:owner/:slug/.well-known/agent-card.json", (c) => card(c))
+	.post("/:owner/:slug/a2a", async (c) => {
+		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
+		const session = c.get("session");
+		if (!session) return c.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Sign in: send an appmarket.org device token as a Bearer token." } }, 401, { "WWW-Authenticate": "Bearer" });
+		if (!repo || !canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
+		const request = await c.req.json<Record<string, unknown>>().catch(() => null);
+		if (!request || Array.isArray(request)) return c.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Send one JSON-RPC request object." } }, 400);
+		const stub = stubFor(repo.id);
+		const response = await dispatch(
+			request,
+			{
+				canWrite: true,
+				state: () => stub.state(),
+				create: async (input) => {
+					const result = await stub.createTask({ id: crypto.randomUUID(), title: input.title, description: input.description, capabilities: cleanTags(input.capabilities) });
+					if (!result.ok) throw new Error(result.error);
+					return result.value;
+				},
+				remove: async (id) => void (await stub.deleteTask(id)),
+			},
+			repo.fullName,
+		);
+		c.header("A2A-Version", "1.0");
+		return c.json(response);
+	});
+
+async function card(c: Context<Ctx>) {
+	const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
+	if (!repo || repo.state === "removed" || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+	const endpoint = `${env.PUBLIC_ORIGIN}/api/repos/${repo.fullName}/a2a`;
+	c.header("Cache-Control", repo.state === "published" ? "public, max-age=300" : "private, no-store");
+	return c.json(agentCard({ fullName: repo.fullName, name: repo.name }, endpoint, env.PUBLIC_ORIGIN));
+}
 
 /** The agent session ended or was discarded: it leaves the board (its claims reopen). */
 export async function leavePlane(repoId: string, sessionId: string): Promise<void> {

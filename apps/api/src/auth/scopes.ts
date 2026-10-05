@@ -35,6 +35,9 @@ const RULES: readonly Rule[] = [
 	{ scope: "sessions:write", methods: ["GET", "POST"], path: new RegExp(`^/api/repos/${REPO}/sessions$`) },
 	{ scope: "sessions:write", methods: ["POST"], path: /^\/api\/sessions\/[0-9a-f-]{36}\/(token|end)$/ },
 	{ scope: "sessions:write", methods: ["DELETE"], path: /^\/api\/sessions\/[0-9a-f-]{36}$/ },
+	// #239: the board over A2A (Agent Card readable like the repo; JSON-RPC like the plane routes).
+	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/(a2a|\\.well-known/agent-card\\.json)$`) },
+	{ scope: "sessions:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/a2a$`) },
 	// #236: agents in a session use the collaboration plane (tasks, Agent Card, claims, leases).
 	{ scope: "sessions:write", methods: ["GET", "POST", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/plane(/(tasks(/[0-9a-f-]{36}/(claim|finish))?|agents|leases))?$`) },
 ];

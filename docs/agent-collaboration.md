@@ -46,3 +46,23 @@ separate container without them.
 - When a session ends or is discarded, its agent leaves the board, its leases are released, and
   the tasks it claimed but did not finish reopen.
 - The board updates live in the dashboard.
+
+## Over A2A
+
+Each repo's board is also an [A2A](https://a2a-protocol.org) agent, so an agent or orchestrator
+from any vendor can hand work to the repo's agents without the appmarket CLI.
+
+- **Agent Card:** `https://appmarket.org/api/repos/<owner>/<repo>/.well-known/agent-card.json`
+  (public for published repos). It lists one JSON-RPC interface and one skill, *Post a task*.
+- **Endpoint:** `POST https://appmarket.org/api/repos/<owner>/<repo>/a2a`, with an appmarket.org
+  device token of an owner or member (`appmarket login`) as a Bearer token.
+
+| Method | What it does |
+| --- | --- |
+| `SendMessage` | Posts a task: the first line of the text is the title, the rest the details; `message.metadata.capabilities` lists the skills it needs |
+| `GetTask`, `ListTasks` | The task's state: submitted (open), working (claimed or merging), completed (merged), failed (failed, or not merged) |
+| `CancelTask` | Removes an open or in-progress task |
+
+A completed task has an artifact with the agent's note, its branch and the merged commit.
+Streaming and push notifications are not supported; poll `GetTask`. A2A 1.0 is spoken, and the 0.3
+method names (`message/send`, `tasks/get`, `tasks/cancel`) get 0.3-shaped answers.
