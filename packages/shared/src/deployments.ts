@@ -168,3 +168,18 @@ export interface WorkerDomain {
 
 /** A hostname a buyer can attach: lowercase labels, no wildcard, at most 253 characters. */
 export const HOSTNAME = /^(?=.{1,253}$)(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/;
+
+/** #51 (D13): a deployed Worker's configuration as the buyer sees it. Secret values never leave Cloudflare. */
+export interface WorkerConfig {
+	vars: { name: string; value: string }[];
+	secrets: string[];
+	/** Secrets the app declares (.dev.vars.example / .env.example). */
+	required: string[];
+	/** Declared secrets that are not set on the Worker. */
+	missing: string[];
+}
+
+/** Environment variable and secret names: letters, digits and underscores, not starting with a digit. */
+export const CONFIG_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+/** Workers allow 5 KB per variable and per secret. */
+export const CONFIG_VALUE_MAX = 5 * 1024;

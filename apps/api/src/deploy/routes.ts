@@ -1,4 +1,4 @@
-import { DEPLOY_UNAVAILABLE, type Deployment, deployAvailability, HOSTNAME } from "@appmarket/shared";
+import { CONFIG_NAME, CONFIG_VALUE_MAX, DEPLOY_UNAVAILABLE, type Deployment, deployAvailability, HOSTNAME, type WorkerConfig } from "@appmarket/shared";
 import { deploymentRequestSchema } from "@appmarket/shared/schemas";
 import { buildDeployConfig, CONTRACT_FILES } from "@appmarket/template-contract";
 import { env } from "cloudflare:workers";
@@ -8,6 +8,7 @@ import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { readFiles } from "../artifacts/git.ts";
 import { accessToken, cloudflareAccounts } from "../cloudflare/oauth.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { readConfig, writeSecret, writeVar } from "./config.ts";
 import { attachDomain, detachDomain, domainErrorMessage, listDomains, listZones } from "./domains.ts";
 import { entitled } from "../payments/routes.ts";
 import { runtimeLogs } from "./runtime-logs.ts";
@@ -95,6 +96,26 @@ export const deploymentRoutes = new Hono<Ctx>()
 			return cloudflareError(c, error);
 		}
 	})
+	// #51 (D13): plain variables (with values) and secrets (names only) of the deployed Worker.
+	.get("/:id/config", async (c) => {
+		const target = await cloudflareTarget(c);
+		if (target instanceof Response) return target;
+		try {
+			const [config, required, audit] = await Promise.all([
+				readConfig(fetch, target.token, target.deployment.accountId, target.deployment.workerName),
+				declaredSecrets(target.deployment.id),
+				env.DB.prepare('SELECT a.kind, a.name, a.action, a.created_at, u.name AS user FROM deployment_config_audit a JOIN "user" u ON u.id = a.user_id WHERE a.deployment_id = ? ORDER BY a.id DESC LIMIT 20')
+					.bind(target.deployment.id)
+					.all<{ kind: string; name: string; action: string; created_at: string; user: string }>(),
+			]);
+			c.header("Cache-Control", "no-store");
+			return c.json({ ...config, required, missing: required.filter((n) => !config.secrets.includes(n)), audit: audit.results } satisfies WorkerConfig & { audit: unknown[] });
+		} catch (error) {
+			return cloudflareError(c, error);
+		}
+	})
+	.put("/:id/config/:kind{vars|secrets}/:name", async (c) => changeConfig(c, false))
+	.delete("/:id/config/:kind{vars|secrets}/:name", async (c) => changeConfig(c, true))
 	// #39 (D9): custom domains on the deployed Worker.
 	.get("/:id/domains", async (c) => {
 		const target = await cloudflareTarget(c);
@@ -189,4 +210,35 @@ function cloudflareError(c: Context<Ctx>, error: unknown): Response {
 	logEvent("deploy.cloudflare_api_failed", { status: error.status, message: error.message.slice(0, 200) }, "warn");
 	const message = error.status === 404 ? "The Worker no longer exists in your Cloudflare account." : error.status === 403 ? "Your Cloudflare connection is not allowed to do that; reconnect it." : `Cloudflare said: ${error.message}`;
 	return c.json({ error: "cloudflare_error", message }, error.status === 404 ? 404 : 502);
+}
+
+/** Secrets the deployed app declares (its published manifest). */
+async function declaredSecrets(deploymentId: string): Promise<string[]> {
+	const row = await env.DB.prepare("SELECT r.published_manifest FROM deployments d JOIN repos r ON r.id = d.repo_id WHERE d.id = ?").bind(deploymentId).first<{ published_manifest: string | null }>();
+	return row?.published_manifest ? ((JSON.parse(row.published_manifest) as { secrets?: string[] }).secrets ?? []) : [];
+}
+
+/** #51: set or delete one variable or secret; the value goes to Cloudflare only, the audit keeps the name. */
+async function changeConfig(c: Context<Ctx>, remove: boolean): Promise<Response> {
+	const kind = c.req.param("kind") === "secrets" ? "secret" : "var";
+	const name = c.req.param("name")!;
+	if (!CONFIG_NAME.test(name)) return c.json({ error: "invalid", message: "Use letters, digits and underscores, not starting with a digit." }, 400);
+	let value: string | null = null;
+	if (!remove) {
+		const body = (await c.req.json().catch(() => null)) as { value?: unknown } | null;
+		if (typeof body?.value !== "string" || new TextEncoder().encode(body.value).length > CONFIG_VALUE_MAX) return c.json({ error: "invalid", message: "A value of at most 5 KB." }, 400);
+		value = body.value;
+	}
+	const target = await cloudflareTarget(c);
+	if (target instanceof Response) return target;
+	const { accountId, workerName, id } = target.deployment;
+	try {
+		if (kind === "secret") await writeSecret(fetch, target.token, accountId, workerName, name, value);
+		else await writeVar(fetch, target.token, accountId, workerName, name, value);
+	} catch (error) {
+		return cloudflareError(c, error);
+	}
+	await env.DB.prepare("INSERT INTO deployment_config_audit (deployment_id, user_id, kind, name, action) VALUES (?, ?, ?, ?, ?)").bind(id, c.get("session")!.user.id, kind, name, remove ? "delete" : "set").run();
+	logEvent("deploy.config_changed", { deployment: id, kind, name, action: remove ? "delete" : "set" });
+	return c.json({ ok: true });
 }
