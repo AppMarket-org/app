@@ -1,7 +1,8 @@
 @if (page(); as p) {
   <div class="profile">
     <aside class="identity" aria-label="Profile">
-      <app-avatar class="photo" [name]="p.owner.name" [src]="p.owner.avatarUrl" [size]="16" [kind]="p.owner.kind" [decorative]="true" [eager]="true" />
+      <p class="eyebrow">{{ p.owner.kind === 'org' ? 'Organization' : 'Public profile' }}</p>
+      <app-avatar class="photo" [name]="p.owner.name" [src]="p.owner.avatarUrl" [size]="8" [kind]="p.owner.kind" [decorative]="true" [eager]="true" />
       <h1>
         <span class="name">{{ p.owner.name }}</span>
         <span class="handle">{{ p.owner.handle }}</span>
@@ -11,6 +12,9 @@
       }
       @if (p.profile?.bio; as bio) {
         <p class="bio">{{ bio }}</p>
+      }
+      @if (canEdit()) {
+        <a mat-stroked-button class="edit-profile" [routerLink]="p.owner.kind === 'org' ? '/settings/orgs/' + p.owner.handle : '/settings'">Edit profile</a>
       }
       @if (p.profile; as profile) {
         <mat-list class="facts" aria-label="Profile details">
@@ -60,19 +64,21 @@
     </aside>
 
     <div class="content">
-      @if (pinned().length || canEdit()) {
+      @if ((!pinnedFallback() && pinned().length) || canEdit()) {
         <section aria-labelledby="pinned-heading" class="pinned">
           <div class="section-head">
-            <!-- Without pins, the fallback cards get no title: they are not "popular", just the owner's repos. -->
-            <h2 id="pinned-heading" [class.sr-only]="pinnedFallback()">{{ pinnedFallback() ? 'Repositories' : 'Pinned' }}</h2>
+            <h2 id="pinned-heading">Featured repositories</h2>
             @if (canEdit()) {
-              <button mat-button type="button" (click)="customizePins()"><mat-icon>push_pin</mat-icon>Customize your pins</button>
+              <button mat-button type="button" (click)="customizePins()"><mat-icon>push_pin</mat-icon>Customize pins</button>
             }
           </div>
-          @if (pinnedFallback() && canEdit()) {
-            <p class="empty">Pin up to six repositories to show them here.</p>
+          @if ((pinnedFallback() || !pinned().length) && canEdit()) {
+            <div class="pin-empty">
+              <mat-icon aria-hidden="true">push_pin</mat-icon>
+              <div><strong>Choose what to showcase</strong><p>Pin up to six public repositories to your profile.</p></div>
+            </div>
           }
-          @if (pinned().length) {
+          @if (!pinnedFallback() && pinned().length) {
             <div class="cards">
               @for (r of pinned(); track r.id) {
                 <app-repo-card [repo]="r" />
@@ -89,8 +95,8 @@
         <app-activity-feed class="activity" [handle]="p.owner.handle" [year]="year()" />
       }
 
-      <section aria-labelledby="repos-heading">
-        <h2 id="repos-heading">Apps</h2>
+      <section aria-labelledby="repos-heading" class="public-repos">
+        <div class="section-head"><h2 id="repos-heading">Public apps <span class="count">{{ p.repos.length }}</span></h2></div>
         @if (p.repos.length) {
           <div class="cards">
             @for (r of p.repos; track r.id) {
@@ -98,7 +104,16 @@
             }
           </div>
         } @else {
-          <p class="empty">No public apps yet.</p>
+          <div class="repo-empty">
+            <mat-icon aria-hidden="true">code_blocks</mat-icon>
+            <h3>Nothing public yet</h3>
+            <p>{{ canEdit() ? 'Your private repositories stay in your dashboard. Published apps will appear here when they are approved.' : 'Published apps from this profile will appear here.' }}</p>
+            @if (canEdit()) {
+              <a mat-stroked-button routerLink="/dashboard">Open dashboard<mat-icon iconPositionEnd>arrow_forward</mat-icon></a>
+            } @else {
+              <a mat-stroked-button routerLink="/search">Explore apps<mat-icon iconPositionEnd>arrow_forward</mat-icon></a>
+            }
+          </div>
         }
       </section>
     </div>
