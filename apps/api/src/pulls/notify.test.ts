@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pullEmail } from "./notify";
+import { pullEmail } from "./notify-email";
 
 describe("pull request email (#258)", () => {
 	it("names the repo, number and actor, links the pull request, and escapes HTML", () => {
