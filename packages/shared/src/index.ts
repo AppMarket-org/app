@@ -16,3 +16,4 @@ export * from "./tokens";
 export type { CheckpointPatch, CheckpointUpload, DeploymentRequest, OrgCreate, OrgMemberInput, RepoInput, RepoSearch, RepoUpdate, ReleaseUpload, ReportInput, TokenRequest, TransitionRequest } from "./schemas";
 export * from "./sessions";
 export * from "./memory";
+export * from "./pulls";

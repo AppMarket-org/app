@@ -54,7 +54,7 @@ export class MergeWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBindi
 		const set = (name: string, fields: Parameters<typeof updateMerge>[1], board: Omit<TaskMerge, "id">) =>
 			step.do(name, async () => {
 				await updateMerge(mergeId, fields);
-				await tellBoard(repo.id, merge.task_id, { id: mergeId, ...board });
+				await reportMerge(merge, { id: mergeId, ...board });
 			});
 		const fail = (name: string, error: string, details?: unknown) =>
 			set(name, { status: "failed", error, details: details ? JSON.stringify(details) : null }, { status: "failed", sha: null, error });
@@ -80,11 +80,11 @@ export class MergeWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBindi
 				),
 			);
 			if (rebased.status === "conflict") {
-				const error = `The branch conflicts with ${merge.base_branch}${rebased.conflicts.length ? ` in ${rebased.conflicts.slice(0, 5).join(", ")}` : ""}. Rebase it onto ${merge.base_branch}, push it to the session fork, then merge again.`;
+				const error = `The branch conflicts with ${merge.base_branch}${rebased.conflicts.length ? ` in ${rebased.conflicts.slice(0, 5).join(", ")}` : ""}. Rebase it onto ${merge.base_branch}, push it${merge.session_id ? " to the session fork" : ""}, then merge again.`;
 				await set("status: conflict", { status: "conflict", error, details: JSON.stringify({ conflicts: rebased.conflicts }) }, { status: "conflict", sha: null, error, conflicts: rebased.conflicts });
 				return;
 			}
-			if (rebased.status === "no_branch") return void (await fail("failed: no branch", `${merge.branch} is not in the session's fork. Push it to the appmarket-session remote first.`));
+			if (rebased.status === "no_branch") return void (await fail("failed: no branch", merge.session_id ? `${merge.branch} is not in the session's fork. Push it to the appmarket-session remote first.` : `${merge.branch} no longer exists.`));
 			if (rebased.status === "nothing") return void (await fail("failed: nothing", `${merge.branch} has no commits beyond ${merge.base_branch}.`));
 			if (rebased.status !== "rebased" || !rebased.head || !rebased.base) return void (await fail("failed: rebase", "The rebase did not finish."));
 			const head = rebased.head;
@@ -163,12 +163,24 @@ async function loadContext(mergeId: string): Promise<MergeContext> {
 	if (!merge) throw new Error(`No merge ${mergeId}`);
 	const row = await env.DB.prepare(
 		`SELECT r.git_repo AS repo_git, r.runtime, f.id AS fork_id, f.git_repo AS fork_git, fo.handle || '/' || f.slug AS fork_name
-		 FROM agent_sessions s JOIN repos r ON r.id = s.repo_id JOIN repos f ON f.id = s.fork_repo_id JOIN owners fo ON fo.id = f.owner_id WHERE s.id = ?`,
+		 FROM repos r, repos f JOIN owners fo ON fo.id = f.owner_id WHERE r.id = ? AND f.id = ?`,
 	)
-		.bind(merge.session_id)
+		.bind(merge.repo_id, merge.source_repo_id)
 		.first<{ repo_git: string; runtime: Runtime; fork_id: string; fork_git: string | null; fork_name: string }>();
-	if (!row?.fork_git) throw new Error("The session's fork is gone.");
+	if (!row?.fork_git) throw new Error("The source repo is gone.");
 	return { merge, repo: { id: merge.repo_id, gitRepo: row.repo_git, runtime: row.runtime }, fork: { id: row.fork_id, gitRepo: row.fork_git, fullName: row.fork_name } };
+}
+
+/** Tells whoever asked for the merge: the board task (#236) and/or the pull request (#256). */
+export async function reportMerge(merge: Pick<MergeRow, "repo_id" | "task_id" | "pull_id">, state: TaskMerge): Promise<void> {
+	if (merge.task_id) await tellBoard(merge.repo_id, merge.task_id, state);
+	if (merge.pull_id && state.status === "merged") {
+		await env.DB.prepare(
+			"UPDATE pull_requests SET state = 'merged', merged_sha = ?, head_sha = COALESCE(?, head_sha), closed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND state = 'open'",
+		)
+			.bind(state.sha, state.sha, merge.pull_id)
+			.run();
+	}
 }
 
 export async function tellBoard(repoId: string, taskId: string, merge: TaskMerge): Promise<void> {

@@ -7,8 +7,12 @@ export type MergeStatus = "queued" | "rebasing" | "checking" | "merging" | "merg
 export interface MergeRow {
 	id: string;
 	repo_id: string;
-	task_id: string;
-	session_id: string;
+	/** The repo the branch lives in: the repo itself, a fork, or an agent session's fork. */
+	source_repo_id: string;
+	/** A board task (#236) or a pull request (#256) this merge is for. */
+	task_id: string | null;
+	session_id: string | null;
+	pull_id: string | null;
 	branch: string;
 	base_branch: string | null;
 	status: MergeStatus;
@@ -28,13 +32,13 @@ export interface TaskMerge {
 	conflicts?: string[];
 }
 
-export const loadMerge = (id: string) => env.DB.prepare("SELECT * FROM plane_merges WHERE id = ?").bind(id).first<MergeRow>();
+export const loadMerge = (id: string) => env.DB.prepare("SELECT * FROM merges WHERE id = ?").bind(id).first<MergeRow>();
 
 export async function updateMerge(id: string, fields: Partial<Omit<MergeRow, "id">>): Promise<void> {
 	const keys = Object.keys(fields) as (keyof typeof fields)[];
 	const done = fields.status === "merged" || fields.status === "conflict" || fields.status === "failed";
 	await env.DB.prepare(
-		`UPDATE plane_merges SET ${keys.map((k) => `${k} = ?`).join(", ")}${done ? ", finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')" : ""} WHERE id = ?`,
+		`UPDATE merges SET ${keys.map((k) => `${k} = ?`).join(", ")}${done ? ", finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')" : ""} WHERE id = ?`,
 	)
 		.bind(...keys.map((k) => fields[k] ?? null), id)
 		.run();

@@ -94,4 +94,6 @@ export const RATE_LIMITS = {
 	DEVICE_CODE: { offset: 8, limit: 10, period: 60 },
 	/** #194: memory writes, per user (agents write in bursts). */
 	MEMORY: { offset: 9, limit: 60, period: 60 },
+	/** #256: pull requests opened, per user. */
+	PULLS: { offset: 10, limit: 20, period: 60 },
 } as const;
