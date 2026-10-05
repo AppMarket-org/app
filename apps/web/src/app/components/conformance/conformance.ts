@@ -27,6 +27,8 @@ export class Conformance {
   readonly path = input.required<string>();
   /** The newest pushed commit (dashboard) instead of the published version. */
   readonly latest = input(false);
+  /** #72: a specific commit (editors and admins), e.g. the submitted version in review. */
+  readonly commit = input<string | null>(null);
   private readonly http = inject(HttpClient);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   protected readonly data = signal<{ version: number; commit: string | null; results: RuleResult[] } | null>(null);
@@ -37,6 +39,6 @@ export class Conformance {
 
   async ngOnInit(): Promise<void> {
     if (!this.isBrowser) return;
-    this.data.set(await firstValueFrom(this.http.get<{ version: number; commit: string | null; results: RuleResult[] }>(`/api/repos/${this.path()}/conformance`, { params: this.latest() ? { commit: 'latest' } : {} })).catch(() => null));
+    this.data.set(await firstValueFrom(this.http.get<{ version: number; commit: string | null; results: RuleResult[] }>(`/api/repos/${this.path()}/conformance`, { params: this.commit() ? { commit: this.commit()! } : this.latest() ? { commit: 'latest' } : {} })).catch(() => null));
   }
 }

@@ -47,6 +47,15 @@ describe('HistoryPage', () => {
     expect(el.textContent).toContain('has not published a build history');
   });
 
+  it('flags unattributed commits of the published version (#72)', () => {
+    const el = render({
+      repo: { name: 'App', slug: 'app', fullName: 'dev/app', state: 'published', owner: { handle: 'dev' } },
+      page: { items: [checkpoint], next: null, summary: { total: 3, harnesses: { 'claude-code': 1, none: 2 } } },
+      unattributed: { count: 2, of: 5 },
+    });
+    expect(el.textContent).toContain('2 of the last 5 commits in this version are unattributed');
+  });
+
   it('renders not found without data', () => {
     expect(render(null).textContent).toContain('App not found');
   });

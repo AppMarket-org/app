@@ -44,6 +44,26 @@ describe("push-notes", () => {
 		expect(git(check, "notes", "--ref=appmarket", "show", two)).toBe('{"from":"b"}');
 	});
 
+	it("also pushes notes to the agent session's fork (#70)", () => {
+		const remote = mkdtempSync(join(tmpdir(), "am-notes-remote-"));
+		git(remote, "init", "-q", "--bare");
+		const fork = mkdtempSync(join(tmpdir(), "am-notes-fork-"));
+		git(fork, "init", "-q", "--bare");
+		const a = clone(remote, "s");
+		writeFileSync(join(a, "f.txt"), "1");
+		git(a, "add", "-A");
+		git(a, "commit", "-qm", "agent work");
+		const sha = git(a, "rev-parse", "HEAD");
+		git(a, "remote", "add", "appmarket-session", fork);
+		git(a, "config", "appmarket.session", "0f8fad5b-d9cb-469f-a165-70867728950e");
+		git(a, "push", "-q", "appmarket-session", "HEAD:refs/heads/agent");
+		git(a, "notes", "--ref=appmarket", "add", "-m", '{"session":true}', sha);
+		pushNotes(a);
+		for (const target of [remote, fork]) {
+			expect(git(target, "notes", "--ref=appmarket", "show", sha), target).toBe('{"session":true}');
+		}
+	});
+
 	it("does nothing without an appmarket remote or when turned off", () => {
 		const dir = mkdtempSync(join(tmpdir(), "am-notes-none-"));
 		git(dir, "init", "-q");

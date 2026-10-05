@@ -33,3 +33,10 @@ mat-panel-title {
   display: flex;
   justify-content: center;
 }
+
+.unattributed {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--mat-sys-on-surface-variant);
+}
