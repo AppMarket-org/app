@@ -186,18 +186,15 @@
   }
 }
 .cloud-symbol {
-  border: 0.0625rem solid #616a54;
-  border-radius: 1rem;
-  width: 4rem;
-  height: 4rem;
+  border-radius: 0.75rem;
   display: grid;
   place-items: center;
-  background: #414a34;
-  mat-icon {
-    font-size: 2rem;
-    width: 2rem;
-    height: 2rem;
-    color: #dae5c7;
+  padding: 0.875rem 1.25rem;
+  background: #f8f8f3;
+  img {
+    display: block;
+    width: 7.5rem;
+    height: auto;
   }
 }
 .cloud-resources {
@@ -246,10 +243,10 @@
       font-size: 1.5rem;
     }
     .cloud-symbol {
-      display: none;
-    }
-    .mono {
-      margin-top: 0;
+      padding: 0.75rem 1rem;
+      img {
+        width: 6.5rem;
+      }
     }
   }
 }

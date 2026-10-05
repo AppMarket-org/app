@@ -8,7 +8,7 @@
   @if (c.connected) {
     <mat-card appearance="outlined">
       <mat-card-header>
-        <mat-icon mat-card-avatar>cloud_done</mat-icon>
+        <mat-icon mat-card-avatar aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>
         <mat-card-title>Connected</mat-card-title>
         <mat-card-subtitle>{{ c.email ?? 'Cloudflare user' }}</mat-card-subtitle>
       </mat-card-header>
@@ -46,7 +46,7 @@
   } @else {
     <mat-card appearance="outlined">
       <mat-card-header>
-        <mat-icon mat-card-avatar>cloud_off</mat-icon>
+        <mat-icon mat-card-avatar aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>
         <mat-card-title>Not connected</mat-card-title>
       </mat-card-header>
       <mat-card-content>
@@ -54,7 +54,7 @@
         <p class="muted">appmarket.org asks for access to deploy Workers and create the resources an app needs (D1, KV, R2). It never stores the secrets you give your apps, and you can disconnect at any time.</p>
       </mat-card-content>
       <mat-card-actions align="end">
-        <a mat-flat-button [href]="connectUrl"><mat-icon>link</mat-icon>Connect Cloudflare account</a>
+        <a mat-flat-button [href]="connectUrl"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Connect Cloudflare account</a>
       </mat-card-actions>
     </mat-card>
   }
