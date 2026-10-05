@@ -33,3 +33,11 @@ export function rangeAllows(range: string | null, version: string): boolean {
 	if (!range || !semver.validRange(range)) return true;
 	return semver.satisfies(version, range, { includePrerelease: true });
 }
+
+/** #69: could a declared range resolve to a vulnerable version? Unparseable ranges count. */
+export function rangeOverlaps(declared: string | null, affected: string): boolean {
+	if (!declared || !semver.validRange(declared) || !semver.validRange(affected)) return true;
+	// No includePrerelease: it turns ^4 into >=4.0.0-0, which would "overlap" <4.0.0 through a
+	// prerelease a plain range never installs.
+	return semver.intersects(declared, affected);
+}

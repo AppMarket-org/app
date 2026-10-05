@@ -100,6 +100,69 @@
     </div>
   </mat-tab>
 
+  <mat-tab label="Impacts">
+    <!-- #69 (G2): a vulnerable package or a failing rule, every repo and fork that carries it, owners notified. -->
+    <div class="tab">
+      <div class="impact-form">
+        <mat-button-toggle-group [value]="impactKind()" (change)="impactKind.set($event.value)" aria-label="Impact kind">
+          <mat-button-toggle value="package">Vulnerable package</mat-button-toggle>
+          <mat-button-toggle value="rule">Failing rule</mat-button-toggle>
+        </mat-button-toggle-group>
+        <div class="graph-form">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ impactKind() === 'package' ? 'npm package' : 'Rule id (e.g. security-scan)' }}</mat-label>
+            <input matInput [ngModel]="impactTarget()" (ngModelChange)="impactTarget.set($event)" name="impactTarget" autocomplete="off" />
+          </mat-form-field>
+          @if (impactKind() === 'package') {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Vulnerable versions</mat-label>
+              <input matInput [ngModel]="impactAffected()" (ngModelChange)="impactAffected.set($event)" name="impactAffected" placeholder="<4.6.2" autocomplete="off" />
+            </mat-form-field>
+          }
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Title owners see</mat-label>
+          <input matInput [ngModel]="impactTitle()" (ngModelChange)="impactTitle.set($event)" name="impactTitle" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>How to fix</mat-label>
+          <textarea matInput rows="3" [ngModel]="impactGuidance()" (ngModelChange)="impactGuidance.set($event)" name="impactGuidance"></textarea>
+        </mat-form-field>
+        <button mat-flat-button type="button" [disabled]="busy() || !impactTarget().trim() || impactTitle().trim().length < 5 || impactGuidance().trim().length < 5" (click)="fileImpact()">File impact and notify owners</button>
+      </div>
+      @for (i of impacts() ?? []; track i.id) {
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>{{ i.title }}</mat-card-title>
+            <mat-card-subtitle>{{ i.kind === 'package' ? i.target + (i.affected ? ' ' + i.affected : '') : 'rule ' + i.target }} · {{ i.open_repos }} affected · {{ i.resolved_repos }} resolved{{ i.closed_at ? ' · closed' : '' }}</mat-card-subtitle>
+          </mat-card-header>
+          @if (impactRepos()[i.id]; as repos) {
+            <mat-card-content>
+              <mat-list>
+                @for (r of repos; track r.repo) {
+                  <mat-list-item lines="2">
+                    <span matListItemTitle>{{ r.repo }} · {{ r.state }}{{ r.resolved_at ? ' · resolved' : '' }}</span>
+                    <span matListItemLine>{{ r.detail ?? '' }}{{ r.forked_from ? ' · fork of ' + r.forked_from : '' }}</span>
+                  </mat-list-item>
+                }
+              </mat-list>
+            </mat-card-content>
+          }
+          <mat-card-actions align="end">
+            <button mat-button type="button" (click)="showImpact(i.id)">Repos</button>
+            @if (!i.closed_at) {
+              <button mat-button type="button" [disabled]="busy()" (click)="recheckImpact(i.id)">Recheck</button>
+              <button mat-button type="button" [disabled]="busy()" (click)="closeImpact(i.id)">Close</button>
+            }
+          </mat-card-actions>
+        </mat-card>
+      }
+      @if (impacts() === null) {
+        <button mat-stroked-button type="button" (click)="loadImpacts()">Load impacts</button>
+      }
+    </div>
+  </mat-tab>
+
   <mat-tab label="Graph">
     <!-- #67 (G1): which apps (forks included) use a package or a binding. -->
     <div class="tab">

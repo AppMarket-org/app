@@ -18,6 +18,8 @@ import { adminReportRoutes, reportRoutes } from "./moderation/routes.ts";
 import { ejectDownloadRoutes, ejectRoutes } from "./deploy/eject.ts";
 import { ogRoutes } from "./og/routes.ts";
 import { conformanceRoutes } from "./conformance/routes.ts";
+import { adminImpactRoutes, myImpactRoutes } from "./impacts/routes.ts";
+import { syncOpenImpacts } from "./impacts/store.ts";
 import { adminGraphRoutes, repoGraphRoutes } from "./graph/routes.ts";
 import { backfillGraph } from "./graph/store.ts";
 import { checkoutRoutes, ensureWebhookEndpoints, myPurchaseRoutes, paymentsAdminRoutes, payoutRoutes, stripeWebhookRoutes } from "./payments/routes.ts";
@@ -76,6 +78,7 @@ api.route("/repos", checkoutRoutes);
 api.route("/owners", payoutRoutes);
 api.route("/stripe", stripeWebhookRoutes);
 api.route("/me", myPurchaseRoutes);
+api.route("/me", myImpactRoutes);
 api.route("/sessions", agentSessionRoutes);
 api.route("/cowbells", cowbellRoutes);
 api.route("/owners", ownerRoutes);
@@ -97,6 +100,7 @@ api.route("/admin", adminReportRoutes);
 api.route("/admin", adminCheckpointRoutes);
 api.route("/admin", paymentsAdminRoutes);
 api.route("/admin", adminGraphRoutes);
+api.route("/admin", adminImpactRoutes);
 api.route("/me", checkpointExportRoutes);
 api.route("/og", ogRoutes);
 api.route("/media", mediaRoutes);
@@ -117,6 +121,8 @@ export default {
 	async scheduled(_controller: ScheduledController, _env: unknown, ctx: ExecutionContext): Promise<void> {
 		// #131: checkpoints of removed repos are deleted (well within the 24 h promise).
 		ctx.waitUntil(new CheckpointStore(env.DB).purgeRemovedRepos(deleteTranscript).then((n) => n && logEvent("checkpoints.purged", { count: n })).catch(() => undefined));
+		// #69: keep open impacts current (new matches, resolved repos).
+		ctx.waitUntil(syncOpenImpacts().catch((error: unknown) => logEvent("impacts.sync_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		// #67: graph edges of published versions (new publishes and older repos).
 		ctx.waitUntil(backfillGraph().catch((error: unknown) => logEvent("graph.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
 		ctx.waitUntil(backfillLanguages().catch((error: unknown) => logEvent("languages.backfill_error", { error: error instanceof Error ? error.message : String(error) }, "error")));
