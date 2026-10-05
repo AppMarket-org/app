@@ -4,6 +4,8 @@ import { logEvent } from "../observability/log.ts";
 import { ContributionStore } from "./store.ts";
 import { startChecks } from "../checks/start.ts";
 import { runtimeAt, saveRuntime } from "../repos/detect.ts";
+import { evaluateCommit } from "../conformance/evaluate.ts";
+import type { Runtime } from "@appmarket/shared";
 
 /** Repos the scan looks at per run (each costs one Artifacts info() call, plus a log when changed). */
 const BATCH = 50;
@@ -17,11 +19,11 @@ export async function scanContributions(): Promise<{ checked: number; scanned: n
 	const store = new ContributionStore(env.DB);
 	await store.syncEvents(new Date(Date.now() - 86_400_000).toISOString());
 	const { results: repos } = await env.DB.prepare(
-		`SELECT id, git_repo, state, contributions_scanned_at FROM repos WHERE git_repo IS NOT NULL AND state != 'removed'
+		`SELECT id, git_repo, state, runtime, contributions_scanned_at FROM repos WHERE git_repo IS NOT NULL AND state != 'removed'
 		 ORDER BY contributions_checked_at IS NOT NULL, contributions_checked_at LIMIT ?`,
 	)
 		.bind(BATCH)
-		.all<{ id: string; git_repo: string; state: string; contributions_scanned_at: string | null }>();
+		.all<{ id: string; git_repo: string; state: string; runtime: Runtime; contributions_scanned_at: string | null }>();
 	let scanned = 0;
 	let commits = 0;
 	const now = new Date().toISOString();
@@ -37,6 +39,8 @@ export async function scanContributions(): Promise<{ checked: number; scanned: n
 				}
 				// #27: checks on the newest commit of a repo that was pushed to (not on the first backfill scan).
 				if (repo.contributions_scanned_at && log[0]) await startChecks({ id: repo.id, gitRepo: repo.git_repo, fullName: repo.id }, log[0].hash, "push", `refs/heads/${defaultBranch}`).catch(() => null);
+				// #68: conformance rules on every push (stored per commit).
+				if (log[0]) await evaluateCommit({ id: repo.id, gitRepo: repo.git_repo, runtime: repo.runtime }, log[0].hash).catch((e) => logEvent("conformance.failed", { repo: repo.id, error: String(e) }, "warn"));
 				scanned++;
 				await env.DB.prepare("UPDATE repos SET contributions_scanned_at = ?, contributions_checked_at = ? WHERE id = ?").bind(lastPushAt, now, repo.id).run();
 			} else {

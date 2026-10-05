@@ -1,0 +1,46 @@
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  align-items: start;
+  overflow-wrap: anywhere;
+}
+
+.meta,
+.detail {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.meta {
+  margin: 0 0 0.75rem;
+}
+
+.rule .meta {
+  margin: 0;
+}
+
+mat-icon.pass {
+  color: var(--mat-sys-primary);
+}
+
+mat-icon.fail {
+  color: var(--mat-sys-error);
+}
+
+mat-icon.pending,
+mat-icon.info {
+  color: var(--mat-sys-on-surface-variant);
+}

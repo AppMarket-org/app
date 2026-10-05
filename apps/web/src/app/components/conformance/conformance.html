@@ -1,0 +1,27 @@
+@if (data(); as d) {
+  @if (d.commit && d.results.length) {
+    <mat-expansion-panel class="conformance">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon aria-hidden="true" [class]="blocking() ? 'fail' : 'pass'">{{ blocking() ? 'report' : 'verified' }}</mat-icon>
+          <span>Conformance: {{ passed() }} of {{ d.results.length }} rules pass</span>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <p class="meta">Rule set v{{ d.version }} · {{ latest() ? 'latest push' : 'published version' }} <code>{{ d.commit.slice(0, 7) }}</code></p>
+      <div class="rules" role="list" aria-label="Conformance rules">
+        @for (r of d.results; track r.id) {
+          <div class="rule" role="listitem">
+            <mat-icon aria-hidden="true" [class]="r.status === 'fail' && r.severity === 'info' ? 'info' : r.status">{{ r.status === 'fail' && r.severity === 'info' ? 'info' : icon[r.status] }}</mat-icon>
+            <div>
+              <div>{{ r.description }}</div>
+              <div class="meta">{{ r.id }} · {{ label(r) }}{{ r.status === 'pending' ? ' · running' : '' }}</div>
+              @if (r.details.length) {
+                <div class="detail">{{ r.details.join(' ') }}</div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </mat-expansion-panel>
+  }
+}
