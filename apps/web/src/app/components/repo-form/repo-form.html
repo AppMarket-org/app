@@ -1,5 +1,5 @@
 <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-  <mat-form-field appearance="outline">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Name</mat-label>
     <input matInput formControlName="name" maxlength="80" autocomplete="off" />
     <mat-hint>3 to 80 characters. Also sets the URL.</mat-hint>
@@ -10,7 +10,7 @@
     }
   </mat-form-field>
 
-  <mat-form-field appearance="outline">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Summary</mat-label>
     <input matInput formControlName="summary" maxlength="160" />
     <mat-hint align="end">{{ form.controls.summary.value.length }} / 160</mat-hint>
@@ -21,14 +21,14 @@
     }
   </mat-form-field>
 
-  <mat-form-field appearance="outline">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Description</mat-label>
     <textarea matInput formControlName="description" rows="6"></textarea>
     <mat-hint>Shown when the repository has no README.</mat-hint>
   </mat-form-field>
 
   <div class="row">
-    <mat-form-field appearance="outline">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>Category</mat-label>
       <mat-select formControlName="category">
         @for (c of categories; track c.slug) {
@@ -38,7 +38,7 @@
       <mat-error>Choose a category.</mat-error>
     </mat-form-field>
 
-    <mat-form-field appearance="outline">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>Runtime</mat-label>
       <mat-select formControlName="runtime">
         @for (r of runtimes; track r.key) {
@@ -52,14 +52,18 @@
   <fieldset>
     <legend>Platforms</legend>
     @for (p of platforms; track p.key) {
-      <mat-checkbox [checked]="form.controls.platforms.value.includes(p.key)" (change)="togglePlatform(p.key, $event.checked)">{{ p.label }}</mat-checkbox>
+      <mat-checkbox
+        [checked]="form.controls.platforms.value.includes(p.key)"
+        (change)="togglePlatform(p.key, $event.checked)"
+        >{{ p.label }}</mat-checkbox
+      >
     }
     @if (form.controls.platforms.touched && form.controls.platforms.value.length === 0) {
       <p class="error" role="alert">Choose at least one platform.</p>
     }
   </fieldset>
 
-  <mat-form-field appearance="outline">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>License (optional)</mat-label>
     <input matInput formControlName="license" placeholder="MIT" />
     <mat-hint>An SPDX identifier, for example MIT or Apache-2.0.</mat-hint>
@@ -70,10 +74,19 @@
     }
   </mat-form-field>
 
-  <mat-form-field appearance="outline">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Live demo URL (optional)</mat-label>
-    <input matInput formControlName="demoUrl" type="url" inputmode="url" placeholder="https://my-app.example.workers.dev" />
-    <mat-hint>Where people can try the app. Web apps that pass the install check can be installed from here.</mat-hint>
+    <input
+      matInput
+      formControlName="demoUrl"
+      type="url"
+      inputmode="url"
+      placeholder="https://my-app.example.workers.dev"
+    />
+    <mat-hint
+      >Where people can try the app. Web apps that pass the install check can be installed from
+      here.</mat-hint
+    >
     @if (form.controls.demoUrl.hasError('server')) {
       <mat-error>{{ form.controls.demoUrl.getError('server') }}</mat-error>
     } @else {

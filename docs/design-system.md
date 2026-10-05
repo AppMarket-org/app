@@ -42,6 +42,8 @@ The marketplace always uses resolver data. Its empty state invites publishing wi
 
 At narrow widths, navigation switches to labelled search/dashboard icon buttons. The product illustration and marketing sections stack, categories wrap, and code scrolls inside its terminal when needed. Keep the illustration label visible on phones. Preserve keyboard focus rings, the skip link, accessible section names, and reduced-motion support. Static illustration tabs are decorative, not controls.
 
+Repository workspaces group tools into Code & agents, Deployment, Marketplace, and Access & history, with in-page navigation. Use a two-column grid that aligns cards at the top and stacks on phones. Git credentials use the dark olive surface; destructive repository controls come last. Keep card descriptions at body weight, and use dynamic Material field subscripts so wrapped hints reserve their own space. Workspace-specific Material presentation lives in `apps/web/src/repo-workspace.scss`.
+
 ## Verification
 
 Run `pnpm check:ui`, `pnpm --filter @appmarket/web typecheck`, `pnpm --filter @appmarket/web build`, and `pnpm --filter @appmarket/web exec ng test --watch=false`. Check the homepage and search at desktop, tablet, and phone widths, including horizontal overflow, filter submission, category links, in-page anchors, and protected-route sign-in destinations. Signed-in or external OAuth/deployment behavior requires a configured backend and account.

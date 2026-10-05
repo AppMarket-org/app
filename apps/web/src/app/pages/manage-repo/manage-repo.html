@@ -2,6 +2,7 @@
   <header class="head">
     <div>
       <a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Dashboard</a>
+      <p class="eyebrow">Repository workspace / {{ owner() }}</p>
       <h1>{{ l.name }}</h1>
       <div class="status">
         <mat-chip-set aria-label="Status">
@@ -11,7 +12,9 @@
       </div>
     </div>
     <div class="head-actions">
-      <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"><mat-icon>history_edu</mat-icon>Checkpoints</a>
+      <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"
+        ><mat-icon>history_edu</mat-icon>Checkpoints</a
+      >
       @if (l.state !== 'removed') {
         <a mat-stroked-button [routerLink]="'/' + l.fullName">View public page</a>
       }
@@ -22,288 +25,478 @@
     <mat-progress-bar mode="indeterminate" aria-label="Working" />
   }
 
-  <div class="grid">
+  @if (l.state !== 'removed') {
+    <nav class="workspace-nav" aria-label="Repository sections">
+      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#code-agents'"
+        ><mat-icon>terminal</mat-icon>Code &amp; agents</a
+      >
+      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#deployment'"
+        ><mat-icon>cloud_upload</mat-icon>Deployment</a
+      >
+      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#marketplace'"
+        ><mat-icon>storefront</mat-icon>Marketplace</a
+      >
+      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#access-history'"
+        ><mat-icon>key</mat-icon>Access &amp; history</a
+      >
+    </nav>
+  }
+  <div class="repo-origins">
     @if (l.sessionOf) {
-      <mat-card appearance="outlined" class="wide">
+      <mat-card appearance="outlined" class="wide source-notice">
         <mat-card-header>
           <mat-icon mat-card-avatar aria-hidden="true">smart_toy</mat-icon>
           <mat-card-title>Agent session fork</mat-card-title>
-          <mat-card-subtitle>An agent's workspace. Review its commits here, merge what you want into the repo it came from, and submit that repo; this fork cannot be submitted.</mat-card-subtitle>
+          <mat-card-subtitle
+            >An agent's workspace. Review its commits here, merge what you want into the repo it
+            came from, and submit that repo; this fork cannot be submitted.</mat-card-subtitle
+          >
         </mat-card-header>
       </mat-card>
     }
     @if (l.importedFrom; as src) {
-      <mat-card appearance="outlined" class="wide">
+      <mat-card appearance="outlined" class="wide source-notice">
         <mat-card-header>
           <mat-icon mat-card-avatar aria-hidden="true">cloud_download</mat-icon>
           <mat-card-title>Imported from GitHub</mat-card-title>
-          <mat-card-subtitle class="wrap">{{ src }} · a one-time copy; push here to update it.</mat-card-subtitle>
+          <mat-card-subtitle class="wrap"
+            >{{ src }} · a one-time copy; push here to update it.</mat-card-subtitle
+          >
         </mat-card-header>
       </mat-card>
     }
     @if (l.forkedFrom; as f) {
-      <mat-card appearance="outlined" class="wide">
+      <mat-card appearance="outlined" class="wide source-notice">
         <mat-card-header>
           <mat-icon mat-card-avatar aria-hidden="true">fork_right</mat-icon>
-          <mat-card-title>Forked from <a mat-button [routerLink]="'/' + f.fullName">{{ f.fullName }}</a></mat-card-title>
-          <mat-card-subtitle>Your copy has the source's branches and tags as they were when you forked.{{ f.tag ? ' The reviewed, published version is the tag ' + f.tag + '.' : '' }}</mat-card-subtitle>
+          <mat-card-title
+            >Forked from
+            <a mat-button [routerLink]="'/' + f.fullName">{{ f.fullName }}</a></mat-card-title
+          >
+          <mat-card-subtitle
+            >Your copy has the source's branches and tags as they were when you forked.{{
+              f.tag ? ' The reviewed, published version is the tag ' + f.tag + '.' : ''
+            }}</mat-card-subtitle
+          >
         </mat-card-header>
         @if (f.tag) {
           <mat-card-content>
-            <p class="hint">To start exactly from the published version, after cloning (with a push token below):</p>
+            <p class="hint">
+              To start exactly from the published version, after cloning (with a push token below):
+            </p>
             <pre><code>git checkout -B main {{ f.tag }} && git push --force appmarket main</code></pre>
           </mat-card-content>
         }
       </mat-card>
     }
-    @if (l.state !== 'removed') {
-      <mat-card appearance="outlined">
-        <mat-card-header><mat-card-title>Push your code</mat-card-title></mat-card-header>
-        <mat-card-content>
-          @if (remote(); as url) {
-            <p>Git remote (no credentials in it):</p>
-            <div class="copyable">
-              <code>{{ url }}</code>
-              <button mat-icon-button type="button" aria-label="Copy remote URL" (click)="copy(url, 'Remote URL')"><mat-icon>content_copy</mat-icon></button>
-            </div>
-          }
-          @if (token()) {
-            <p>Run these from your project. The token works for 1 hour and is shown only now; do not save it in Git config.</p>
-            @for (cmd of pushCommands(); track $index) {
+  </div>
+
+  @if (l.state !== 'removed') {
+    <section class="workspace-section" id="code-agents" aria-labelledby="code-agents-heading">
+      <div class="section-heading">
+        <span class="section-number">01</span>
+        <div>
+          <h2 id="code-agents-heading">Code &amp; agents</h2>
+          <p>Push code, work with your agents, and keep every change in Git.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <mat-card appearance="outlined" class="push-card">
+          <mat-card-header>
+            <mat-card-title>Push your code</mat-card-title>
+            <mat-card-subtitle
+              >Your Git remote and short-lived credentials for pushing code.</mat-card-subtitle
+            >
+          </mat-card-header>
+          <mat-card-content>
+            @if (remote(); as url) {
+              <p>Git remote (no credentials in it):</p>
               <div class="copyable">
-                <code>{{ cmd }}</code>
-                <button mat-icon-button type="button" aria-label="Copy command" (click)="copy(cmd, 'Command')"><mat-icon>content_copy</mat-icon></button>
+                <code>{{ url }}</code>
+                <button
+                  mat-icon-button
+                  type="button"
+                  aria-label="Copy remote URL"
+                  (click)="copy(url, 'Remote URL')"
+                >
+                  <mat-icon>content_copy</mat-icon>
+                </button>
               </div>
             }
-          } @else {
-            <button mat-flat-button type="button" [disabled]="busy()" (click)="createPushToken()">Create push token</button>
-          }
-        </mat-card-content>
-      </mat-card>
-    }
+            @if (token()) {
+              <p>
+                Run these from your project. The token works for 1 hour and is shown only now; do
+                not save it in Git config.
+              </p>
+              @for (cmd of pushCommands(); track $index) {
+                <div class="copyable">
+                  <code>{{ cmd }}</code>
+                  <button
+                    mat-icon-button
+                    type="button"
+                    aria-label="Copy command"
+                    (click)="copy(cmd, 'Command')"
+                  >
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </div>
+              }
+            } @else {
+              <button mat-flat-button type="button" [disabled]="busy()" (click)="createPushToken()">
+                Create push token
+              </button>
+            }
+          </mat-card-content>
+        </mat-card>
+        @if (!l.sessionOf) {
+          <app-sessions-card [path]="path()" />
+        }
+      </div>
+    </section>
 
-    @if (canSubmit()) {
-      <mat-card appearance="outlined">
-        <mat-card-header><mat-card-title>Submit a version for review</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <form [formGroup]="submitForm" (ngSubmit)="submitVersion(formDirective)" #formDirective="ngForm" novalidate>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Git tag</mat-label>
-              <input matInput formControlName="tag" placeholder="v1.0.0" autocomplete="off" />
-              <mat-hint>Push the tag first. Its commit is what gets reviewed and made public.</mat-hint>
-              <mat-error>Use letters, digits, ".", "_", "-" or "/".</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Release notes</mat-label>
-              <textarea matInput formControlName="releaseNotes" rows="4"></textarea>
-            </mat-form-field>
-            @if (submitError(); as message) {
-              <div class="error" role="alert">
-                <p>{{ message }}</p>
-                @if (submitIssues().length > 0) {
-                  <mat-list dense>
-                    @for (issue of submitIssues(); track issue) {
-                      <mat-list-item>
-                        <mat-icon matListItemIcon>error_outline</mat-icon>
-                        <span matListItemTitle class="issue">{{ issue }}</span>
-                      </mat-list-item>
+    <section class="workspace-section" id="deployment" aria-labelledby="deployment-heading">
+      <div class="section-heading">
+        <span class="section-number">02</span>
+        <div>
+          <h2 id="deployment-heading">Deployment</h2>
+          <p>Ship from Git to your own Cloudflare account.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <app-previews-card [path]="path()" [slug]="slug()" />
+        <app-checks-card [path]="path()" />
+        @if (!l.sessionOf) {
+          <app-webhooks-card class="wide" [path]="l.fullName" />
+        }
+      </div>
+    </section>
+
+    <section class="workspace-section" id="marketplace" aria-labelledby="marketplace-heading">
+      <div class="section-heading">
+        <span class="section-number">03</span>
+        <div>
+          <h2 id="marketplace-heading">Marketplace</h2>
+          <p>Prepare your app’s public page, submit a version, and set up sales.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <mat-card appearance="outlined" class="details-card">
+          <mat-card-header>
+            <mat-card-title>Details</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (editing()) {
+              <app-repo-form
+                [initial]="l"
+                submitLabel="Save details"
+                [saving]="busy()"
+                [errorMessage]="detailsError()"
+                [fieldErrors]="detailsFieldErrors()"
+                (saved)="saveDetails($event)"
+                (cancelled)="editing.set(false)"
+              />
+            } @else {
+              <mat-list>
+                <mat-list-item lines="2">
+                  <span matListItemTitle>Summary</span>
+                  <span matListItemLine>{{ l.summary }}</span>
+                </mat-list-item>
+                <mat-list-item lines="2">
+                  <span matListItemTitle>License</span>
+                  <span matListItemLine>{{ l.license ?? 'None' }}</span>
+                </mat-list-item>
+              </mat-list>
+              <div class="detail-actions">
+                <app-runtime-badge [runtime]="l.runtime" />
+                <button mat-stroked-button type="button" (click)="editing.set(true)">
+                  Edit details
+                </button>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @if (canSubmit()) {
+          <mat-card appearance="outlined">
+            <mat-card-header
+              ><mat-card-title>Submit a version for review</mat-card-title></mat-card-header
+            >
+            <mat-card-content>
+              <form
+                [formGroup]="submitForm"
+                (ngSubmit)="submitVersion(formDirective)"
+                #formDirective="ngForm"
+                novalidate
+              >
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Git tag</mat-label>
+                  <input matInput formControlName="tag" placeholder="v1.0.0" autocomplete="off" />
+                  <mat-hint
+                    >Push the tag first. Its commit is what gets reviewed and made public.</mat-hint
+                  >
+                  <mat-error>Use letters, digits, ".", "_", "-" or "/".</mat-error>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Release notes</mat-label>
+                  <textarea matInput formControlName="releaseNotes" rows="4"></textarea>
+                </mat-form-field>
+                @if (submitError(); as message) {
+                  <div class="error" role="alert">
+                    <p>{{ message }}</p>
+                    @if (submitIssues().length > 0) {
+                      <mat-list dense>
+                        @for (issue of submitIssues(); track issue) {
+                          <mat-list-item>
+                            <mat-icon matListItemIcon>error_outline</mat-icon>
+                            <span matListItemTitle class="issue">{{ issue }}</span>
+                          </mat-list-item>
+                        }
+                      </mat-list>
                     }
-                  </mat-list>
+                  </div>
                 }
-              </div>
-            }
-            <button mat-flat-button type="submit" [disabled]="busy()">Submit for review</button>
-          </form>
-        </mat-card-content>
-      </mat-card>
-    }
+                <button mat-flat-button type="submit" [disabled]="busy()">Submit for review</button>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        }
 
-    @if (l.state === 'submitted' && l.submittedChecks?.warnings?.length) {
-      <mat-card appearance="outlined" class="wide">
-        <mat-card-header>
-          <mat-card-title>Review notes for {{ l.submittedTag }}</mat-card-title>
-          <mat-card-subtitle>Not blocking. Fix them in your next version if they apply.</mat-card-subtitle>
-        </mat-card-header>
+        @if (l.state === 'submitted' && l.submittedChecks?.warnings?.length) {
+          <mat-card appearance="outlined" class="wide">
+            <mat-card-header>
+              <mat-card-title>Review notes for {{ l.submittedTag }}</mat-card-title>
+              <mat-card-subtitle
+                >Not blocking. Fix them in your next version if they apply.</mat-card-subtitle
+              >
+            </mat-card-header>
+            <mat-card-content>
+              <mat-list>
+                @for (w of l.submittedChecks!.warnings; track $index) {
+                  <mat-list-item lines="2">
+                    <mat-icon matListItemIcon>warning</mat-icon>
+                    <span matListItemTitle>{{ w.file }}</span>
+                    <span matListItemLine class="issue">{{ w.message }}</span>
+                  </mat-list-item>
+                }
+              </mat-list>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <mat-card appearance="outlined" class="wide">
+          <mat-card-header>
+            <mat-card-title>Screenshots</mat-card-title>
+            <mat-card-subtitle
+              >PNG, JPEG or WebP, up to {{ maxShotMb }} MB each, {{ shotLimits.maxCount }} at
+              most.</mat-card-subtitle
+            >
+          </mat-card-header>
+          <mat-card-content>
+            <div class="shots">
+              @for (shot of screenshots(); track shot.id; let i = $index) {
+                <mat-card appearance="outlined" class="shot">
+                  <img mat-card-image [src]="shot.url" [alt]="'Screenshot ' + (i + 1)" />
+                  <mat-card-actions>
+                    <button
+                      mat-button
+                      type="button"
+                      [attr.aria-label]="'Delete screenshot ' + (i + 1)"
+                      [disabled]="busy()"
+                      (click)="deleteScreenshot(shot.id)"
+                    >
+                      <mat-icon>delete</mat-icon>Delete
+                    </button>
+                  </mat-card-actions>
+                </mat-card>
+              }
+            </div>
+            @if (screenshots().length < shotLimits.maxCount) {
+              <input
+                #fileInput
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                (change)="upload($event)"
+              />
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="busy()"
+                (click)="fileInput.click()"
+              >
+                Add screenshot
+              </button>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @if (!l.sessionOf) {
+          <app-price-card class="wide" [repo]="l" (changed)="repo.set($event)" />
+        }
+        <app-releases-card
+          class="wide"
+          [path]="l.fullName"
+          [suggestedTag]="l.publishedTag ?? l.submittedTag"
+        />
+        @if (l.platforms.includes('android')) {
+          <app-android-card class="wide" [repo]="l" (changed)="repo.set($event)" />
+        }
+      </div>
+    </section>
+  }
+  <section class="workspace-section" id="access-history" aria-labelledby="access-history-heading">
+    <div class="section-heading">
+      <span class="section-number">04</span>
+      <div>
+        <h2 id="access-history-heading">Access &amp; history</h2>
+        <p>Manage repository access and review its activity.</p>
+      </div>
+    </div>
+    <div class="grid">
+      @if (l.state !== 'removed') {
+        <mat-card appearance="outlined" class="wide">
+          <mat-card-header>
+            <mat-card-title>Tokens</mat-card-title>
+            <mat-card-subtitle
+              >Every push and clone token issued for this repository. Tokens themselves are never
+              stored.</mat-card-subtitle
+            >
+          </mat-card-header>
+          <mat-card-content>
+            @if (tokens().length > 0) {
+              <div class="table-scroll">
+                <table mat-table [dataSource]="tokens()">
+                  <ng-container matColumnDef="scope">
+                    <th mat-header-cell *matHeaderCellDef>Scope</th>
+                    <td mat-cell *matCellDef="let t">
+                      {{ t.scope === 'write' ? 'Push' : 'Clone' }}
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="state">
+                    <th mat-header-cell *matHeaderCellDef>State</th>
+                    <td mat-cell *matCellDef="let t">
+                      <mat-chip-set [attr.aria-label]="'Token ' + t.state">
+                        <mat-chip [class]="t.state === 'active' ? 'published' : ''">{{
+                          t.state
+                        }}</mat-chip>
+                      </mat-chip-set>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="issuedTo">
+                    <th mat-header-cell *matHeaderCellDef>Issued to</th>
+                    <td mat-cell *matCellDef="let t">{{ t.mintedBy.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="expires">
+                    <th mat-header-cell *matHeaderCellDef>Expires</th>
+                    <td mat-cell *matCellDef="let t">{{ t.expiresAt | date: 'short' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>
+                      <span class="cdk-visually-hidden">Actions</span>
+                    </th>
+                    <td mat-cell *matCellDef="let t">
+                      @if (t.state === 'active') {
+                        <button
+                          mat-button
+                          type="button"
+                          class="danger"
+                          [disabled]="busy()"
+                          (click)="revoke(t.id)"
+                        >
+                          Revoke
+                        </button>
+                      }
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="tokenColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: tokenColumns"></tr>
+                </table>
+              </div>
+              @if (activeTokens() > 0) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  class="danger"
+                  [disabled]="busy()"
+                  (click)="revokeAll()"
+                >
+                  Revoke all active tokens
+                </button>
+              }
+            } @else {
+              <p class="muted">No tokens issued yet.</p>
+            }
+          </mat-card-content>
+        </mat-card>
+        <app-export-card class="wide" [path]="path()" />
+      }
+      <mat-card appearance="outlined" class="history">
+        <mat-card-header><mat-card-title>History</mat-card-title></mat-card-header>
         <mat-card-content>
           <mat-list>
-            @for (w of l.submittedChecks!.warnings; track $index) {
-              <mat-list-item lines="2">
-                <mat-icon matListItemIcon>warning</mat-icon>
-                <span matListItemTitle>{{ w.file }}</span>
-                <span matListItemLine class="issue">{{ w.message }}</span>
+            @for (e of events(); track $index) {
+              <mat-list-item [lines]="e.note ? 3 : 2">
+                <span matListItemTitle
+                  >{{ states[e.to].label }}{{ e.tag ? ' · ' + e.tag : '' }}</span
+                >
+                <span matListItemLine
+                  >by {{ e.actor.name }} ({{ e.actor.role }}),
+                  {{ e.createdAt | date: 'medium' }}</span
+                >
+                @if (e.note) {
+                  <span matListItemLine>{{ e.note }}</span>
+                }
               </mat-list-item>
+            } @empty {
+              <mat-list-item>No changes yet.</mat-list-item>
             }
           </mat-list>
         </mat-card-content>
       </mat-card>
-    }
-
-    @if (can('draft') || can('unpublished') || can('removed')) {
-      <mat-card appearance="outlined">
-        <mat-card-header><mat-card-title>Status</mat-card-title></mat-card-header>
-        <mat-card-content class="actions">
-          @if (can('draft')) {
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('draft')">Withdraw from review</button>
-          }
-          @if (can('unpublished')) {
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="change('unpublished')">Hide from marketplace</button>
-          }
-          @if (can('removed')) {
-            <button mat-button type="button" class="danger" [disabled]="busy()" (click)="change('removed')">Delete repo</button>
-          }
-        </mat-card-content>
-      </mat-card>
-    }
-
-    @if (l.state !== 'removed') {
-      <mat-card appearance="outlined" class="wide">
-        <mat-card-header>
-          <mat-card-title>Details</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          @if (editing()) {
-            <app-repo-form
-              [initial]="l"
-              submitLabel="Save details"
-              [saving]="busy()"
-              [errorMessage]="detailsError()"
-              [fieldErrors]="detailsFieldErrors()"
-              (saved)="saveDetails($event)"
-              (cancelled)="editing.set(false)"
-            />
-          } @else {
-            <mat-list>
-              <mat-list-item lines="2">
-                <span matListItemTitle>Summary</span>
-                <span matListItemLine>{{ l.summary }}</span>
-              </mat-list-item>
-              <mat-list-item lines="2">
-                <span matListItemTitle>License</span>
-                <span matListItemLine>{{ l.license ?? 'None' }}</span>
-              </mat-list-item>
-            </mat-list>
-            <div class="detail-actions">
-              <app-runtime-badge [runtime]="l.runtime" />
-              <button mat-stroked-button type="button" (click)="editing.set(true)">Edit details</button>
-            </div>
-          }
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card appearance="outlined" class="wide">
-        <mat-card-header>
-          <mat-card-title>Screenshots</mat-card-title>
-          <mat-card-subtitle>PNG, JPEG or WebP, up to {{ maxShotMb }} MB each, {{ shotLimits.maxCount }} at most.</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="shots">
-            @for (shot of screenshots(); track shot.id; let i = $index) {
-              <mat-card appearance="outlined" class="shot">
-                <img mat-card-image [src]="shot.url" [alt]="'Screenshot ' + (i + 1)" />
-                <mat-card-actions>
-                  <button mat-button type="button" [attr.aria-label]="'Delete screenshot ' + (i + 1)" [disabled]="busy()" (click)="deleteScreenshot(shot.id)">
-                    <mat-icon>delete</mat-icon>Delete
-                  </button>
-                </mat-card-actions>
-              </mat-card>
+      @if (can('draft') || can('unpublished') || can('removed')) {
+        <mat-card appearance="outlined" class="wide lifecycle-card">
+          <mat-card-header><mat-card-title>Repository controls</mat-card-title></mat-card-header>
+          <mat-card-content class="actions">
+            @if (can('draft')) {
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="busy()"
+                (click)="change('draft')"
+              >
+                Withdraw from review
+              </button>
             }
-          </div>
-          @if (screenshots().length < shotLimits.maxCount) {
-            <input #fileInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="upload($event)" />
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="fileInput.click()">Add screenshot</button>
-          }
-        </mat-card-content>
-      </mat-card>
-
-      <app-checks-card [path]="path()" />
-      <app-previews-card [path]="path()" [slug]="slug()" />
-      @if (!l.sessionOf) {
-        <app-sessions-card [path]="path()" />
-      }
-      <app-export-card [path]="path()" />
-      @if (!l.sessionOf) {
-        <app-price-card [repo]="l" (changed)="repo.set($event)" />
-      }
-      <app-releases-card class="wide" [path]="l.fullName" [suggestedTag]="l.publishedTag ?? l.submittedTag" />
-      @if (!l.sessionOf) {
-        <app-webhooks-card [path]="l.fullName" />
-      }
-      @if (l.platforms.includes('android')) {
-        <app-android-card [repo]="l" (changed)="repo.set($event)" />
-      }
-
-      <mat-card appearance="outlined" class="wide">
-        <mat-card-header>
-          <mat-card-title>Tokens</mat-card-title>
-          <mat-card-subtitle>Every push and clone token issued for this repository. Tokens themselves are never stored.</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          @if (tokens().length > 0) {
-            <div class="table-scroll">
-              <table mat-table [dataSource]="tokens()">
-                <ng-container matColumnDef="scope">
-                  <th mat-header-cell *matHeaderCellDef>Scope</th>
-                  <td mat-cell *matCellDef="let t">{{ t.scope === 'write' ? 'Push' : 'Clone' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="state">
-                  <th mat-header-cell *matHeaderCellDef>State</th>
-                  <td mat-cell *matCellDef="let t">
-                    <mat-chip-set [attr.aria-label]="'Token ' + t.state">
-                      <mat-chip [class]="t.state === 'active' ? 'published' : ''">{{ t.state }}</mat-chip>
-                    </mat-chip-set>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="issuedTo">
-                  <th mat-header-cell *matHeaderCellDef>Issued to</th>
-                  <td mat-cell *matCellDef="let t">{{ t.mintedBy.name }}</td>
-                </ng-container>
-                <ng-container matColumnDef="expires">
-                  <th mat-header-cell *matHeaderCellDef>Expires</th>
-                  <td mat-cell *matCellDef="let t">{{ t.expiresAt | date: 'short' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef><span class="cdk-visually-hidden">Actions</span></th>
-                  <td mat-cell *matCellDef="let t">
-                    @if (t.state === 'active') {
-                      <button mat-button type="button" class="danger" [disabled]="busy()" (click)="revoke(t.id)">Revoke</button>
-                    }
-                  </td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="tokenColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: tokenColumns"></tr>
-              </table>
-            </div>
-            @if (activeTokens() > 0) {
-              <button mat-stroked-button type="button" class="danger" [disabled]="busy()" (click)="revokeAll()">Revoke all active tokens</button>
+            @if (can('unpublished')) {
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="busy()"
+                (click)="change('unpublished')"
+              >
+                Hide from marketplace
+              </button>
             }
-          } @else {
-            <p class="muted">No tokens issued yet.</p>
-          }
-        </mat-card-content>
-      </mat-card>
-    }
-
-    <mat-card appearance="outlined" class="history">
-      <mat-card-header><mat-card-title>History</mat-card-title></mat-card-header>
-      <mat-card-content>
-        <mat-list>
-          @for (e of events(); track $index) {
-            <mat-list-item [lines]="e.note ? 3 : 2">
-              <span matListItemTitle>{{ states[e.to].label }}{{ e.tag ? ' · ' + e.tag : '' }}</span>
-              <span matListItemLine>by {{ e.actor.name }} ({{ e.actor.role }}), {{ e.createdAt | date: 'medium' }}</span>
-              @if (e.note) {
-                <span matListItemLine>{{ e.note }}</span>
-              }
-            </mat-list-item>
-          } @empty {
-            <mat-list-item>No changes yet.</mat-list-item>
-          }
-        </mat-list>
-      </mat-card-content>
-    </mat-card>
-  </div>
+            @if (can('removed')) {
+              <button
+                mat-button
+                type="button"
+                class="danger"
+                [disabled]="busy()"
+                (click)="change('removed')"
+              >
+                Delete repo
+              </button>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  </section>
 } @else if (loadError()) {
-  <p class="error" role="alert">This app could not be loaded. It may not exist, or it is not yours.</p>
+  <p class="error" role="alert">
+    This app could not be loaded. It may not exist, or it is not yours.
+  </p>
   <a mat-button routerLink="/dashboard">Back to the dashboard</a>
 } @else {
   <mat-progress-bar mode="indeterminate" aria-label="Loading app" />
