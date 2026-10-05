@@ -22,6 +22,10 @@ export const ENVIRONMENTS = {
 		buildsBucket: "appmarket-builds-dev",
 		// R22: Cloudflare Access on /admin. Not used in development.
 		access: { teamDomain: "", aud: "" },
+		// #230: sender for notification email (Cloudflare Email Service). Dev uses the local
+		// simulation, which prints messages instead of sending them. Empty = email off.
+		emailFrom: "notifications@appmarket.org",
+		emailRemote: false,
 	},
 	staging: {
 		workerName: "appmarket-api-staging",
@@ -37,6 +41,9 @@ export const ENVIRONMENTS = {
 		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
 		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
 		access: { teamDomain: "cportsche1.cloudflareaccess.com", aud: "09de5142e7a6247d4dba8782ed8ed5cd0451e1a065e8cde05f07e2934ff0919c" },
+		// Off until appmarket.org is onboarded in Email Service (Compute > Email Service > Email Sending).
+		emailFrom: "",
+		emailRemote: true,
 	},
 	production: {
 		workerName: "appmarket-api",
@@ -52,6 +59,8 @@ export const ENVIRONMENTS = {
 		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
 		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
 		access: { teamDomain: "cportsche1.cloudflareaccess.com", aud: "89058f739ae9e219a89f42fd868b501fb80d6a62a8b4dff41aff407fdb771d8b" },
+		emailFrom: "",
+		emailRemote: true,
 	},
 } as const;
 

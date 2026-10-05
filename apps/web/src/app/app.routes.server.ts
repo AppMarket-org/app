@@ -5,6 +5,7 @@ export const serverRoutes: ServerRoute[] = [
   // Home lists the latest apps, so it renders per request.
   { path: '', renderMode: RenderMode.Server },
   // Static content: prerendered at build time.
+  { path: 'email/unsubscribe', renderMode: RenderMode.Client },
   {
     path: 'legal/:page',
     renderMode: RenderMode.Prerender,

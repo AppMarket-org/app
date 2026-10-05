@@ -12,6 +12,7 @@ export const routes: Routes = [
   { path: '', resolve: { latest: latestResolver }, loadComponent: () => import('./pages/home/home').then((m) => m.Home) },
   { path: 'category/:slug', resolve: { results: categoryResolver }, runGuardsAndResolvers: 'paramsOrQueryParamsChange', loadComponent: () => import('./pages/category/category').then((m) => m.Category) },
   { path: 'search', resolve: { results: searchResolver }, runGuardsAndResolvers: 'paramsOrQueryParamsChange', loadComponent: () => import('./pages/search/search').then((m) => m.Search) },
+  { path: 'email/unsubscribe', loadComponent: () => import('./pages/unsubscribe/unsubscribe').then((m) => m.UnsubscribePage) },
   { path: 'legal/:page', loadComponent: () => import('./pages/legal/legal').then((m) => m.Legal) },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   { path: 'device', canActivate: [authGuard()], loadComponent: () => import('./pages/device/device').then((m) => m.DevicePage) },
