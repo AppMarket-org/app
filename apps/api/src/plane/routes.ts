@@ -5,7 +5,7 @@ import { canEdit, canView } from "../repos/access.ts";
 import { logEvent } from "../observability/log.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { agentCard, dispatch } from "./a2a.ts";
-import { startMerge } from "./merge.ts";
+import { sessionFork, startMerge } from "./merge.ts";
 import type { PlaneResult, RepoPlane } from "./coordinator.ts";
 import { cleanTags, type LeaseHint, leaseHints, normalizePath, type PlaneLease } from "./model.ts";
 import { expandPaths, indexInfo, neighbours } from "../codegraph/store.ts";
@@ -95,7 +95,8 @@ export const planeRoutes = new Hono<Ctx>()
 		const result = await p.stub.finish(c.req.param("id"), s.id, status, branch || null, text(body.note, 2000) || null);
 		// #238: a finished task with a branch is merged (rebase, checks, conformance, fast-forward).
 		if (result.ok && status === "done" && branch) {
-			await startMerge(p.repo, c.req.param("id"), s.id, branch).catch((error: unknown) => logEvent("plane.merge_start_failed", { repo: p.repo.fullName, error: String(error) }, "error"));
+			const fork = await sessionFork(s.id);
+			if (fork) await startMerge({ repo: p.repo, sourceRepoId: fork, branch, taskId: c.req.param("id"), sessionId: s.id }).catch((error: unknown) => logEvent("plane.merge_start_failed", { repo: p.repo.fullName, error: String(error) }, "error"));
 			return c.json(await p.stub.state());
 		}
 		return reply(c, result);
@@ -107,7 +108,9 @@ export const planeRoutes = new Hono<Ctx>()
 		const task = (await p.stub.state()).tasks.find((t) => t.id === c.req.param("id"));
 		if (!task || task.status !== "done" || !task.branch || !task.claimedBy) return c.json({ error: "Only finished tasks with a branch can be merged." }, 400);
 		if (task.merge?.status === "merged") return c.json({ error: "Already merged." }, 409);
-		await startMerge(p.repo, task.id, task.claimedBy, task.branch);
+		const fork = await sessionFork(task.claimedBy);
+		if (!fork) return c.json({ error: "The agent session's fork is gone." }, 409);
+		await startMerge({ repo: p.repo, sourceRepoId: fork, branch: task.branch, taskId: task.id, sessionId: task.claimedBy });
 		return c.json(await p.stub.state());
 	})
 	.post("/:owner/:slug/plane/leases", async (c) => {

@@ -91,6 +91,7 @@ export default defineConfig(({ mode }) => {
 				// Checkpoint uploads per device (approximate is fine at 60/min); deploys use the exact RateLimiter.
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
 				RL_MEMORY: rateLimit(RATE_LIMITS.MEMORY),
+				RL_PULLS: rateLimit(RATE_LIMITS.PULLS),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
 				CHECKS_WORKFLOW: bindings.workflow({ name: `${workerName}-checks`, worker: workerName, exportName: "ChecksWorkflow" }),
 				MERGE_WORKFLOW: bindings.workflow({ name: `${workerName}-merge`, worker: workerName, exportName: "MergeWorkflow" }),
