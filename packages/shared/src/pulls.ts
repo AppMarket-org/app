@@ -27,6 +27,12 @@ export interface PullRequest {
 	closedAt: string | null;
 	/** The latest merge attempt (rebase, checks, conformance, fast-forward). */
 	merge: PullMerge | null;
+	/** #258: the decision from the repo's owners and members' latest reviews. */
+	review: { decision: ReviewDecision; approvals: number };
+	/** #258: the repo requires an approval before merging. */
+	requireApproval: boolean;
+	/** Why merging is not possible right now, or null. */
+	mergeBlocked: string | null;
 	/** The viewer may merge (target owners and members). */
 	canMerge: boolean;
 	/** The viewer may edit, close or reopen (the author, or target owners and members). */
@@ -50,4 +56,47 @@ export function parsePullInput(input: { title?: unknown; body?: unknown }, parti
 		out.body = input.body.trim();
 	}
 	return out;
+}
+
+/** #258: reviews and comments. */
+export type ReviewState = "commented" | "approved" | "changes_requested";
+export type ReviewDecision = "approved" | "changes_requested" | null;
+
+export const COMMENT_LIMIT = 10_000;
+
+export interface PullComment {
+	id: string;
+	author: string;
+	body: string;
+	/** A line comment: file, line and side of the diff. */
+	path: string | null;
+	line: number | null;
+	side: "old" | "new" | null;
+	reviewId: string | null;
+	createdAt: string;
+	updatedAt: string;
+	/** The viewer wrote it (may edit and delete it). */
+	mine: boolean;
+	/** The viewer may delete it (its author, or the repo's owners and members). */
+	canDelete: boolean;
+}
+
+export interface PullReview {
+	id: string;
+	reviewer: string;
+	state: ReviewState;
+	body: string;
+	headSha: string | null;
+	/** From an owner or member of the repo (other than the author): it decides approval. */
+	counts: boolean;
+	createdAt: string;
+}
+
+/** The decision from each counting reviewer's latest review: any request for changes wins. */
+export function reviewDecision(reviews: { reviewerId: string; state: ReviewState; counts: boolean; createdAt: string }[]): { decision: ReviewDecision; approvals: number } {
+	const latest = new Map<string, ReviewState>();
+	for (const r of [...reviews].filter((r) => r.counts && r.state !== "commented").sort((a, b) => a.createdAt.localeCompare(b.createdAt))) latest.set(r.reviewerId, r.state);
+	const states = [...latest.values()];
+	const approvals = states.filter((s) => s === "approved").length;
+	return { decision: states.includes("changes_requested") ? "changes_requested" : approvals ? "approved" : null, approvals };
 }

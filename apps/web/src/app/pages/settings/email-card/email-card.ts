@@ -5,8 +5,11 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 
+type Topic = 'impacts' | 'pulls';
+
 interface EmailPreferences {
   impacts: boolean;
+  pulls: boolean;
   /** False until appmarket.org sends email in this environment. */
   sending: boolean;
 }
@@ -28,11 +31,11 @@ export class EmailCard implements OnInit {
     this.prefs.set(await firstValueFrom(this.http.get<EmailPreferences>('/api/me/email-preferences')).catch(() => null));
   }
 
-  protected async setImpacts(on: boolean): Promise<void> {
+  protected async set(topic: Topic, on: boolean): Promise<void> {
     const before = this.prefs();
-    this.prefs.update((p) => (p ? { ...p, impacts: on } : p));
+    this.prefs.update((p) => (p ? { ...p, [topic]: on } : p));
     try {
-      this.prefs.set(await firstValueFrom(this.http.put<EmailPreferences>('/api/me/email-preferences', { impacts: on })));
+      this.prefs.set(await firstValueFrom(this.http.put<EmailPreferences>('/api/me/email-preferences', { [topic]: on })));
     } catch {
       this.prefs.set(before);
       this.snackBar.open('Could not save the email setting.', undefined, { duration: 4000 });

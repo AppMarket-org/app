@@ -1,4 +1,4 @@
-import { isBranchName, parsePullInput, type PullMerge, type PullRequest, type PullState, redactSecrets, type Repo } from "@appmarket/shared";
+import { COMMENT_LIMIT, isBranchName, parsePullInput, type PullComment, type PullMerge, type PullRequest, type PullReview, type PullState, type ReviewState, redactSecrets, type Repo, reviewDecision } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import { listBranches } from "../artifacts/git.ts";
@@ -7,6 +7,7 @@ import { logEvent } from "../observability/log.ts";
 import { normalizePath } from "../plane/model.ts";
 import { startMerge } from "../plane/merge.ts";
 import { changedFiles, diffRange, fileDiff } from "./diff.ts";
+import { notifyPull, participants, repoOwners } from "./notify.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { pickBranch } from "../repos/pick-branch.ts";
 import { RepoStore } from "../repos/repository.ts";
@@ -45,8 +46,27 @@ async function latestMerge(pullId: string): Promise<PullMerge | null> {
 	return { id: m.id, status: m.status, sha: m.head_sha, error: m.error, ...(conflicts ? { conflicts } : {}) };
 }
 
+async function reviewsOf(pullId: string) {
+	const { results } = await env.DB.prepare("SELECT reviewer_id, state, counts, created_at FROM pull_reviews WHERE pull_id = ?")
+		.bind(pullId)
+		.all<{ reviewer_id: string; state: ReviewState; counts: number; created_at: string }>();
+	return reviewDecision(results.map((r) => ({ reviewerId: r.reviewer_id, state: r.state, counts: r.counts === 1, createdAt: r.created_at })));
+}
+
+const requiresApproval = async (repoId: string) =>
+	(await env.DB.prepare("SELECT require_approval FROM repo_pull_settings WHERE repo_id = ?").bind(repoId).first<{ require_approval: number }>())?.require_approval === 1;
+
+/** Why the pull request cannot be merged now (null when it can). */
+function blocked(state: PullState, review: { decision: string | null }, requireApproval: boolean): string | null {
+	if (state !== "open") return `The pull request is ${state}.`;
+	if (review.decision === "changes_requested") return "Changes were requested.";
+	if (requireApproval && review.decision !== "approved") return "This repo requires an approval before merging.";
+	return null;
+}
+
 async function toPull(row: PullRow, repo: Repo, session: AppSession | null): Promise<PullRequest> {
 	const editor = canEdit(repo, session);
+	const [review, requireApproval] = await Promise.all([reviewsOf(row.id), requiresApproval(repo.id)]);
 	return {
 		number: row.number,
 		title: row.title,
@@ -61,6 +81,9 @@ async function toPull(row: PullRow, repo: Repo, session: AppSession | null): Pro
 		updatedAt: row.updated_at,
 		closedAt: row.closed_at,
 		merge: await latestMerge(row.id),
+		review,
+		requireApproval,
+		mergeBlocked: blocked(row.state, review, requireApproval),
 		canMerge: editor && row.state === "open",
 		canEdit: editor || row.author_id === session?.user.id,
 	};
@@ -89,6 +112,16 @@ async function refreshHead(row: PullRow): Promise<PullRow> {
 		return { ...row, head_sha: head };
 	}
 	return row;
+}
+
+function commentInput(body: Record<string, unknown>): { error: string } | { body: string; path: string | null; line: number | null; side: "old" | "new" | null } {
+	if (typeof body.body !== "string" || !body.body.trim() || body.body.length > COMMENT_LIMIT) return { error: `A comment is 1 to ${COMMENT_LIMIT} characters.` };
+	if (body.path === undefined || body.path === null) return { body: body.body.trim(), path: null, line: null, side: null };
+	const path = typeof body.path === "string" ? normalizePath(body.path) : null;
+	if (!path || path.endsWith("/")) return { error: "path is a file of the diff." };
+	if (!Number.isInteger(body.line) || (body.line as number) < 1) return { error: "line is a line number." };
+	if (body.side !== "old" && body.side !== "new") return { error: "side is old or new." };
+	return { body: body.body.trim(), path, line: body.line as number, side: body.side };
 }
 
 async function forDiff(repo: Repo, row: PullRow) {
@@ -171,6 +204,11 @@ export const pullRoutes = new Hono<Ctx>()
 		}
 		const row = (await env.DB.prepare(`${SELECT} WHERE p.id = ?`).bind(id).first<PullRow>())!;
 		logEvent("pull.opened", { repo: repo.fullName, number: row.number, fork: source.id !== repo.id });
+		c.executionCtx.waitUntil(
+			repoOwners(repo.owner.id)
+				.then((owners) => notifyPull({ repo: repo.fullName, number: row.number, title: row.title, actorId: session.user.id, actor: session.user.name, what: "opened a pull request", excerpt: row.body, userIds: owners }))
+				.catch(() => undefined),
+		);
 		return c.json(await toPull(row, repo, session), 201);
 	})
 	.get("/:owner/:slug/pulls/:number{[0-9]+}", async (c) => {
@@ -221,14 +259,171 @@ export const pullRoutes = new Hono<Ctx>()
 		const diff = range ? await fileDiff(range, path) : null;
 		return diff ? c.json({ base: range!.base, head: range!.head, ...diff }) : notFound(c);
 	})
+	// #258: conversation and line comments, and reviews.
+	.get("/:owner/:slug/pulls/:number{[0-9]+}/comments", async (c) => {
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row) return notFound(c);
+		const session = c.get("session");
+		const editor = canEdit(repo, session);
+		const [comments, reviews] = await Promise.all([
+			env.DB.prepare(`SELECT c.*, u.name AS author FROM pull_comments c LEFT JOIN "user" u ON u.id = c.author_id WHERE c.pull_id = ? AND c.deleted_at IS NULL ORDER BY c.created_at LIMIT 1000`)
+				.bind(row.id)
+				.all<{ id: string; author_id: string; author: string | null; body: string; path: string | null; line: number | null; side: "old" | "new" | null; review_id: string | null; created_at: string; updated_at: string }>(),
+			env.DB.prepare(`SELECT r.*, u.name AS reviewer FROM pull_reviews r LEFT JOIN "user" u ON u.id = r.reviewer_id WHERE r.pull_id = ? ORDER BY r.created_at LIMIT 500`)
+				.bind(row.id)
+				.all<{ id: string; reviewer: string | null; state: ReviewState; body: string; head_sha: string | null; counts: number; created_at: string }>(),
+		]);
+		return c.json({
+			comments: comments.results.map(
+				(r): PullComment => ({
+					id: r.id,
+					author: r.author ?? "",
+					body: r.body,
+					path: r.path,
+					line: r.line,
+					side: r.side,
+					reviewId: r.review_id,
+					createdAt: r.created_at,
+					updatedAt: r.updated_at,
+					mine: r.author_id === session?.user.id,
+					canDelete: r.author_id === session?.user.id || editor,
+				}),
+			),
+			reviews: reviews.results.map((r): PullReview => ({ id: r.id, reviewer: r.reviewer ?? "", state: r.state, body: r.body, headSha: r.head_sha, counts: r.counts === 1, createdAt: r.created_at })),
+		});
+	})
+	.post("/:owner/:slug/pulls/:number{[0-9]+}/comments", async (c) => {
+		const session = c.get("session");
+		if (!session) return c.json({ error: "unauthorized" }, 401);
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row) return notFound(c);
+		const { success } = await env.RL_PULLS.limit({ key: session.user.id });
+		if (!success) return c.json({ error: "rate_limited", retryAfter: 60 }, 429, { "Retry-After": "60" });
+		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+		const comment = commentInput(body);
+		if ("error" in comment) return invalid(c, comment.error);
+		const id = crypto.randomUUID();
+		await env.DB.prepare("INSERT INTO pull_comments (id, pull_id, author_id, body, path, line, side) VALUES (?, ?, ?, ?, ?, ?, ?)")
+			.bind(id, row.id, session.user.id, redactSecrets(comment.body).text, comment.path, comment.line, comment.side)
+			.run();
+		await env.DB.prepare("UPDATE pull_requests SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.id).run();
+		c.executionCtx.waitUntil(
+			participants(row.id, row.author_id)
+				.then((ids) =>
+					notifyPull({ repo: repo.fullName, number: row.number, title: row.title, actorId: session.user.id, actor: session.user.name, what: comment.path ? `commented on ${comment.path}` : "commented", excerpt: comment.body, userIds: ids }),
+				)
+				.catch(() => undefined),
+		);
+		return c.json({ id }, 201);
+	})
+	.patch("/:owner/:slug/pulls/:number{[0-9]+}/comments/:id", async (c) => {
+		const session = c.get("session");
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row || !session) return notFound(c);
+		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+		if (typeof body.body !== "string" || !body.body.trim() || body.body.length > COMMENT_LIMIT) return invalid(c, `A comment is 1 to ${COMMENT_LIMIT} characters.`);
+		const result = await env.DB.prepare(
+			"UPDATE pull_comments SET body = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND pull_id = ? AND author_id = ? AND deleted_at IS NULL",
+		)
+			.bind(redactSecrets(body.body.trim()).text, c.req.param("id"), row.id, session.user.id)
+			.run();
+		return result.meta.changes ? c.json({ ok: true }) : notFound(c);
+	})
+	.delete("/:owner/:slug/pulls/:number{[0-9]+}/comments/:id", async (c) => {
+		const session = c.get("session");
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row || !session) return notFound(c);
+		const anyone = canEdit(repo, session);
+		const result = await env.DB.prepare(
+			`UPDATE pull_comments SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND pull_id = ? AND deleted_at IS NULL ${anyone ? "" : "AND author_id = ?"}`,
+		)
+			.bind(...(anyone ? [c.req.param("id"), row.id] : [c.req.param("id"), row.id, session.user.id]))
+			.run();
+		return result.meta.changes ? c.json({ ok: true }) : notFound(c);
+	})
+	.post("/:owner/:slug/pulls/:number{[0-9]+}/reviews", async (c) => {
+		const session = c.get("session");
+		if (!session) return c.json({ error: "unauthorized" }, 401);
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row) return notFound(c);
+		if (row.state !== "open") return invalid(c, `The pull request is ${row.state}.`, 409);
+		const { success } = await env.RL_PULLS.limit({ key: session.user.id });
+		if (!success) return c.json({ error: "rate_limited", retryAfter: 60 }, 429, { "Retry-After": "60" });
+		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+		const state = ({ comment: "commented", approve: "approved", request_changes: "changes_requested" } as const)[String(body.event) as "comment" | "approve" | "request_changes"];
+		if (!state) return invalid(c, "event is comment, approve or request_changes.");
+		const text = typeof body.body === "string" ? body.body.trim() : "";
+		if (text.length > COMMENT_LIMIT) return invalid(c, `A review is at most ${COMMENT_LIMIT} characters.`);
+		if (state !== "approved" && !text && !Array.isArray(body.comments)) return invalid(c, "Say what to change, or add line comments.");
+		if (state !== "commented" && row.author_id === session.user.id) return invalid(c, "You cannot approve or request changes on your own pull request.", 403);
+		const lines = Array.isArray(body.comments) ? body.comments.slice(0, 100).map((x) => commentInput((x ?? {}) as Record<string, unknown>)) : [];
+		const bad = lines.find((l) => "error" in l);
+		if (bad && "error" in bad) return invalid(c, bad.error);
+		const id = crypto.randomUUID();
+		const counts = canEdit(repo, session) && row.author_id !== session.user.id;
+		await env.DB.batch([
+			env.DB.prepare("INSERT INTO pull_reviews (id, pull_id, reviewer_id, state, body, head_sha, counts) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(
+				id,
+				row.id,
+				session.user.id,
+				state,
+				redactSecrets(text).text,
+				row.head_sha,
+				counts ? 1 : 0,
+			),
+			...lines.map((l) => {
+				const x = l as Exclude<typeof l, { error: string }>;
+				return env.DB.prepare("INSERT INTO pull_comments (id, pull_id, author_id, body, path, line, side, review_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(
+					crypto.randomUUID(),
+					row.id,
+					session.user.id,
+					redactSecrets(x.body).text,
+					x.path,
+					x.line,
+					x.side,
+					id,
+				);
+			}),
+			env.DB.prepare("UPDATE pull_requests SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.id),
+		]);
+		const what = { commented: "reviewed", approved: "approved", changes_requested: "requested changes" }[state];
+		c.executionCtx.waitUntil(
+			participants(row.id, row.author_id)
+				.then((ids) => notifyPull({ repo: repo.fullName, number: row.number, title: row.title, actorId: session.user.id, actor: session.user.name, what, excerpt: text, userIds: ids }))
+				.catch(() => undefined),
+		);
+		return c.json(await toPull((await pullRow(repo.id, row.number))!, repo, session), 201);
+	})
 	.post("/:owner/:slug/pulls/:number{[0-9]+}/merge", async (c) => {
 		const session = c.get("session");
 		const repo = await target(c);
 		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
 		if (!repo || !row) return notFound(c);
 		if (!canEdit(repo, session)) return invalid(c, "Only the repo's owners and members can merge.", 403);
-		if (row.state !== "open") return invalid(c, `The pull request is ${row.state}.`, 409);
+		const why = blocked(row.state, await reviewsOf(row.id), await requiresApproval(repo.id));
+		if (why) return invalid(c, why, 409);
 		await startMerge({ repo, sourceRepoId: row.source_repo_id, branch: row.source_branch, pullId: row.id, baseBranch: row.target_branch });
 		logEvent("pull.merge_requested", { repo: repo.fullName, number: row.number });
 		return c.json(await toPull((await pullRow(repo.id, row.number))!, repo, session), 202);
+	})
+	// #258: the repo's merge rule.
+	.get("/:owner/:slug/pull-settings", async (c) => {
+		const repo = await target(c);
+		if (!repo || !canEdit(repo, c.get("session"))) return notFound(c);
+		return c.json({ requireApproval: await requiresApproval(repo.id) });
+	})
+	.put("/:owner/:slug/pull-settings", async (c) => {
+		const repo = await target(c);
+		if (!repo || !canEdit(repo, c.get("session"))) return notFound(c);
+		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+		if (typeof body.requireApproval !== "boolean") return invalid(c, "requireApproval is true or false.");
+		await env.DB.prepare("INSERT INTO repo_pull_settings (repo_id, require_approval) VALUES (?, ?) ON CONFLICT (repo_id) DO UPDATE SET require_approval = excluded.require_approval")
+			.bind(repo.id, body.requireApproval ? 1 : 0)
+			.run();
+		return c.json({ requireApproval: body.requireApproval });
 	});

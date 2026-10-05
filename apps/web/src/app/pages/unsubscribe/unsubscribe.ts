@@ -21,6 +21,8 @@ import { Seo } from '../../seo/seo';
 export class UnsubscribePage {
   private readonly http = inject(HttpClient);
   private readonly query = inject(ActivatedRoute).snapshot.queryParamMap;
+  /** What the link turns off. */
+  protected readonly topic = this.query.get('t') === 'pulls' ? 'Pull request emails' : 'Security notice emails';
   protected readonly state = signal<'ready' | 'working' | 'done' | 'invalid'>(this.query.get('u') && this.query.get('s') ? 'ready' : 'invalid');
 
   constructor() {

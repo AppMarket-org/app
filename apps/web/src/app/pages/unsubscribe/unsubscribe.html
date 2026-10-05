@@ -1,17 +1,17 @@
 <mat-card appearance="outlined" class="box">
   <mat-card-header>
-    <mat-card-title>Security notice emails</mat-card-title>
+    <mat-card-title>{{ topic }}</mat-card-title>
   </mat-card-header>
   <mat-card-content>
     @switch (state()) {
       @case ('done') {
-        <p><mat-icon aria-hidden="true">check_circle</mat-icon>You will not get these emails anymore. Notices still appear on your dashboard.</p>
+        <p><mat-icon aria-hidden="true">check_circle</mat-icon>You will not get these emails anymore. Everything still appears on appmarket.org.</p>
       }
       @case ('invalid') {
         <p>This link is not valid. You can change your email settings in Settings.</p>
       }
       @default {
-        <p>Stop emails about security notices for your repos? Notices still appear on your dashboard, and you can turn the emails back on in Settings.</p>
+        <p>Stop these emails? Everything still appears on appmarket.org, and you can turn the emails back on in Settings.</p>
       }
     }
   </mat-card-content>
