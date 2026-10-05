@@ -204,3 +204,24 @@ footer {
     margin-left: 0;
   }
 }
+
+mat-toolbar.workspace {
+  height: 4rem;
+  padding: 0 1rem;
+  background: var(--mat-sys-surface);
+}
+main.workspace {
+  max-width: none;
+  padding: 1.5rem;
+}
+main.workspace:has(app-code) {
+  padding: 0;
+}
+@media (max-width: 37.5rem) {
+  main.workspace {
+    padding: 1rem;
+  }
+  mat-toolbar.workspace {
+    padding: 0 0.5rem;
+  }
+}
