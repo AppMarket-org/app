@@ -25,9 +25,29 @@ export interface PlaneTask {
   claimedBy: string | null;
   branch: string | null;
   note: string | null;
+  merge: TaskMerge | null;
   createdAt: string;
   updatedAt: string;
 }
+export interface TaskMerge {
+  id: string;
+  status: 'queued' | 'rebasing' | 'checking' | 'merging' | 'merged' | 'conflict' | 'failed';
+  sha: string | null;
+  error: string | null;
+  conflicts?: string[];
+}
+
+/** #238: what each merge stage is called on the board. */
+export const MERGE_LABELS: Record<TaskMerge['status'], string> = {
+  queued: 'Merge queued',
+  rebasing: 'Rebasing onto the base branch',
+  checking: 'Running checks',
+  merging: 'Merging',
+  merged: 'Merged',
+  conflict: 'Conflicts',
+  failed: 'Not merged',
+};
+
 export interface PlaneAgent {
   id: string;
   name: string;
@@ -90,6 +110,9 @@ export class AgentsPage implements OnInit {
   protected readonly finished = computed(() => this.state()?.tasks.filter((t) => t.status === 'done' || t.status === 'failed') ?? []);
   private readonly names = computed(() => new Map((this.state()?.agents ?? []).map((a) => [a.id, a.name])));
 
+  protected readonly mergeLabels = MERGE_LABELS;
+  protected readonly merging = signal<string | null>(null);
+
   protected readonly form = new FormGroup({
     title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(200)] }),
     description: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(4000)] }),
@@ -148,6 +171,23 @@ export class AgentsPage implements OnInit {
       this.state.set(await firstValueFrom(this.http.delete<PlaneState>(`/api/repos/${this.path()}/plane/tasks/${task.id}`)));
     } catch {
       this.snackBar.open('Could not remove the task.', undefined, { duration: 4000 });
+    }
+  }
+
+  protected inFlight(merge: TaskMerge | null): boolean {
+    return !!merge && ['queued', 'rebasing', 'checking', 'merging'].includes(merge.status);
+  }
+
+  /** #238: merge again, after a conflict, failed checks or a moved base. */
+  protected async merge(task: PlaneTask): Promise<void> {
+    this.merging.set(task.id);
+    try {
+      this.state.set(await firstValueFrom(this.http.post<PlaneState>(`/api/repos/${this.path()}/plane/tasks/${task.id}/merge`, {})));
+    } catch (error) {
+      const message = error instanceof HttpErrorResponse && typeof error.error?.error === 'string' ? error.error.error : 'Could not start the merge.';
+      this.snackBar.open(message, undefined, { duration: 4000 });
+    } finally {
+      this.merging.set(null);
     }
   }
 

@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => {
 				RepoPlane: exports.durableObject({ storage: "sqlite" }),
 				DeployWorkflow: exports.workflow({ name: `${workerName}-deploy`, concurrency: { limit: 5 } }),
 				ChecksWorkflow: exports.workflow({ name: `${workerName}-checks`, concurrency: { limit: 5 } }),
+				// #238: merges agent work from the collaboration plane.
+				MergeWorkflow: exports.workflow({ name: `${workerName}-merge`, concurrency: { limit: 5 } }),
 			},
 			env: {
 				APP_ENV: bindings.text(environment),
@@ -87,6 +89,7 @@ export default defineConfig(({ mode }) => {
 				RL_CHECKPOINT: rateLimit(RATE_LIMITS.CHECKPOINT),
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
 				CHECKS_WORKFLOW: bindings.workflow({ name: `${workerName}-checks`, worker: workerName, exportName: "ChecksWorkflow" }),
+				MERGE_WORKFLOW: bindings.workflow({ name: `${workerName}-merge`, worker: workerName, exportName: "MergeWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
 				RATE_LIMITER: bindings.durableObject({ worker: workerName, exportName: "RateLimiter" }),
 				PLANE: bindings.durableObject({ worker: workerName, exportName: "RepoPlane" }),

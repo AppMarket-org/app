@@ -74,7 +74,7 @@ function canonical(value: unknown): string {
 	return JSON.stringify(value);
 }
 
-async function hashOf(record: CheckpointRecord): Promise<string> {
+export async function hashOf(record: CheckpointRecord): Promise<string> {
 	const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical(record)));
 	return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
