@@ -5,6 +5,7 @@ import { categoryResolver, latestResolver, searchResolver } from './pages/catalo
 import { historyResolver } from './pages/history/history-resolver';
 import { ownerResolver } from './pages/owner/owner-resolver';
 import { repoResolver } from './pages/repo/repo-resolver';
+import { settingsSectionGuard } from './pages/settings/settings-sections';
 
 // Public pages are server-rendered for SEO (see app.routes.server.ts); /dashboard, /settings, /admin
 // and /login are client-only. Owner and repo pages (#102) come last: their first segment is a
@@ -19,7 +20,8 @@ export const routes: Routes = [
   { path: 'device', canActivate: [authGuard()], loadComponent: () => import('./pages/device/device').then((m) => m.DevicePage) },
   { path: 'settings/orgs/new', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/new-org/new-org').then((m) => m.NewOrg) },
   { path: 'settings/orgs/:handle', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/org-settings/org-settings').then((m) => m.OrgSettings) },
-  { path: 'settings', canActivate: [authGuard()], loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
+  { path: 'settings', pathMatch: 'full', redirectTo: 'settings/profile' },
+  { path: 'settings/:section', canActivate: [authGuard(), settingsSectionGuard], loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
   { path: 'dashboard/new', canActivate: [authGuard()], loadComponent: () => import('./pages/new-repo/new-repo').then((m) => m.NewRepo) },
   { path: 'dashboard/repos/:owner/:slug/agents', canActivate: [authGuard()], loadComponent: () => import('./pages/agents/agents').then((m) => m.AgentsPage) },
   { path: 'dashboard/repos/:owner/:slug/checkpoints', canActivate: [authGuard()], loadComponent: () => import('./pages/checkpoints/checkpoints').then((m) => m.CheckpointsPage) },

@@ -13,3 +13,11 @@
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-small);
 }
+mat-card { border: 0; background: transparent; box-shadow: none; }
+mat-card-header { padding: 0 0 1.5rem; margin-bottom: 0.5rem; border-bottom: 0.0625rem solid var(--app-border); }
+mat-card-content { padding: 0; }
+mat-card-title { font: 600 1.5rem/1.4 var(--app-font-display); letter-spacing: -0.035em; }
+mat-card-subtitle { font: 400 0.875rem/1.7 var(--app-font-body); margin-top: 0.5rem; }
+.email { gap: 0; }
+mat-slide-toggle { padding: 1rem 0; border-bottom: 0.0625rem solid var(--app-border); }
+mat-slide-toggle:last-of-type { border: 0; }

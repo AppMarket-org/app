@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -14,9 +14,10 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/note-dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HANDLE_PATTERN, RESERVED_HANDLES, type OrgMembership, type Owner, type OwnerPrivacy, type OwnerProfile, type OwnerProfileUpdate, type SessionInfo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { OwnersApi } from '../../api/owners';
@@ -26,16 +27,22 @@ import { profileErrors } from '../../components/profile-form/profile-errors';
 import { Auth } from '../../auth/auth';
 import { EmailCard } from './email-card/email-card';
 import { Seo } from '../../seo/seo';
+import { SETTINGS_SECTIONS, type SettingsSection } from './settings-sections';
 
 /** #102, #139: your profile, username and organizations. */
 @Component({
   selector: 'app-settings',
-  imports: [DatePipe, EmailCard, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, MatTooltipModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, EmailCard, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, MatTooltipModule, MatSelectModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Settings {
+  readonly section = input<SettingsSection>('profile');
+  protected readonly sections = SETTINGS_SECTIONS;
+  /** Keep visited forms mounted so switching sections preserves unsaved edits. */
+  protected readonly visited = signal(new Set<SettingsSection>());
+  private readonly router = inject(Router);
   private readonly api = inject(OwnersApi);
   private readonly auth = inject(Auth);
   private readonly snackBar = inject(MatSnackBar);
@@ -59,7 +66,17 @@ export class Settings {
   protected readonly handleForm = new FormGroup({ handle: this.handle });
 
   constructor() {
-    inject(Seo).set({ title: 'Settings', description: 'Your profile, username and organizations.', path: '/settings', noindex: true });
+    const seo = inject(Seo);
+    effect(() => {
+      const section = this.section();
+      const detail = SETTINGS_SECTIONS.find((s) => s.id === section)!;
+      this.visited.update((before) => new Set([...before, section]));
+      seo.set({ title: `${detail.label} settings`, description: detail.description, heading: [{ label: 'Settings' }], path: `/settings/${section}`, noindex: true });
+    });
+  }
+
+  protected openSection(section: SettingsSection): void {
+    void this.router.navigate(['/settings', section]);
   }
 
   async ngOnInit(): Promise<void> {
