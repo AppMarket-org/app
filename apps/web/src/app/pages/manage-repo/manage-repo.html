@@ -202,12 +202,18 @@
                   <span matListItemLine>{{ l.summary }}</span>
                 </mat-list-item>
                 <mat-list-item lines="2">
+                  <span matListItemTitle>Runtime</span>
+                  <span matListItemLine>{{ l.runtimeDetected ? runtimeName(l.runtime) + ', detected from your code' : 'Detected after your first push' }}</span>
+                </mat-list-item>
+                <mat-list-item lines="2">
                   <span matListItemTitle>License</span>
                   <span matListItemLine>{{ l.license ?? 'None' }}</span>
                 </mat-list-item>
               </mat-list>
               <div class="detail-actions">
-                <app-runtime-badge [runtime]="l.runtime" />
+                @if (l.runtimeDetected) {
+                  <app-runtime-badge [runtime]="l.runtime" />
+                }
                 <button mat-stroked-button type="button" (click)="editing.set(true)">
                   Edit details
                 </button>

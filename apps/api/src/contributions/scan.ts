@@ -3,6 +3,7 @@ import { pushedCommits } from "../artifacts/git.ts";
 import { logEvent } from "../observability/log.ts";
 import { ContributionStore } from "./store.ts";
 import { startChecks } from "../checks/start.ts";
+import { runtimeAt, saveRuntime } from "../repos/detect.ts";
 
 /** Repos the scan looks at per run (each costs one Artifacts info() call, plus a log when changed). */
 const BATCH = 50;
@@ -16,11 +17,11 @@ export async function scanContributions(): Promise<{ checked: number; scanned: n
 	const store = new ContributionStore(env.DB);
 	await store.syncEvents(new Date(Date.now() - 86_400_000).toISOString());
 	const { results: repos } = await env.DB.prepare(
-		`SELECT id, git_repo, contributions_scanned_at FROM repos WHERE git_repo IS NOT NULL AND state != 'removed'
+		`SELECT id, git_repo, state, contributions_scanned_at FROM repos WHERE git_repo IS NOT NULL AND state != 'removed'
 		 ORDER BY contributions_checked_at IS NOT NULL, contributions_checked_at LIMIT ?`,
 	)
 		.bind(BATCH)
-		.all<{ id: string; git_repo: string; contributions_scanned_at: string | null }>();
+		.all<{ id: string; git_repo: string; state: string; contributions_scanned_at: string | null }>();
 	let scanned = 0;
 	let commits = 0;
 	const now = new Date().toISOString();
@@ -29,6 +30,11 @@ export async function scanContributions(): Promise<{ checked: number; scanned: n
 			const { lastPushAt, commits: log, defaultBranch } = await pushedCommits(repo.git_repo, 500);
 			if (lastPushAt && (!repo.contributions_scanned_at || lastPushAt > repo.contributions_scanned_at)) {
 				commits += await store.addCommits(repo.id, log);
+				// Drafts follow their code; published versions get their runtime at submit.
+				if (repo.state === "draft" && log[0]) {
+					const runtime = await runtimeAt(repo.git_repo, log[0].hash).catch(() => null);
+					if (runtime) await saveRuntime(repo.id, runtime);
+				}
 				// #27: checks on the newest commit of a repo that was pushed to (not on the first backfill scan).
 				if (repo.contributions_scanned_at && log[0]) await startChecks({ id: repo.id, gitRepo: repo.git_repo, fullName: repo.id }, log[0].hash, "push", `refs/heads/${defaultBranch}`).catch(() => null);
 				scanned++;

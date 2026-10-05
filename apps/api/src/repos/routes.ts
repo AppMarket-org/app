@@ -32,6 +32,7 @@ import { CheckStore } from "../checks/store.ts";
 import { startChecks } from "../checks/start.ts";
 import { type RepoCheckSummary, RepoStore } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
+import { detectAtHead, runtimeAt, saveRuntime } from "./detect.ts";
 import { Screenshots } from "./screenshots.ts";
 import { TokenAudit } from "./token-audit.ts";
 import { tokenPolicy } from "./token-policy.ts";
@@ -117,6 +118,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		try {
 			const created = await store.insert(ids, owner.id, user.id, input.data, gitRepo);
 			if (input.data.importUrl) await store.setImportedFrom(created.id, `${input.data.importUrl.replace(/(\.git)?\/?$/, "")}${input.data.importBranch ? `#${input.data.importBranch}` : ""}`);
+			// Imported code is there already: detect its runtime now.
+			if (input.data.importUrl) await detectAtHead(created.id, gitRepo).catch(() => null);
 			logEvent("repo.created", { repo: created.fullName, gitRepo: gitRepo, user: user.id, imported: !!input.data.importUrl });
 			return c.json(await store.findById(created.id), 201);
 		} catch (error) {
@@ -161,6 +164,7 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			await store.setForkedFrom(created.id, source);
 			// #67: the fork starts with its source's graph edges.
 			await copyGraph(source.id, created.id);
+			if (source.runtimeDetected) await saveRuntime(created.id, source.runtime);
 			logEvent("repo.forked", { repo: created.fullName, from: source.fullName, tag: source.publishedTag, user: user.id });
 			return c.json(await store.findById(created.id), 201);
 		} catch (error) {
@@ -225,6 +229,13 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			commit = await resolveTag(repo.gitRepo, request.data.tag);
 			if (!commit) return c.json({ error: "tag_not_found", tag: request.data.tag }, 422);
 			// R26: the version must look like the declared runtime.
+			// The runtime is read from the submitted code, not chosen by hand.
+			const detected = await runtimeAt(repo.gitRepo, commit);
+			if (!detected) return c.json({ error: "runtime_unknown", message: "Could not tell how this app runs. Add a Wrangler config with the Worker entry (or an index.html for a static site)." }, 422);
+			if (detected !== repo.runtime || !repo.runtimeDetected) {
+				await saveRuntime(repo.id, detected);
+				repo.runtime = detected;
+			}
 			const root = await readRootEntries(repo.gitRepo, commit);
 			const issues = checkRuntime(repo.runtime, root);
 			if (issues.length > 0) return c.json({ error: "runtime_mismatch", runtime: repo.runtime, issues }, 422);

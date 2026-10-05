@@ -53,6 +53,7 @@ interface RepoRow {
 	published_manifest: string | null;
 	published_pwa: string | null;
 	demo_url: string | null;
+	runtime_detected_at: string | null;
 	android_package: string | null;
 	android_verified_at: string | null;
 	cowbell_count: number;
@@ -89,6 +90,7 @@ function toRepo(row: RepoRow): Repo {
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		pwa: row.published_pwa ? JSON.parse(row.published_pwa) : null,
 		demoUrl: row.demo_url,
+		runtimeDetected: !!row.runtime_detected_at,
 		android: row.android_package && row.android_verified_at ? { package: row.android_package, verifiedAt: row.android_verified_at } : null,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,

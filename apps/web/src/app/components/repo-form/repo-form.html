@@ -27,6 +27,7 @@
     <mat-hint>Shown when the repository has no README.</mat-hint>
   </mat-form-field>
 
+  <!-- The runtime is detected from the code (import, push, submit); nobody picks it by hand. -->
   <div class="row">
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>Category</mat-label>
@@ -38,15 +39,6 @@
       <mat-error>Choose a category.</mat-error>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Runtime</mat-label>
-      <mat-select formControlName="runtime">
-        @for (r of runtimes; track r.key) {
-          <mat-option [value]="r.key">{{ r.name }}</mat-option>
-        }
-      </mat-select>
-      <mat-hint>{{ runtimeNote() }}</mat-hint>
-    </mat-form-field>
   </div>
 
   <fieldset>
