@@ -4,7 +4,9 @@ import { type Context, Hono } from "hono";
 import { listBranches } from "../artifacts/git.ts";
 import type { AppSession, AuthVariables } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
+import { normalizePath } from "../plane/model.ts";
 import { startMerge } from "../plane/merge.ts";
+import { changedFiles, diffRange, fileDiff } from "./diff.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { pickBranch } from "../repos/pick-branch.ts";
 import { RepoStore } from "../repos/repository.ts";
@@ -87,6 +89,11 @@ async function refreshHead(row: PullRow): Promise<PullRow> {
 		return { ...row, head_sha: head };
 	}
 	return row;
+}
+
+async function forDiff(repo: Repo, row: PullRow) {
+	const source = await env.DB.prepare("SELECT git_repo FROM repos WHERE id = ?").bind(row.source_repo_id).first<{ git_repo: string | null }>();
+	return { id: row.id, state: row.state, target_branch: row.target_branch, source_branch: row.source_branch, head_sha: row.head_sha, target_git: repo.gitRepo!, source_git: source?.git_repo ?? null };
 }
 
 /**
@@ -194,6 +201,25 @@ export const pullRoutes = new Hono<Ctx>()
 			.bind(input.title !== undefined ? redactSecrets(input.title).text : row.title, input.body !== undefined ? redactSecrets(input.body).text : row.body, state, state, row.id)
 			.run();
 		return c.json(await toPull(await refreshHead((await pullRow(repo.id, row.number))!), repo, session));
+	})
+	// #257: the diff: commits and files changed, and one file's hunks.
+	.get("/:owner/:slug/pulls/:number{[0-9]+}/files", async (c) => {
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row) return notFound(c);
+		const range = await diffRange(await forDiff(repo, await refreshHead(row)));
+		if (!range) return c.json({ error: "unavailable", message: "The branches of this pull request are gone or share no history." }, 409);
+		return c.json({ base: range.base, head: range.head, commits: range.commits, ...(await changedFiles(range)) });
+	})
+	.get("/:owner/:slug/pulls/:number{[0-9]+}/diff", async (c) => {
+		const path = normalizePath(c.req.query("path") ?? "");
+		if (!path || path.endsWith("/")) return invalid(c, "path is a file.");
+		const repo = await target(c);
+		const row = repo ? await pullRow(repo.id, Number(c.req.param("number"))) : null;
+		if (!repo || !row) return notFound(c);
+		const range = await diffRange(await forDiff(repo, row));
+		const diff = range ? await fileDiff(range, path) : null;
+		return diff ? c.json({ base: range!.base, head: range!.head, ...diff }) : notFound(c);
 	})
 	.post("/:owner/:slug/pulls/:number{[0-9]+}/merge", async (c) => {
 		const session = c.get("session");
