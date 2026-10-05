@@ -38,3 +38,9 @@ merging again starts over. A repo with auto deploy redeploys after the merge.
 | POST | `/api/repos/:owner/:repo/pulls` | `{ title, body?, source?: "owner/fork", sourceBranch, targetBranch? }` |
 | GET, PATCH | `/api/repos/:owner/:repo/pulls/:number` | PATCH takes `title`, `body`, `state` (open or closed) |
 | POST | `/api/repos/:owner/:repo/pulls/:number/merge` | Starts the merge; follow it in `merge` on the pull request |
+| GET | `/api/repos/:owner/:repo/pulls/:number/files` | The pull request's commits and files changed (added, modified, deleted, with line counts; binary and files over 512 KB flagged) |
+| GET | `/api/repos/:owner/:repo/pulls/:number/diff?path=` | One file's hunks, with 3 lines of context |
+
+The diff of an open pull request compares the head with its merge base on the target branch, as
+`git diff target...source` does, so changes made on the target meanwhile are not shown. Once
+merged, it shows what landed.

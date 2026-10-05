@@ -17,6 +17,7 @@
 		"@cloudflare/ci": "0.2.0",
 		"@resvg/resvg-wasm": "2.6.2",
 		"better-auth": "1.7.7",
+		"diff": "9",
 		"hono": "^4.13.12",
 		"satori": "0.32.0",
 		"semver": "7",
