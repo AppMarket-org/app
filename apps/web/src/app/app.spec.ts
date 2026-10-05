@@ -20,16 +20,21 @@ describe('App', () => {
       'dev/Hello',
     );
     expect(el.querySelector('.brand')).toBeNull();
+    expect(el.querySelector('.brand-mark .logo')).not.toBeNull();
+    expect(el.querySelector('.brand-mark')?.getAttribute('href')).toBe('/');
 
     TestBed.inject(Seo).setHeading([{ label: 'Dashboard' }]);
     fixture.detectChanges();
     expect(el.querySelector('h1')?.textContent?.trim()).toBe('Dashboard');
     expect(el.querySelector('.brand')).toBeNull();
+    expect(el.querySelector('.brand-mark .logo')).not.toBeNull();
+    expect(el.querySelector('.brand-mark')?.getAttribute('href')).toBe('/');
     expect(el.querySelector('a[routerLink="/dashboard"]')).toBeNull();
 
     TestBed.inject(Seo).setHeading([]);
     fixture.detectChanges();
     expect(el.querySelector('.brand')).not.toBeNull();
     expect(el.querySelector('.heading')).toBeNull();
+    expect(el.querySelector('.brand-mark')).toBeNull();
   });
 });
