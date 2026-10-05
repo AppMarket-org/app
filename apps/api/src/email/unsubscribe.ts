@@ -3,7 +3,7 @@
  * topic with a key derived from the auth secret, so a link works without signing in and cannot be
  * forged for another user.
  */
-export const EMAIL_TOPICS = ["impacts"] as const;
+export const EMAIL_TOPICS = ["impacts", "pulls"] as const;
 export type EmailTopic = (typeof EMAIL_TOPICS)[number];
 
 async function key(secret: string): Promise<CryptoKey> {
