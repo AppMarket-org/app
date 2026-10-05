@@ -1,205 +1,187 @@
-<section class="hero" aria-labelledby="hero-heading">
-  <p class="eyebrow">
-    <span class="status-dot" aria-hidden="true"></span> Host code. Build apps. Work together.
-  </p>
-  <h1 id="hero-heading">A Git platform<br /><span>for agents and humans.</span></h1>
-  <p class="hero-description">
-    Host your Git repositories and build apps with your coding agents. Keep the context behind every
-    commit. Deploy into your own Cloudflare account, and publish or sell what you build.
-  </p>
-  <div class="hero-actions">
-    <a mat-flat-button routerLink="/search"
-      >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-    >
-    <a mat-stroked-button routerLink="/dashboard/new">Build an app</a>
-  </div>
-  <p class="hero-note">
-    Git repositories <span aria-hidden="true">/</span> Agent checkpoints
-    <span aria-hidden="true">/</span> App deployments
-  </p>
-</section>
+<app-home-hero />
 
-<app-workspace-preview />
+<div class="home-content">
+  <app-workspace-preview />
 
-<div class="agent-strip">
-  <span class="mono">BUILD WITH YOUR CODING AGENT</span>
-  <div>
-    <span>Claude Code</span><span>Codex</span><span class="agent-mcp">Other agents via MCP</span>
-  </div>
-</div>
-
-<section class="workflow" id="workflow" aria-labelledby="workflow-heading">
-  <div class="section-intro">
-    <p class="eyebrow">01 / THE APP DEVELOPMENT PLATFORM</p>
-    <h2 id="workflow-heading">Host your code.<br />Build and deploy apps.</h2>
-    <p>
-      Bring your Git workflow to appmarket. Host your repositories, build with your agent, and
-      deploy your apps from one platform.
-    </p>
-  </div>
-  <div class="workflow-steps">
-    <article>
-      <span class="step-number">01</span>
-      <div>
-        <h3>Create a Git repository.</h3>
-        <p>
-          Host your app’s source in an appmarket Git repository. Clone it locally, push changes with
-          Git, and manage versions as your app grows.
-        </p>
-        <a mat-button routerLink="/dashboard/new"
-          >Create a repository <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-        >
-      </div>
-      <mat-icon class="step-icon" aria-hidden="true">code_blocks</mat-icon>
-    </article>
-    <article>
-      <span class="step-number">02</span>
-      <div>
-        <h3>Build with your coding agent.</h3>
-        <p>
-          Use Claude Code, Codex, or another agent via MCP. The appmarket CLI links prompts, tool
-          calls, model details, and token usage to the Git commits they produced.
-        </p>
-        <a mat-button href="#cli"
-          >Meet the CLI <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-        >
-      </div>
-      <mat-icon class="step-icon" aria-hidden="true">history</mat-icon>
-    </article>
-    <article>
-      <span class="step-number">03</span>
-      <div>
-        <h3>Deploy into your own account.</h3>
-        <p>
-          Connect Cloudflare and deploy supported apps into your infrastructure. Your account is the
-          destination, and you stay in control of what runs there.
-        </p>
-        <a mat-button routerLink="/search"
-          >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-        >
-      </div>
-      <mat-icon class="step-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>
-    </article>
-  </div>
-</section>
-
-<section class="context-section" aria-labelledby="context-heading">
-  <div class="context-copy">
-    <p class="eyebrow">02 / AGENT CHECKPOINTS</p>
-    <h2 id="context-heading">Git history, with<br />the agent context.</h2>
-    <p>
-      See the prompts, tool calls, model details, and token usage behind agent-generated commits.
-      Checkpoints stay linked to your Git history, so you can trace how your app was built.
-    </p>
-    <a mat-stroked-button routerLink="/dashboard"
-      >View your repositories <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-    >
-  </div>
-  <div class="trust-details">
-    <article>
-      <mat-icon aria-hidden="true">lock</mat-icon>
-      <div>
-        <h3>Private by default</h3>
-        <p>
-          New checkpoints keep prompts visible to you and your organization. You choose what to
-          share.
-        </p>
-      </div>
-    </article>
-    <article>
-      <mat-icon aria-hidden="true">shield</mat-icon>
-      <div>
-        <h3>Redaction happens locally</h3>
-        <p>
-          The CLI scans for known secrets and configured patterns before checkpoint data is stored
-          or uploaded.
-        </p>
-      </div>
-    </article>
-    <article>
-      <mat-icon aria-hidden="true">terminal</mat-icon>
-      <div>
-        <h3>A CLI you can inspect</h3>
-        <p>
-          Open source and MIT licensed. See what it records, and keep working if a hook or upload
-          fails.
-        </p>
-      </div>
-    </article>
-  </div>
-</section>
-
-<section class="catalog" aria-labelledby="categories-heading">
-  <div class="section-heading">
+  <div class="agent-strip">
+    <span class="mono">BUILD WITH YOUR CODING AGENT</span>
     <div>
-      <p class="eyebrow">03 / THE MARKETPLACE</p>
-      <h2 id="categories-heading">Apps you can build on.</h2>
+      <span>Claude Code</span><span>Codex</span><span class="agent-mcp">Other agents via MCP</span>
     </div>
-    <a mat-stroked-button routerLink="/search"
-      >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-    >
   </div>
-  <p class="catalog-description">
-    Discover source-available apps to deploy or build on. Publish your own apps for free or set a
-    price and sell them. Buyers can deploy supported apps into their own Cloudflare accounts.
-  </p>
-  <mat-chip-set aria-label="Categories">
-    @for (category of categories; track category.slug) {
-      <a mat-chip [routerLink]="['/category', category.slug]">{{ category.name }}</a>
-    }
-  </mat-chip-set>
-  <div class="latest-heading">
-    <h3 id="latest-heading">Latest apps</h3>
-    <span class="mono">FROM THE COMMUNITY</span>
-  </div>
-  <div aria-labelledby="latest-heading">
-    @if (latest().items.length > 0) {
-      <div class="grid">
-        @for (item of latest().items; track item.id) {
-          <app-repo-card [repo]="item" />
-        }
-      </div>
-    } @else {
-      <div class="empty">
-        <mat-icon aria-hidden="true">deployed_code</mat-icon>
+
+  <section class="workflow" id="workflow" aria-labelledby="workflow-heading">
+    <div class="section-intro">
+      <p class="eyebrow">01 / THE APP DEVELOPMENT PLATFORM</p>
+      <h2 id="workflow-heading">Host your code.<br />Build and deploy apps.</h2>
+      <p>
+        Bring your Git workflow to appmarket. Host your repositories, build with your agent, and
+        deploy your apps from one platform.
+      </p>
+    </div>
+    <div class="workflow-steps">
+      <article>
+        <span class="step-number">01</span>
         <div>
-          <h3>Publish an app from your repository.</h3>
+          <h3>Create a Git repository.</h3>
           <p>
-            No apps are published yet. Create a repository, build your app, and publish it to the
-            marketplace.
+            Host your app’s source in an appmarket Git repository. Clone it locally, push changes with
+            Git, and manage versions as your app grows.
+          </p>
+          <a mat-button routerLink="/dashboard/new"
+            >Create a repository <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+          >
+        </div>
+        <mat-icon class="step-icon" aria-hidden="true">code_blocks</mat-icon>
+      </article>
+      <article>
+        <span class="step-number">02</span>
+        <div>
+          <h3>Build with your coding agent.</h3>
+          <p>
+            Use Claude Code, Codex, or another agent via MCP. The appmarket CLI links prompts, tool
+            calls, model details, and token usage to the Git commits they produced.
+          </p>
+          <a mat-button href="#cli"
+            >Meet the CLI <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+          >
+        </div>
+        <mat-icon class="step-icon" aria-hidden="true">history</mat-icon>
+      </article>
+      <article>
+        <span class="step-number">03</span>
+        <div>
+          <h3>Deploy into your own account.</h3>
+          <p>
+            Connect Cloudflare and deploy supported apps into your infrastructure. Your account is the
+            destination, and you stay in control of what runs there.
+          </p>
+          <a mat-button routerLink="/search"
+            >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+          >
+        </div>
+        <mat-icon class="step-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>
+      </article>
+    </div>
+  </section>
+
+  <section class="context-section" aria-labelledby="context-heading">
+    <div class="context-copy">
+      <p class="eyebrow">02 / AGENT CHECKPOINTS</p>
+      <h2 id="context-heading">Git history, with<br />the agent context.</h2>
+      <p>
+        See the prompts, tool calls, model details, and token usage behind agent-generated commits.
+        Checkpoints stay linked to your Git history, so you can trace how your app was built.
+      </p>
+      <a mat-stroked-button routerLink="/dashboard"
+        >View your repositories <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+      >
+    </div>
+    <div class="trust-details">
+      <article>
+        <mat-icon aria-hidden="true">lock</mat-icon>
+        <div>
+          <h3>Private by default</h3>
+          <p>
+            New checkpoints keep prompts visible to you and your organization. You choose what to
+            share.
           </p>
         </div>
-        <a mat-stroked-button routerLink="/dashboard/new"
-          >Publish an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-        >
-      </div>
-    }
-  </div>
-</section>
-
-<section class="cli-section" id="cli" aria-labelledby="cli-heading">
-  <div>
-    <p class="eyebrow">04 / THE APPMARKET CLI</p>
-    <h2 id="cli-heading">Connect your agent.<br />Capture your Git context.</h2>
-    <p>
-      Sign in, connect your coding agent, and initialize your Git repository. The CLI captures agent
-      checkpoints when you commit.
-    </p>
-    <a
-      mat-button
-      href="https://www.npmjs.com/package/appmarket"
-      target="_blank"
-      rel="noopener noreferrer"
-      >Explore the open-source CLI <mat-icon iconPositionEnd>north_east</mat-icon></a
-    >
-  </div>
-  <div class="terminal">
-    <div class="terminal-heading">
-      <mat-icon aria-hidden="true">terminal</mat-icon><span>Quick start · Claude Code</span>
+      </article>
+      <article>
+        <mat-icon aria-hidden="true">shield</mat-icon>
+        <div>
+          <h3>Redaction happens locally</h3>
+          <p>
+            The CLI scans for known secrets and configured patterns before checkpoint data is stored
+            or uploaded.
+          </p>
+        </div>
+      </article>
+      <article>
+        <mat-icon aria-hidden="true">terminal</mat-icon>
+        <div>
+          <h3>A CLI you can inspect</h3>
+          <p>
+            Open source and MIT licensed. See what it records, and keep working if a hook or upload
+            fails.
+          </p>
+        </div>
+      </article>
     </div>
-    <pre
-      aria-label="CLI quick start commands"
-    ><code><span class="comment"># Sign in to appmarket</span>
+  </section>
+
+  <section class="catalog" aria-labelledby="categories-heading">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">03 / THE MARKETPLACE</p>
+        <h2 id="categories-heading">Apps you can build on.</h2>
+      </div>
+      <a mat-stroked-button routerLink="/search"
+        >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+      >
+    </div>
+    <p class="catalog-description">
+      Discover source-available apps to deploy or build on. Publish your own apps for free or set a
+      price and sell them. Buyers can deploy supported apps into their own Cloudflare accounts.
+    </p>
+    <mat-chip-set aria-label="Categories">
+      @for (category of categories; track category.slug) {
+        <a mat-chip [routerLink]="['/category', category.slug]">{{ category.name }}</a>
+      }
+    </mat-chip-set>
+    <div class="latest-heading">
+      <h3 id="latest-heading">Latest apps</h3>
+      <span class="mono">FROM THE COMMUNITY</span>
+    </div>
+    <div aria-labelledby="latest-heading">
+      @if (latest().items.length > 0) {
+        <div class="grid">
+          @for (item of latest().items; track item.id) {
+            <app-repo-card [repo]="item" />
+          }
+        </div>
+      } @else {
+        <div class="empty">
+          <mat-icon aria-hidden="true">deployed_code</mat-icon>
+          <div>
+            <h3>Publish an app from your repository.</h3>
+            <p>
+              No apps are published yet. Create a repository, build your app, and publish it to the
+              marketplace.
+            </p>
+          </div>
+          <a mat-stroked-button routerLink="/dashboard/new"
+            >Publish an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+          >
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="cli-section" id="cli" aria-labelledby="cli-heading">
+    <div>
+      <p class="eyebrow">04 / THE APPMARKET CLI</p>
+      <h2 id="cli-heading">Connect your agent.<br />Capture your Git context.</h2>
+      <p>
+        Sign in, connect your coding agent, and initialize your Git repository. The CLI captures agent
+        checkpoints when you commit.
+      </p>
+      <a
+        mat-button
+        href="https://www.npmjs.com/package/appmarket"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Explore the open-source CLI <mat-icon iconPositionEnd>north_east</mat-icon></a
+      >
+    </div>
+    <div class="terminal">
+      <div class="terminal-heading">
+        <mat-icon aria-hidden="true">terminal</mat-icon><span>Quick start · Claude Code</span>
+      </div>
+      <pre
+        aria-label="CLI quick start commands"
+      ><code><span class="comment"># Sign in to appmarket</span>
 npx appmarket login
 
 <span class="comment"># Connect your agent</span>
@@ -207,24 +189,26 @@ npx appmarket adapter install claude-code
 
 <span class="comment"># Run inside your Git repository</span>
 npx appmarket init</code></pre>
-    <div class="terminal-footer">
-      <span class="status-dot" aria-hidden="true"></span> Also supports Codex &amp; MCP
+      <div class="terminal-footer">
+        <span class="status-dot" aria-hidden="true"></span> Also supports Codex &amp; MCP
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="closing" aria-labelledby="closing-heading">
-  <p class="eyebrow">GIT HOSTING TO APP DEPLOYMENT</p>
-  <h2 id="closing-heading">Build your next app<br />on appmarket.</h2>
-  <p>
-    Build with your agent. Deploy into your own Cloudflare account. Publish or sell your app when
-    it’s ready.
-  </p>
-  <div class="hero-actions">
-    <a mat-flat-button routerLink="/search"
-      >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-    ><a mat-button routerLink="/dashboard/new"
-      >Build an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
-    >
-  </div>
-</section>
+  <section class="closing" aria-labelledby="closing-heading">
+    <p class="eyebrow">GIT HOSTING TO APP DEPLOYMENT</p>
+    <h2 id="closing-heading">Build your next app<br />on appmarket.</h2>
+    <p>
+      Build with your agent. Deploy into your own Cloudflare account. Publish or sell your app when
+      it’s ready.
+    </p>
+    <div class="hero-actions">
+      <a mat-flat-button routerLink="/search"
+        >Deploy an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+      ><a mat-button routerLink="/dashboard/new"
+        >Build an app <mat-icon iconPositionEnd>arrow_forward</mat-icon></a
+      >
+    </div>
+  </section>
+
+</div>

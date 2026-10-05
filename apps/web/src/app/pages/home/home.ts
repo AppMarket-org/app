@@ -5,13 +5,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { CATEGORIES, type RepoPage } from '@appmarket/shared';
 import { RepoCard } from '../../components/repo-card/repo-card';
+import { HomeHero } from './home-hero/home-hero';
 import { WorkspacePreview } from './workspace-preview/workspace-preview';
 import { Seo } from '../../seo/seo';
 
 @Component({
   selector: 'app-home',
   host: { class: 'marketing-page' },
-  imports: [MatButtonModule, MatChipsModule, MatIconModule, RouterLink, RepoCard, WorkspacePreview],
+  imports: [HomeHero, MatButtonModule, MatChipsModule, MatIconModule, RouterLink, RepoCard, WorkspacePreview],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

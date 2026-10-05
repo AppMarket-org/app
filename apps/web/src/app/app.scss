@@ -94,8 +94,8 @@ main {
   box-sizing: border-box;
 }
 main:has(app-home) {
-  padding-top: 0;
-  padding-bottom: 0;
+  max-width: none;
+  padding: 0;
 }
 footer {
   display: flex;
