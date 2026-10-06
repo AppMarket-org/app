@@ -74,6 +74,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `pr create [--title] [--body] [--base]` / `pr list [--state]` / `pr view [n]` / `pr merge [n]` | Pull requests for this branch: from a fork or agent session to the original repo, otherwise to the default branch |
 | `issue create --title t [--type bug\|feature\|task] [--priority p] [--assign agents\|<handle>] [--body b]` | Open an issue; assigned to `agents`, it is a task on the Agents board |
 | `issue list [--state] [--type] [--assign]` / `issue view <n>` / `issue comment <n> --body b` / `issue close <n> [--not-planned]` / `issue reopen <n>` | Issues of this repo (of the original repo from a fork or agent session) |
+| `memory list [query] [--tag t]` / `memory add <text> [--tags a,b] [--pin]` / `memory remove <id>` / `memory export` | The repo's memory; `export` writes it into a section of AGENTS.md for tools that read that file |
 | `setup-git [--remove]` | Let plain `git` sign in to appmarket.org remotes with this login (no tokens to copy, nothing in the keychain) |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
@@ -108,7 +109,9 @@ issue with its comments, and `issue_comment` reports progress or asks a question
 In any appmarket repo, `memory_recall`, `memory_remember`, `memory_update` and `memory_forget`
 read and keep the repo's memory: short notes about its conventions, decisions and traps, shared by
 its people and agents across sessions and vendors. Notes are redacted on your machine before they
-are sent (and again on the server); pinned notes come first.
+are sent (and again on the server); pinned notes come first. With the Claude Code or Codex adapter (or the Claude Code
+plugin), each session starts with the repo's memory in its context: pinned notes first, then the
+most recent, within about 4,000 characters. Offline or signed out, sessions start without it.
 
 See [docs/agent-collaboration.md](https://github.com/AppMarket-org/app/blob/main/docs/agent-collaboration.md).
 

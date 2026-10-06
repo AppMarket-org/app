@@ -5,13 +5,15 @@ import { log } from "../log.ts";
 import { readFileSync } from "node:fs";
 import { checkpoint } from "./checkpoint.ts";
 import { settingsPath } from "./adapter.ts";
+import { sessionStartContext } from "./memory.ts";
 
 /**
  * `appmarket hook claude-code|codex`: the harness runs this for each hook event with JSON on stdin (#112).
- * Records only sessions working in an initialised repo, prints nothing (UserPromptSubmit output
- * would be added to the conversation) and always exits 0.
+ * Records only sessions working in an initialised repo and always exits 0. It prints nothing
+ * (UserPromptSubmit output would be added to the conversation) except at SessionStart, where the
+ * repo's memory (#196) is added to the agent's context.
  */
-export function hook(harness: string, stdin: string, opts: { plugin?: boolean } = {}): number {
+export async function hook(harness: string, stdin: string, opts: { plugin?: boolean } = {}): Promise<number> {
 	try {
 		if (harness !== "claude-code" && harness !== "codex") return 0;
 		// Plugin and `adapter install` both present: the settings hooks record, the plugin's stay quiet.
@@ -29,6 +31,10 @@ export function hook(harness: string, stdin: string, opts: { plugin?: boolean } 
 		// itself is not recorded: it would land in the next commit's checkpoint.
 		if (committed) return checkpoint({ hook: true, cwd: root });
 		for (const event of eventsFor(input, undefined, root, harness)) append(key, event);
+		if (input.hook_event_name === "SessionStart") {
+			const context = await sessionStartContext(root);
+			if (context) process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context } })}\n`);
+		}
 	} catch (error) {
 		log("hook claude-code failed", error);
 	}
