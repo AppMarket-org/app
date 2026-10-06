@@ -248,6 +248,12 @@ export async function pushedCommits(gitRepo: string, limit = 200): Promise<{ com
 
 /** Code browser: a ref (branch, tag or commit) resolved to its commit, or null. */
 export async function resolveRef(gitRepo: string, ref: string): Promise<string | null> {
+	// Artifacts log() accepts short names only. Resolve qualified refs from Git's advertisement
+	// so a tag can be selected even when a branch has the same name.
+	if (ref.startsWith("refs/heads/") || ref.startsWith("refs/tags/")) {
+		const result = await listRefs(gitRepo).catch(() => null);
+		return result?.refs[ref] ?? null;
+	}
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const [commit] = await git.log({ ref, limit: 1 }).catch(() => []);
 	return commit?.hash ?? null;
