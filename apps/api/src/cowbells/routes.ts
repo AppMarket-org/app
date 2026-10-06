@@ -40,10 +40,13 @@ export const repoCowbellRoutes = new Hono<Ctx>()
 		return c.json(status);
 	});
 
+/** The repos a user rang that they can still see: one that has since gone private (and is not theirs) drops out. */
+export async function cowbelledRepos(session: NonNullable<Session>) {
+	const ids = await cowbells().repoIdsFor(session.user.id);
+	return (await repos().findByIds(ids)).filter((repo) => canView(repo, session));
+}
+
 /** The signed-in user's cowbelled repos. Mounted under /api/cowbells. */
 export const cowbellRoutes = new Hono<Ctx>().use(requireRole()).get("/", async (c) => {
-	const session = c.get("session");
-	const ids = await cowbells().repoIdsFor(session!.user.id);
-	// A repo you rang that has since gone private (and is not yours) drops out of the list.
-	return c.json({ items: (await repos().findByIds(ids)).filter((repo) => canView(repo, session)) });
+	return c.json({ items: await cowbelledRepos(c.get("session")!) });
 });

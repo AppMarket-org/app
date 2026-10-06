@@ -16,7 +16,7 @@ function setup() {
   const repos = vi.fn(() => of([{ id: '1', name: 'Angular Example App', summary: 'Angular Example App', fullName: 'dev/angular-example-app', runtime: 'workers-js', state: 'draft', updatedAt: '2026-10-04T00:00:00Z' }]));
   const deployments = vi.fn(() => of([]));
   const cowbells = vi.fn(() => of([]));
-  const http = vi.fn(() => of({ items: [] }));
+  const http = vi.fn((url: string) => of(url === '/api/me/counts' ? { repositories: 1, apps: 7, cowbells: 2 } : { items: [] }));
   TestBed.configureTestingModule({ providers: [
     provideRouter([routes.find((r) => r.path === 'dashboard')!]),
     { provide: Auth, useValue: { load: async () => ({ id: 'user' }) } },
@@ -66,5 +66,13 @@ it('supports directly opening a cowbells URL without loading repository or deplo
   expect(harness.routeNativeElement!.querySelector('.saved')).not.toBeNull();
   expect(api.repos).not.toHaveBeenCalled();
   expect(api.deployments).not.toHaveBeenCalled();
-  expect(api.http).not.toHaveBeenCalled();
+  expect(api.http).toHaveBeenCalledExactlyOnceWith('/api/me/counts');
+});
+
+it("shows every tab's count from the start, holding the badge's place while it loads", async () => {
+  setup();
+  const harness = await RouterTestingHarness.create('/dashboard/cowbells');
+  const counts = [...harness.fixture.nativeElement.querySelectorAll('.tab-count')].map((e: Element) => e.textContent?.trim());
+  // Cowbells comes from its own page (no cowbells in the mock), the others from /api/me/counts.
+  expect(counts).toEqual(['1', '7', '0']);
 });

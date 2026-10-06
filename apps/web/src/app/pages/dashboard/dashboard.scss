@@ -6,12 +6,17 @@
 }
 .tab-content { display: flex; align-items: center; gap: 0.625rem; white-space: nowrap; }
 .tab-content mat-icon { width: 1.25rem; height: 1.25rem; font-size: 1.25rem; }
-.tab-count { padding: 0.125rem 0.5rem; border-radius: 1rem; background: var(--mat-sys-surface-container-high); font: var(--mat-sys-label-small); }
+.tab-count {
+  // The badge holds its space before its number arrives, so the tabs do not shift.
+  display: inline-block; box-sizing: border-box; min-width: 1.75rem; min-height: 1.25rem; padding: 0.125rem 0.5rem; text-align: center;
+  border-radius: 1rem; background: var(--mat-sys-surface-container-high); font: var(--mat-sys-label-small);
+  &.pending { opacity: 0.5; }
+}
 
 @media (max-width: 37.5rem) {
   .dashboard-nav { margin: -1rem -1rem 1.5rem; padding-inline: 0; --mat-tab-header-label-text-size: 0.75rem; }
   .dashboard-nav a { min-width: 0; padding-inline: 0.5rem; }
   .tab-content { gap: 0.375rem; }
   .tab-content mat-icon { display: none; }
-  .tab-count { padding-inline: 0.375rem; }
+  .tab-count { min-width: 1.5rem; padding-inline: 0.375rem; }
 }

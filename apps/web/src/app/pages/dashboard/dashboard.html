@@ -1,12 +1,12 @@
 <nav mat-tab-nav-bar class="dashboard-nav" [tabPanel]="panel" [mat-stretch-tabs]="false" aria-label="Dashboard sections">
   <a mat-tab-link routerLink="/dashboard" routerLinkActive #repos="routerLinkActive" [routerLinkActiveOptions]="{ exact: true }" [active]="repos.isActive">
-    <span class="tab-content"><mat-icon aria-hidden="true">folder_open</mat-icon>Repositories @if (counts.repositories() !== undefined) { <span class="tab-count">{{ counts.repositories() }}</span> }</span>
+    <span class="tab-content"><mat-icon aria-hidden="true">folder_open</mat-icon>Repositories <span class="tab-count" [class.pending]="counts.repositories() === undefined">{{ counts.repositories() ?? '' }}</span></span>
   </a>
   <a mat-tab-link routerLink="/dashboard/apps" routerLinkActive #apps="routerLinkActive" [active]="apps.isActive">
-    <span class="tab-content"><mat-icon aria-hidden="true">cloud_upload</mat-icon>Running apps @if (counts.apps() !== undefined) { <span class="tab-count">{{ counts.apps() }}</span> }</span>
+    <span class="tab-content"><mat-icon aria-hidden="true">cloud_upload</mat-icon>Running apps <span class="tab-count" [class.pending]="counts.apps() === undefined">{{ counts.apps() ?? '' }}</span></span>
   </a>
   <a mat-tab-link routerLink="/dashboard/cowbells" routerLinkActive #cowbells="routerLinkActive" [active]="cowbells.isActive">
-    <span class="tab-content"><mat-icon svgIcon="cowbell" aria-hidden="true" />Cowbells @if (counts.cowbells() !== undefined) { <span class="tab-count">{{ counts.cowbells() }}</span> }</span>
+    <span class="tab-content"><mat-icon svgIcon="cowbell" aria-hidden="true" />Cowbells <span class="tab-count" [class.pending]="counts.cowbells() === undefined">{{ counts.cowbells() ?? '' }}</span></span>
   </a>
 </nav>
 <mat-tab-nav-panel #panel><router-outlet /></mat-tab-nav-panel>
