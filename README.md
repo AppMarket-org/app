@@ -105,11 +105,11 @@ machine before anything is uploaded.
 
 ```mermaid
 flowchart LR
-    A["🧑‍💻 You + your coding agent"] -- "git push · checkpoints" --> R[("appmarket.org<br>Git repositories")]
-    R -- "pull request" --> C["✅ Checks<br>containers"]
-    C -- "merge" --> R
-    R -- "publish" --> M["🛒 Marketplace"]
-    M -- "one-click deploy" --> CF["☁️ The buyer's own<br>Cloudflare account"]
+    A["🧑‍💻 You + agent"] -- push --> R[("appmarket.org")]
+    R -- PR --> C["✅ Checks"]
+    C -- merge --> R
+    R -- publish --> M["🛒 Marketplace"]
+    M -- deploy --> CF["☁️ Your Cloudflare"]
 ```
 
 The whole platform runs on Cloudflare: Workers for the web app and API, Artifacts for Git storage,
@@ -134,7 +134,7 @@ You need Node 22.18+ and pnpm.
 
 ```sh
 pnpm install
-cp apps/api/.dev.vars.example apps/api/.dev.vars    # then fill in the values, see docs/auth-setup.md
+cp apps/api/.dev.vars.example apps/api/.dev.vars    # fill in: docs/auth-setup.md
 pnpm --filter @appmarket/api db:migrate             # local D1 database
 pnpm dev                                            # API on :5173, web app on :4200
 ```
