@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import type { Checkpoint, CheckpointPage } from "@appmarket/shared";
 import { transcriptEvents } from "../adapters/claude-code.ts";
 import { codexTranscriptEvents } from "../adapters/codex.ts";
+import { OPENCODE_PLUGIN, opencodePluginPath } from "../adapters/opencode.ts";
 import { call } from "../api.ts";
 import { HOME, VERSION } from "../config.ts";
 import { loadCredentials } from "../credentials.ts";
@@ -85,6 +86,26 @@ export function adapterHealth(harness: HookHarness): Check {
 	return { level: "ok", name, detail: `${version ?? bin}; newest transcript readable (model ${settings.model})` };
 }
 
+function opencodeInstalled(): boolean {
+	return existsSync(opencodePluginPath());
+}
+
+/** #119: OpenCode sends everything through the plugin, so the check is that this version's plugin is in place. */
+export function opencodeHealth(): Check {
+	const name = "OpenCode adapter";
+	const version = versionOf("opencode");
+	const path = opencodePluginPath();
+	if (!opencodeInstalled()) return version ? { level: "warn", name, detail: `opencode ${version} found but the adapter is not installed: appmarket adapter install opencode` } : { level: "ok", name, detail: "opencode not found; nothing to check" };
+	let current = false;
+	try {
+		current = readFileSync(path, "utf8") === OPENCODE_PLUGIN;
+	} catch {
+		// Unreadable: reported as outdated.
+	}
+	if (!current) return { level: "warn", name, detail: `${path} is from another CLI version: appmarket adapter install opencode` };
+	return { level: "ok", name, detail: `${version ? `opencode ${version}; ` : ""}plugin ${path}` };
+}
+
 function pluginInstalled(): boolean {
 	try {
 		return readFileSync(join(homedir(), ".claude", "plugins", "installed_plugins.json"), "utf8").includes("appmarket@");
@@ -132,7 +153,7 @@ export async function doctor(api: string): Promise<number> {
 		else if (session) checks.push({ level: "ok", name: "Sign-in", detail: `${creds.handle} on ${creds.device}, expires ${session.session.expiresAt.slice(0, 10)}` });
 		else checks.push({ level: "warn", name: "Sign-in", detail: `${creds.handle} (could not verify while offline)` });
 	}
-	checks.push(adapterHealth("claude-code"), adapterHealth("codex"));
+	checks.push(adapterHealth("claude-code"), adapterHealth("codex"), opencodeHealth());
 	const sessions = join(HOME, "sessions");
 	checks.push(existsSync(sessions) ? { level: "ok", name: "Local state", detail: HOME } : { level: "warn", name: "Local state", detail: `${HOME} has no session buffers yet` });
 
@@ -151,7 +172,7 @@ export async function status(api: string): Promise<number> {
 	console.log(`Server:            ${server}`);
 	console.log(`Queued uploads:    ${items.length}${items.length ? ` (oldest ${items.map((i) => i.firstAt).sort()[0]!.slice(0, 16).replace("T", " ")})` : ""}`);
 	console.log(`Last upload:       ${state.lastUploadAt ? state.lastUploadAt.slice(0, 16).replace("T", " ") : "never"}`);
-	console.log(`Adapters:          ${(["claude-code", "codex"] as const).filter(adapterInstalled).join(", ") || "none (appmarket adapter install <harness>)"}`);
+	console.log(`Adapters:          ${[...(["claude-code", "codex"] as const).filter(adapterInstalled), ...(opencodeInstalled() ? ["opencode"] : [])].join(", ") || "none (appmarket adapter install <harness>)"}`);
 	const root = repoRoot();
 	const repo = root ? gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root }) : "";
 	if (!root || !repo) {

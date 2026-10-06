@@ -1,5 +1,6 @@
 import { append, bufferKey } from "../buffer.ts";
 import { COMMIT_COMMAND, eventsFor, type HookInput } from "../adapters/claude-code.ts";
+import { opencodeEvents, type OpencodeInput } from "../adapters/opencode.ts";
 import { gitOr, repoRoot } from "../git.ts";
 import { log } from "../log.ts";
 import { readFileSync } from "node:fs";
@@ -8,13 +9,15 @@ import { settingsPath } from "./adapter.ts";
 import { sessionStartContext } from "./memory.ts";
 
 /**
- * `appmarket hook claude-code|codex`: the harness runs this for each hook event with JSON on stdin (#112).
+ * `appmarket hook claude-code|codex|opencode`: the harness runs this for each hook event with JSON on stdin
+ * (#112; OpenCode's plugin sends its own shape, #119).
  * Records only sessions working in an initialised repo and always exits 0. It prints nothing
  * (UserPromptSubmit output would be added to the conversation) except at SessionStart, where the
  * repo's memory (#196) is added to the agent's context.
  */
 export async function hook(harness: string, stdin: string, opts: { plugin?: boolean } = {}): Promise<number> {
 	try {
+		if (harness === "opencode") return opencodeHook(JSON.parse(stdin) as OpencodeInput);
 		if (harness !== "claude-code" && harness !== "codex") return 0;
 		// Plugin and `adapter install` both present: the settings hooks record, the plugin's stay quiet.
 		if (opts.plugin && harness === "claude-code" && settingsHooksInstalled()) return 0;
@@ -38,6 +41,19 @@ export async function hook(harness: string, stdin: string, opts: { plugin?: bool
 	} catch (error) {
 		log("hook claude-code failed", error);
 	}
+	return 0;
+}
+
+/** #119: one event from the OpenCode plugin. An agent's `git commit` gets its checkpoint right away. */
+function opencodeHook(input: OpencodeInput): number {
+	const root = input.directory ? repoRoot(input.directory) : null;
+	if (!root) return 0;
+	if (!gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root })) return 0;
+	if (gitOr(["config", "--get", "appmarket.disabled"], "", { cwd: root }) === "true") return 0;
+	const command = typeof input.args?.command === "string" ? input.args.command : "";
+	if (input.event === "tool" && input.tool === "bash" && !input.error && COMMIT_COMMAND.test(command)) return checkpoint({ hook: true, cwd: root });
+	const key = bufferKey(root);
+	for (const event of opencodeEvents(input, root)) append(key, event);
 	return 0;
 }
 

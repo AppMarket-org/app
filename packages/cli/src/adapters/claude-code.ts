@@ -34,7 +34,7 @@ export function argsSummary(tool: string, input: Record<string, unknown> = {}, r
 	// Codex apply_patch: the command is the whole patch; keep only the files it touches.
 	const patch = pick("command") ?? "";
 	const patched = patch.startsWith("*** Begin Patch") ? [...patch.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)].map((m) => m[1]!.trim()).join(", ") : undefined;
-	const value = patched ?? pick("command") ?? pick("file_path") ?? pick("notebook_path") ?? pick("pattern") ?? pick("url") ?? pick("query") ?? pick("description");
+	const value = patched ?? pick("command") ?? pick("file_path") ?? pick("filePath") ?? pick("notebook_path") ?? pick("pattern") ?? pick("url") ?? pick("query") ?? pick("description") ?? pick("path");
 	let out = (value ?? (tool.startsWith("mcp__") ? Object.keys(input).join(",") : "")).replace(/\s+/g, " ");
 	if (root) out = out.split(`${root}/`).join("").split(root).join(".");
 	const home = homedir();

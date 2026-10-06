@@ -32,7 +32,7 @@ Usage: appmarket <command> [options]
   record [--prompt <text>] [--tool <name> --args <a>] [--for <sha>]   Add events (adapters pipe JSON on stdin)
   checkpoint [--commit <sha>] [--force]                          Checkpoint a commit (the git hook runs this)
   mcp                                                            MCP server (stdio) with record_context, for agents without hooks
-  adapter install|uninstall claude-code|codex                    Record agent sessions (prompts, tools, model, effort, usage)
+  adapter install|uninstall claude-code|codex|opencode           Record agent sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
   push-notes                                                     Push refs/notes/appmarket to the appmarket remote (runs after each checkpoint)
   session start [<owner>/<repo>] [--harness <name>]              Start an agent session: its own branches in the repo, protected branches off limits

@@ -5,7 +5,7 @@ model and effort produced each commit. Open source (MIT) so you can read exactly
 
 ```sh
 npx appmarket login                      # device code sign-in; the token goes in your OS keychain
-appmarket adapter install claude-code    # once per machine: record Claude Code sessions (or: codex)
+appmarket adapter install claude-code    # once per machine: record Claude Code sessions (or: codex, opencode)
 cd my-app && appmarket init              # post-commit hook + repo config
 git commit ...                           # every commit gets a checkpoint
 ```
@@ -32,6 +32,17 @@ review them once: open Codex and run `/hooks`. Prompts and tool calls (shell com
 files an `apply_patch` touched) come from the hooks; model, Codex version, `model_reasoning_effort`,
 token usage (reasoning tokens separately) and the final message come from the session's rollout
 file at commit time.
+
+## OpenCode
+
+`appmarket adapter install opencode` writes a plugin to `~/.config/opencode/plugins/appmarket.ts`
+and adds the `appmarket mcp` server to `~/.config/opencode/opencode.json` (other settings and MCP
+servers are kept; with only an `opencode.jsonc`, it prints the entry to add). The plugin forwards
+OpenCode's events as they happen: prompts (not the task tool's subagent prompts), tool calls with
+their outcome, the model and variant (effort), token usage and cost per model call, and the final
+message. Each event goes to a detached `appmarket hook opencode`, so OpenCode never waits for it.
+Usage of the model call that ran `git commit` arrives just after the commit, so it counts toward
+the next checkpoint.
 
 ## Other agents (MCP)
 
@@ -83,7 +94,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
-| `adapter install\|uninstall claude-code\|codex` | Add or remove the hooks for Claude Code or Codex |
+| `adapter install\|uninstall claude-code\|codex\|opencode` | Add or remove the hooks for Claude Code or Codex, or the OpenCode plugin |
 | `sync` | Upload queued checkpoints now (offline uploads retry with backoff for 7 days) |
 | `status` | Queued uploads, last upload, adapters, and this repo's checkpoints still waiting for a push (flags those older than 30 days) |
 | `doctor` | Checks git hooks, sign-in, connection, and each adapter against the installed harness (reads its newest transcript) |
