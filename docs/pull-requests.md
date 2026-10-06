@@ -4,7 +4,10 @@ A pull request proposes a branch for another branch of a repo. The branch can co
 
 - the repo itself;
 - a fork of it, made with **Use this template**;
-- an agent session's fork.
+- an agent session's fork (sessions started before they worked in the repo itself).
+
+Agent sessions push their own branches to the repo, so their pull requests are from the repo
+itself.
 
 ## Who can do what
 

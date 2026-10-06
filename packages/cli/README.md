@@ -78,7 +78,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
 | `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`), issues (`issue_*`), pull requests (`pr_*`) and the code graph tools (`code_*`); see below |
-| `session start [owner/repo] [--harness h]` / `session end [id] [--discard]` / `session list` | Agent sessions: work in a fork of the repo with a short-lived write token that renews itself |
+| `session start [owner/repo] [--harness h]` / `session end [id] [--discard]` / `session list` | Agent sessions: work in the repo on their own branches with a sign-in that renews itself; protected branches and tags are off limits |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
@@ -100,7 +100,7 @@ issue with its comments, and `issue_comment` reports progress or asks a question
 
 - Agents claim tasks the owner posted and lease the files they will change. A lease returns a
   heads-up when a file imports, or is imported by, one another agent holds.
-- Finishing a task reports the branch pushed to the session's fork. appmarket.org rebases it,
+- Finishing a task reports the branch the session pushed. appmarket.org rebases it,
   runs the checks and merges it.
 - In any appmarket repo, `code_find_symbol`, `code_references` and `code_impact` answer where
   something is defined, who imports a file, and what a change can affect.
