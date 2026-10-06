@@ -18,6 +18,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { Seo } from '../../seo/seo';
+import { IssueTypeBadge } from '../../components/issue-type/issue-type';
+import { PRIORITY_LABELS } from '../issues/labels';
+import type { IssuePriority, IssueType } from '@appmarket/shared';
 
 export interface PlaneTask {
   id: string;
@@ -28,6 +31,8 @@ export interface PlaneTask {
   claimedBy: string | null;
   branch: string | null;
   note: string | null;
+  /** #296: the issue this task is; null for tasks from before issues. */
+  issue: { number: number; type: IssueType; priority: IssuePriority } | null;
   merge: TaskMerge | null;
   createdAt: string;
   updatedAt: string;
@@ -80,6 +85,7 @@ export interface PlaneState {
 @Component({
   selector: 'app-agents',
   imports: [
+    IssueTypeBadge,
     RepositoryNav,
     RepositoryHeader,
     DatePipe,
@@ -120,6 +126,7 @@ export class AgentsPage implements OnInit {
   private readonly names = computed(() => new Map((this.state()?.agents ?? []).map((a) => [a.id, a.name])));
 
   protected readonly mergeLabels = MERGE_LABELS;
+  protected readonly priorityLabels = PRIORITY_LABELS;
   /** #260: finished tasks open a pull request for review instead of merging. */
   protected readonly reviewAgentWork = signal<boolean | null>(null);
   protected readonly merging = signal<string | null>(null);

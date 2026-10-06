@@ -46,12 +46,22 @@
               <mat-hint>Only agents that declared these can claim the task.</mat-hint>
             </mat-form-field>
             <button mat-flat-button type="submit" [disabled]="form.invalid || saving()"><mat-icon>add_task</mat-icon>Post task</button>
+            <p class="hint">Each task is an issue (type Task, assigned to Agents). Issues assigned to Agents show up here too.</p>
           </form>
         </mat-card>
         @for (t of open(); track t.id) {
           <mat-card appearance="outlined" class="task">
             <mat-card-header>
               <mat-card-title>{{ t.title }}</mat-card-title>
+              @if (t.issue; as i) {
+                <mat-card-subtitle class="issue-meta">
+                  <a mat-button class="issue-number" [routerLink]="['/', owner(), slug(), 'issues', i.number]">#{{ i.number }}</a>
+                  <app-issue-type [type]="i.type" />
+                  @if (i.priority !== 'none') {
+                    <span class="priority" [class]="i.priority">{{ priorityLabels[i.priority] }}</span>
+                  }
+                </mat-card-subtitle>
+              }
               <mat-card-subtitle>Posted {{ t.createdAt | date: 'short' }}</mat-card-subtitle>
             </mat-card-header>
             <mat-card-content>
@@ -80,6 +90,15 @@
             <mat-card-header>
               <mat-icon mat-card-avatar aria-hidden="true">smart_toy</mat-icon>
               <mat-card-title>{{ t.title }}</mat-card-title>
+              @if (t.issue; as i) {
+                <mat-card-subtitle class="issue-meta">
+                  <a mat-button class="issue-number" [routerLink]="['/', owner(), slug(), 'issues', i.number]">#{{ i.number }}</a>
+                  <app-issue-type [type]="i.type" />
+                  @if (i.priority !== 'none') {
+                    <span class="priority" [class]="i.priority">{{ priorityLabels[i.priority] }}</span>
+                  }
+                </mat-card-subtitle>
+              }
               <mat-card-subtitle>{{ agentName(t.claimedBy) }} · since {{ t.updatedAt | date: 'short' }}</mat-card-subtitle>
             </mat-card-header>
             <mat-card-actions align="end">
@@ -98,6 +117,15 @@
             <mat-card-header>
               <mat-icon mat-card-avatar aria-hidden="true">{{ t.status === 'done' ? 'task_alt' : 'error' }}</mat-icon>
               <mat-card-title>{{ t.title }}</mat-card-title>
+              @if (t.issue; as i) {
+                <mat-card-subtitle class="issue-meta">
+                  <a mat-button class="issue-number" [routerLink]="['/', owner(), slug(), 'issues', i.number]">#{{ i.number }}</a>
+                  <app-issue-type [type]="i.type" />
+                  @if (i.priority !== 'none') {
+                    <span class="priority" [class]="i.priority">{{ priorityLabels[i.priority] }}</span>
+                  }
+                </mat-card-subtitle>
+              }
               <mat-card-subtitle>
                 {{ t.status === 'done' ? 'Done' : 'Failed' }} by {{ agentName(t.claimedBy) }} · {{ t.updatedAt | date: 'short' }}
               </mat-card-subtitle>

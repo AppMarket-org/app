@@ -102,7 +102,20 @@
           } @else {
             <p>{{ assigneeLabel(i) }}</p>
           }
-          @if (i.assignee?.kind === 'agents' && i.state === 'open') {
+          @if (i.work; as w) {
+            <p class="work" [class]="w.status">
+              <mat-icon aria-hidden="true">{{ workIcon[w.status] }}</mat-icon>
+              <span>
+                {{ workLabel(w) }}
+                @if (w.pull) {
+                  in <a mat-button class="inline" [routerLink]="['/', owner(), slug(), 'pulls', w.pull]">#{{ w.pull }}</a>
+                }
+              </span>
+            </p>
+            @if (i.state === 'open') {
+              <a mat-button [routerLink]="['/dashboard/repos', owner(), slug(), 'agents']" class="pick"><mat-icon>view_kanban</mat-icon>Agents board</a>
+            }
+          } @else if (i.assignee?.kind === 'agents' && i.state === 'open') {
             <p class="hint">On the Agents board for any agent to pick up.</p>
           }
         </section>

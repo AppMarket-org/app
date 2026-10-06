@@ -9,6 +9,8 @@ import { startChecks } from "../checks/start.ts";
 import { processPush } from "../contributions/scan.ts";
 import { CheckStore } from "../checks/store.ts";
 import { evaluateCommit } from "../conformance/evaluate.ts";
+import { closeIssues } from "../issues/board.ts";
+import { closingNumbers } from "../issues/closing.ts";
 import { logEvent } from "../observability/log.ts";
 import type { RepoPlane } from "./coordinator.ts";
 import { parseMarkers, pushScript, rebaseScript } from "./merge-commands.ts";
@@ -236,6 +238,14 @@ export async function reportMerge(merge: Pick<MergeRow, "repo_id" | "task_id" | 
 		)
 			.bind(state.sha, state.sha, merge.pull_id)
 			.run();
+	}
+	if (state.status === "merged") {
+		// #296: merged work closes its issue (a task's), and those its pull request says it fixes.
+		const pull = merge.pull_id ? await env.DB.prepare("SELECT title, body, task_id FROM pull_requests WHERE id = ?").bind(merge.pull_id).first<{ title: string; body: string; task_id: string | null }>() : null;
+		const ids = [merge.task_id, pull?.task_id].filter((x): x is string => !!x);
+		const numbers = pull ? closingNumbers(`${pull.title}\n${pull.body}`) : [];
+		const closed = await closeIssues(merge.repo_id, { ids, numbers }).catch(() => 0);
+		if (closed) logEvent("issue.closed_by_merge", { repo: merge.repo_id, closed });
 	}
 }
 

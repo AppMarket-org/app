@@ -45,6 +45,9 @@
             @if (i.assignee) {
               <span class="assignee"><mat-icon aria-hidden="true">{{ i.assignee.kind === 'agents' ? 'smart_toy' : 'person' }}</mat-icon>{{ assigneeLabel(i) }}</span>
             }
+            @if (i.work && i.state === 'open' && i.work.status !== 'open') {
+              <span class="assignee work"><mat-icon aria-hidden="true">{{ i.work.status === 'claimed' ? 'smart_toy' : i.work.status === 'review' ? 'rate_review' : i.work.status === 'failed' ? 'error_outline' : 'task_alt' }}</mat-icon>{{ i.work.status === 'claimed' ? 'In progress' : i.work.status === 'review' ? 'In review' : i.work.status === 'failed' ? 'Agent failed' : 'Done' }}</span>
+            }
             @if (i.comments) {
               <span class="assignee"><mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>{{ i.comments }}</span>
             }

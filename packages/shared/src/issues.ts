@@ -18,6 +18,16 @@ export type IssueCloseReason = "completed" | "not_planned";
 /** A person (by handle), or any agent working on the repo's board. */
 export type IssueAssignee = { kind: "user"; handle: string; name: string } | { kind: "agents" };
 
+/** #296: an issue for agents, as its task on the Agents board stands. */
+export interface IssueWork {
+	/** open: waiting for an agent; claimed: an agent is on it; review: in a pull request; done, failed. */
+	status: "open" | "claimed" | "review" | "done" | "failed";
+	/** The agent working on it (or that did). */
+	agent: string | null;
+	/** The pull request with the work, when there is one. */
+	pull: number | null;
+}
+
 export interface Issue {
 	number: number;
 	title: string;
@@ -33,6 +43,8 @@ export interface Issue {
 	createdAt: string;
 	updatedAt: string;
 	closedAt: string | null;
+	/** Its task on the Agents board, when it is for agents (#296). */
+	work: IssueWork | null;
 	/** The viewer may change type, priority, assignee and state (the repo's owners and members). */
 	canTriage: boolean;
 	/** The viewer may edit the title and description (the author, or a triager). */

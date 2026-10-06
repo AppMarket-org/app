@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { A2A_ERRORS, agentCard, type Board, type BoardOps, dispatch, taskFromMessage, taskState } from "./a2a";
 import type { PlaneTask } from "./model";
 
-const task = (o: Partial<PlaneTask> = {}): PlaneTask => ({ id: "t1", title: "Add /health", description: "Return ok", capabilities: ["typescript"], status: "open", claimedBy: null, branch: null, note: null, merge: null, createdAt: "2026-10-05T10:00:00Z", updatedAt: "2026-10-05T10:00:00Z", ...o });
+const task = (o: Partial<PlaneTask> = {}): PlaneTask => ({ id: "t1", title: "Add /health", description: "Return ok", capabilities: ["typescript"], status: "open", claimedBy: null, branch: null, note: null, issue: null, merge: null, createdAt: "2026-10-05T10:00:00Z", updatedAt: "2026-10-05T10:00:00Z", ...o });
 const agents = [{ id: "a1", name: "Claude Code", vendor: "anthropic", capabilities: ["typescript"], lastSeen: "" }];
 
 function fakeOps(board: Board, canWrite = true): BoardOps & { created: unknown[]; removed: string[] } {
