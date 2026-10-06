@@ -17,7 +17,11 @@
 	// /api/*, /sitemap.xml and SSR data fetches go to the API Worker without a public hop.
 	"services": [{ "binding": "API", "service": "appmarket-api" }],
 	// R22: custom domains (Cloudflare creates the DNS records and certificates on deploy).
-	"routes": [{ "pattern": "appmarket.org", "custom_domain": true }],
+	// www.appmarket.org answers with a permanent redirect to appmarket.org (server.ts).
+	"routes": [
+		{ "pattern": "appmarket.org", "custom_domain": true },
+		{ "pattern": "www.appmarket.org", "custom_domain": true }
+	],
 	// PRD R4: top level is production; `wrangler deploy --env staging` targets the staging API.
 	"env": {
 		"staging": {

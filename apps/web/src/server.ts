@@ -31,11 +31,14 @@ export const reqHandler = createRequestHandler(async (req) => {
  * (robots.txt is a static asset served before the Worker, and must not block crawling, or crawlers
  * would never see the noindex.)
  */
-const INDEXED_HOSTS = new Set(['appmarket.org', 'www.appmarket.org']);
+const INDEXED_HOSTS = new Set(['appmarket.org']);
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		if (INDEXED_HOSTS.has(new URL(request.url).hostname)) return serve(request, env, ctx);
+		const url = new URL(request.url);
+		// One canonical host: www.appmarket.org moves permanently to appmarket.org, path and query kept.
+		if (url.hostname === 'www.appmarket.org') return Response.redirect(`https://appmarket.org${url.pathname}${url.search}`, 301);
+		if (INDEXED_HOSTS.has(url.hostname)) return serve(request, env, ctx);
 		return withHeaders(await serve(request, env, ctx), { 'X-Robots-Tag': 'noindex, nofollow' });
 	},
 };

@@ -59,7 +59,8 @@ export const ENVIRONMENTS = {
 		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
 		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
 		access: { teamDomain: "cportsche1.cloudflareaccess.com", aud: "89058f739ae9e219a89f42fd868b501fb80d6a62a8b4dff41aff407fdb771d8b" },
-		emailFrom: "",
+		// #230: same sender as staging; the appmarket.org domain is onboarded to Email Service.
+		emailFrom: "notifications@appmarket.org",
 		emailRemote: true,
 	},
 } as const;
