@@ -17,6 +17,20 @@
           Require an approval before merging
           <span class="hint">An owner or member other than the author approves first.</span>
         </mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="branches">
+          <mat-label>Protected branches</mat-label>
+          <mat-chip-grid #grid aria-label="Protected branches">
+            <mat-chip-row [removable]="false" class="fixed">default branch</mat-chip-row>
+            @for (b of s.protectedBranches; track b) {
+              <mat-chip-row (removed)="removeBranch(b)" [disabled]="busy()">
+                {{ b }}
+                <button matChipRemove [attr.aria-label]="'Unprotect ' + b"><mat-icon>cancel</mat-icon></button>
+              </mat-chip-row>
+            }
+            <input placeholder="release/*" [matChipInputFor]="grid" (matChipInputTokenEnd)="addBranch($event)" [disabled]="busy()" />
+          </mat-chip-grid>
+          <mat-hint>Agent sessions push any other branch and open pull requests; they never push here. A name, or a prefix ending in *.</mat-hint>
+        </mat-form-field>
         @if (template(); as t) {
           <mat-slide-toggle [checked]="s.upstreamSync" [disabled]="busy()" (change)="set('upstreamSync', $event.checked)">
             Get updates from {{ t }}

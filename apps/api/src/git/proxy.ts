@@ -11,6 +11,8 @@ import { checkPull } from "../pulls/checks.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { OwnerStore } from "../owners/store.ts";
 import { processPush } from "../contributions/scan.ts";
+import { pullSettings } from "../pulls/store.ts";
+import { type ParsedPush, parsePushCommands, refusals, refusedPush, ZERO } from "./push-rules.ts";
 import { updatedRefs, withMessages } from "./sideband.ts";
 import { credentialOf, FORWARD_REQUEST_HEADERS, FORWARD_RESPONSE_HEADERS, type GitRoute, isArtifactsToken, parseGitPath } from "./access.ts";
 
@@ -58,6 +60,7 @@ export async function gitProxy(c: Context): Promise<Response> {
 	if (!repo?.gitRepo || repo.state === "removed") return credential ? refuse(404, "Repository not found.") : challenge("Repository not found, or sign in to see it.");
 
 	let upstreamToken: string;
+	let agent: AgentSession | null = null;
 	if (credential && isArtifactsToken(credential)) {
 		upstreamToken = credential;
 	} else {
@@ -68,9 +71,84 @@ export async function gitProxy(c: Context): Promise<Response> {
 			if (!session) return challenge(decision);
 			return refuse(decision.startsWith("Not found") ? 404 : 403, decision);
 		}
+		// #308: an agent session's sign-in works on its own repo only, under the branch rules.
+		agent = session ? await agentSessionOf(session) : null;
+		if (agent && agent.repoId !== repo.id) return refuse(403, "This agent session works on another repository.");
 		upstreamToken = await artifactsToken(repo.gitRepo, write ? "write" : "read");
 	}
+	if (agent && route.kind === "service" && write) return agentPush(c, repo, route, upstreamToken, agent);
 	return forward(c, repo.gitRepo, route, upstreamToken, repo);
+}
+
+interface AgentSession {
+	id: string;
+	repoId: string;
+}
+
+/** The agent session (#309) a sign-in belongs to, if it is one. */
+async function agentSessionOf(session: AppSession): Promise<AgentSession | null> {
+	const row = await env.DB.prepare("SELECT id, repo_id FROM agent_sessions WHERE auth_session_id = ? AND status = 'active'").bind(session.session.id).first<{ id: string; repo_id: string }>();
+	return row ? { id: row.id, repoId: row.repo_id } : null;
+}
+
+/**
+ * #308: an agent session's push. Its commands are read from the start of the request and checked
+ * against the branch rules before anything reaches Artifacts; a refused push gets Git's own
+ * "remote rejected" answer. Branches it creates are remembered (it may delete only those).
+ */
+async function agentPush(c: Context, repo: Repo, route: GitRoute, token: string, agent: AgentSession): Promise<Response> {
+	let body = c.req.raw.body;
+	if (!body) return refuse(403, "Empty push.");
+	const gzip = (c.req.header("content-encoding") ?? "").toLowerCase() === "gzip";
+	if (gzip) body = body.pipeThrough(new DecompressionStream("gzip"));
+	const reader = body.getReader();
+	let buffered = new Uint8Array(0);
+	let parsed: (ParsedPush & { end: number }) | null = null;
+	while (!parsed) {
+		const { done, value } = await reader.read();
+		if (value) {
+			const next = new Uint8Array(buffered.length + value.length);
+			next.set(buffered);
+			next.set(value, buffered.length);
+			buffered = next;
+		}
+		parsed = parsePushCommands(buffered);
+		if (done || buffered.length > 1_000_000) break;
+	}
+	if (!parsed) return refuse(403, "Could not read this push.");
+	const settings = await pullSettings(repo.id);
+	const { defaultBranch } = await listBranches(repo.gitRepo!);
+	const created = await env.DB.prepare("SELECT branch FROM agent_session_branches WHERE session_id = ?").bind(agent.id).all<{ branch: string }>();
+	const problems = refusals(parsed.commands, { protectedBranches: [defaultBranch, ...settings.protectedBranches].filter(Boolean), created: new Set(created.results.map((r) => r.branch)) });
+	if (problems.length) {
+		logEvent("git.agent_push_refused", { repo: repo.fullName, session: agent.id, refs: problems.map((p) => p.ref) });
+		return new Response(refusedPush(parsed, problems), { status: 200, headers: { "Content-Type": "application/x-git-receive-pack-result", "Cache-Control": "no-cache" } });
+	}
+	// Forward the bytes read so far, then the rest of the request.
+	const head = buffered;
+	const rest = new ReadableStream<Uint8Array>({
+		start(controller) {
+			controller.enqueue(head);
+		},
+		async pull(controller) {
+			const { done, value } = await reader.read();
+			if (done) controller.close();
+			else controller.enqueue(value);
+		},
+		cancel(reason) {
+			return reader.cancel(reason);
+		},
+	});
+	const response = await forward(c, repo.gitRepo!, route, token, repo, { body: rest, dropContentEncoding: gzip });
+	const newBranches = parsed.commands.filter((cmd) => cmd.old === ZERO && cmd.new !== ZERO && cmd.ref.startsWith("refs/heads/")).map((cmd) => cmd.ref.slice("refs/heads/".length));
+	const deleted = parsed.commands.filter((cmd) => cmd.new === ZERO && cmd.ref.startsWith("refs/heads/")).map((cmd) => cmd.ref.slice("refs/heads/".length));
+	if (response.ok && (newBranches.length || deleted.length)) {
+		await env.DB.batch([
+			...newBranches.map((b) => env.DB.prepare("INSERT OR IGNORE INTO agent_session_branches (session_id, branch) VALUES (?, ?)").bind(agent.id, b)),
+			...deleted.map((b) => env.DB.prepare("DELETE FROM agent_session_branches WHERE session_id = ? AND branch = ?").bind(agent.id, b)),
+		]);
+	}
+	return response;
 }
 
 async function allowed(repo: Repo, session: AppSession | null, write: boolean): Promise<"ok" | string> {
@@ -114,16 +192,17 @@ async function pullLinks(repo: Repo, branches: string[]): Promise<string[]> {
 	return lines.length ? ["", ...lines, ""] : [];
 }
 
-async function forward(c: Context, gitRepo: string, route: GitRoute, token: string, repo?: Repo): Promise<Response> {
+async function forward(c: Context, gitRepo: string, route: GitRoute, token: string, repo?: Repo, override?: { body: ReadableStream<Uint8Array>; dropContentEncoding: boolean }): Promise<Response> {
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const remote = (await git.info()).remote;
 	const target = route.kind === "info/refs" ? `${remote}/info/refs?service=${route.service}` : `${remote}/${route.service}`;
 	const headers = new Headers({ Authorization: `Bearer ${token}` });
 	for (const h of FORWARD_REQUEST_HEADERS) {
 		const v = c.req.header(h);
-		if (v) headers.set(h, v);
+		if (v && !(override?.dropContentEncoding && h === "content-encoding")) headers.set(h, v);
 	}
-	const upstream = await fetch(target, { method: c.req.method, headers, body: c.req.method === "POST" ? c.req.raw.body : undefined, ...(c.req.method === "POST" ? { duplex: "half" } : {}) } as RequestInit);
+	const body = override ? override.body : c.req.method === "POST" ? c.req.raw.body : undefined;
+	const upstream = await fetch(target, { method: c.req.method, headers, body, ...(c.req.method === "POST" ? { duplex: "half" } : {}) } as RequestInit);
 	if (upstream.status === 401 || upstream.status === 403) {
 		logEvent("git.proxy_denied", { status: upstream.status, service: route.service });
 		return challenge("That token is not valid for this repository.");

@@ -9,3 +9,11 @@
   font: var(--mat-sys-body-small);
   color: var(--mat-sys-on-surface-variant);
 }
+
+.branches {
+  width: 100%;
+}
+
+.fixed {
+  --mat-chip-label-text-color: var(--mat-sys-on-surface-variant);
+}
