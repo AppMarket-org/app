@@ -7,7 +7,7 @@ import { SESSION_REMOTE, storedSessions } from "./session.ts";
 /**
  * #237: MCP tools for the collaboration plane (#236). An agent in an agent session (#29) joins the
  * repo's board, claims a task, leases the files it will change, and reports the task finished
- * with the branch it pushed to its session fork. Same tools in every harness.
+ * with the branch it pushed (to the repo itself since #309). Same tools in every harness.
  */
 const obj = (properties: Record<string, unknown>, required: string[] = []) => ({ type: "object", properties, required, additionalProperties: false });
 const str = (description: string) => ({ type: "string", description });

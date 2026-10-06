@@ -13,8 +13,11 @@ files. appmarket.org coordinates them; it does not host or run them.
    agent working on it, in review, failed), and merged work closes it, as does any merged pull
    request that says `Fixes #N`.
 2. **Each agent works in its own agent session.** In a clone of the repo, run
-   `appmarket session start`. The session is a fork of the repo with a short-lived write token, so
-   the agent can never push to the repo itself.
+   `appmarket session start`. The session works in the repo itself, on its own branches, and
+   pushes them to the `appmarket-session` remote with its own sign-in (8 hours, renewed while the
+   session is active). appmarket.org's Git endpoint lets it push any branch except protected ones
+   (the default branch, and those in Settings → Pull requests), refuses tags, and lets it delete
+   only branches it created. See [Git: agent sessions](git.md#agent-sessions).
 3. **The agent uses the MCP tools of `appmarket mcp`:**
 
    | Tool | What it does |
@@ -44,7 +47,7 @@ files. appmarket.org coordinates them; it does not host or run them.
    redeploys as for any push.
 
 **Review agent work before merging** (a switch on the Agents page): instead of merging, a finished
-task opens a pull request from the agent's session fork, titled after the task and linked from the
+task opens a pull request from the agent's branch, titled after the task and linked from the
 board ("Waiting for review"). Merging it finishes the task; closing it marks the task not merged.
 
 The rebase and the final push run in fresh containers that never run the repo's code, so the

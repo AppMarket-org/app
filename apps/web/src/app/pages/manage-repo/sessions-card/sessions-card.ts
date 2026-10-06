@@ -12,7 +12,7 @@ import type { AgentSession } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmDialog, type ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog';
 
-/** #29 (R9): agent sessions, each working in its own fork with a short-lived write token. */
+/** #29 (R9), #309: agent sessions, working in the repo on their own branches (older ones in a fork). */
 @Component({
   selector: 'app-sessions-card',
   imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatListModule],
@@ -33,14 +33,14 @@ export class SessionsCard {
   }
 
   protected async end(s: AgentSession): Promise<void> {
-    await this.act(() => this.http.post(`/api/sessions/${s.id}/end`, {}), 'Session ended; its token is revoked');
+    await this.act(() => this.http.post(`/api/sessions/${s.id}/end`, {}), 'Session ended; its sign-in is revoked');
   }
 
   protected async discard(s: AgentSession): Promise<void> {
     const ok = await firstValueFrom(
       this.dialog
         .open<ConfirmDialog, ConfirmDialogData, boolean>(ConfirmDialog, {
-          data: { title: 'Discard this session?', message: `Its fork ${s.fork} and everything pushed to it are deleted. Work you already merged stays.`, confirm: 'Discard' },
+          data: { title: 'Discard this session?', message: s.inRepo ? 'Its sign-in is revoked and the branches it created are deleted. Work you already merged stays.' : `Its fork ${s.fork} and everything pushed to it are deleted. Work you already merged stays.`, confirm: 'Discard' },
           width: '28rem',
         })
         .afterClosed(),

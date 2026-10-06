@@ -34,8 +34,8 @@ Usage: appmarket <command> [options]
   adapter install|uninstall claude-code|codex                    Record agent sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
   push-notes                                                     Push refs/notes/appmarket to the appmarket remote (runs after each checkpoint)
-  session start [<owner>/<repo>] [--harness <name>]              Start an agent session in its own fork (short-lived write token)
-  session end [<id>] [--discard]                                 End it (revokes the token) or discard it (deletes the fork)
+  session start [<owner>/<repo>] [--harness <name>]              Start an agent session: its own branches in the repo, protected branches off limits
+  session end [<id>] [--discard]                                 End it (revokes its sign-in) or discard it (also deletes its branches)
   session list [<owner>/<repo>]                                  Agent sessions of this repo
   pr create [--title t] [--body b] [--base branch]                 Open a pull request for this branch (to the repo it was forked from, for forks)
   pr list [--state open|merged|closed|all] | view [n] | merge [n]  Pull requests of this repo; view and merge default to this branch's
