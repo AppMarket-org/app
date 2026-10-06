@@ -1,7 +1,7 @@
 <a mat-button class="skip-link" href="#main-content">Skip to content</a>
 <mat-toolbar [class.workspace]="workspace()">
   @if (seo.heading().length === 0) {
-    <a mat-button class="brand" routerLink="/" aria-label="appmarket.org home"
+    <a mat-button class="brand" [routerLink]="auth.user() ? '/dashboard' : '/'" [attr.aria-label]="auth.user() ? 'Dashboard' : 'appmarket.org home'"
       ><img class="logo" src="/brand/logo.png" alt="" /><span class="wordmark"
         >appmarket<span class="domain">.org</span></span
       ></a
@@ -10,8 +10,8 @@
     <a
       mat-icon-button
       class="brand-mark"
-      [routerLink]="workspace() ? '/dashboard' : '/'"
-      [attr.aria-label]="workspace() ? 'Dashboard home' : 'appmarket.org home'"
+      [routerLink]="auth.user() ? '/dashboard' : '/'"
+      [attr.aria-label]="auth.user() ? 'Dashboard' : 'appmarket.org home'"
     >
       <img class="logo" src="/brand/logo.png" alt="" />
     </a>
@@ -54,23 +54,31 @@
   @if (!auth.user()) {
     <a mat-button class="wide product-link" href="/#workflow">How it works</a>
   }
+  <form class="toolbar-search wide" role="search" (submit)="search($event, query.value); query.value = ''">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+      <input #query matInput type="search" name="q" placeholder="Search apps" aria-label="Search apps" maxlength="100" autocomplete="off" />
+    </mat-form-field>
+  </form>
   <a mat-button class="wide" routerLink="/search">{{ workspace() ? 'Apps' : 'Explore apps' }}</a>
   <a mat-icon-button class="narrow" routerLink="/search" aria-label="Search" matTooltip="Search"
     ><mat-icon>search</mat-icon></a
   >
 
   @if (auth.user(); as user) {
-    @if (seo.heading().length !== 1 || seo.heading()[0].label !== 'Dashboard') {
-      <a mat-button class="wide" routerLink="/dashboard">Dashboard</a>
-      <a
-        mat-icon-button
-        class="narrow"
-        routerLink="/dashboard"
-        aria-label="Dashboard"
-        matTooltip="Dashboard"
-        ><mat-icon>space_dashboard</mat-icon></a
-      >
-    }
+    <!-- Create things from anywhere, like GitHub's "+" menu. -->
+    <button mat-stroked-button class="create-trigger" type="button" [matMenuTriggerFor]="create" aria-label="Create new…" matTooltip="Create new…">
+      <mat-icon>add</mat-icon><mat-icon class="caret">arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #create="matMenu" xPosition="before">
+      <a mat-menu-item routerLink="/dashboard/new"><mat-icon>create_new_folder</mat-icon>New repository</a>
+      <a mat-menu-item routerLink="/dashboard/new" [queryParams]="{ import: 'github' }"><mat-icon>upload_file</mat-icon>Import repository</a>
+      <mat-divider />
+      <a mat-menu-item routerLink="/dashboard/cloudflare"><mat-icon>cloud</mat-icon>Connect Cloudflare</a>
+      <a mat-menu-item routerLink="/search"><mat-icon>rocket_launch</mat-icon>Deploy an app</a>
+      <mat-divider />
+      <a mat-menu-item routerLink="/settings/orgs/new"><mat-icon>corporate_fare</mat-icon>New organization</a>
+    </mat-menu>
     <button
       mat-icon-button
       class="account-trigger"

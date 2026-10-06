@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, type ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import type { Repo, RepoInput } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { RepoForm, type RepoFormValue } from '../../components/repo-form/repo-form';
@@ -39,7 +39,11 @@ export class NewRepo {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly fieldErrors = signal<Record<string, string>>({});
 
+  private readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
+
   constructor() {
+    // "Import repository" in the + menu: start at the GitHub address.
+    if (inject(ActivatedRoute).snapshot.queryParamMap.get('import') === 'github') afterNextRender(() => this.importInput()?.nativeElement.focus());
     inject(Seo).set({ title: 'New repo', description: 'Create a repo for your app on appmarket.org.', path: '/dashboard/new', noindex: true });
   }
 
