@@ -32,7 +32,7 @@ Usage: appmarket <command> [options]
   record [--prompt <text>] [--tool <name> --args <a>] [--for <sha>]   Add events (adapters pipe JSON on stdin)
   checkpoint [--commit <sha>] [--force]                          Checkpoint a commit (the git hook runs this)
   mcp                                                            MCP server (stdio) with record_context, for agents without hooks
-  adapter install|uninstall claude-code|codex|opencode           Record agent sessions (prompts, tools, model, effort, usage)
+  adapter install|uninstall claude-code|codex|opencode|cursor    Record agent sessions (prompts, tools, model, effort, usage)
   sync                                                           Upload queued checkpoints now
   push-notes                                                     Push refs/notes/appmarket to the appmarket remote (runs after each checkpoint)
   session start [<owner>/<repo>] [--harness <name>]              Start an agent session: its own branches in the repo, protected branches off limits
@@ -84,6 +84,7 @@ async function main(argv: string[]): Promise<number> {
 			tag: { type: "string" },
 			tags: { type: "string" },
 			pin: { type: "boolean" },
+			project: { type: "boolean" },
 			"agents-md": { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
@@ -139,7 +140,7 @@ async function main(argv: string[]): Promise<number> {
 		case "rewritten":
 			return rewritten(rest[0] ?? "", await readStdin());
 		case "adapter":
-			return adapter(rest[0], rest[1]);
+			return adapter(rest[0], rest[1], { project: !!values.project });
 		case "sync": {
 			const r = await flush({ all: !values.quiet });
 			if (!values.quiet) console.log(`Uploaded ${r.sent}, waiting ${r.pending}, dropped ${r.failed}.`);

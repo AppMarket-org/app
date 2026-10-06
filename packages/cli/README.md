@@ -5,7 +5,7 @@ model and effort produced each commit. Open source (MIT) so you can read exactly
 
 ```sh
 npx appmarket login                      # device code sign-in; the token goes in your OS keychain
-appmarket adapter install claude-code    # once per machine: record Claude Code sessions (or: codex, opencode)
+appmarket adapter install claude-code    # once per machine: record Claude Code sessions (or: codex, opencode, cursor)
 cd my-app && appmarket init              # post-commit hook + repo config
 git commit ...                           # every commit gets a checkpoint
 ```
@@ -43,6 +43,15 @@ their outcome, the model and variant (effort), token usage and cost per model ca
 message. Each event goes to a detached `appmarket hook opencode`, so OpenCode never waits for it.
 Usage of the model call that ran `git commit` arrives just after the commit, so it counts toward
 the next checkpoint.
+
+## Cursor
+
+`appmarket adapter install cursor` adds hooks to `~/.cursor/hooks.json` (with `--project`: the
+repo's `.cursor/hooks.json`; other hooks there are kept). Restart Cursor to load them. Prompts,
+tool calls (with their outcome), the model, the reasoning-effort setting, Cursor's version and the
+final answer come from the hooks; Cursor gives hooks no token usage, so its checkpoints have none.
+An agent's `git commit` makes the checkpoint right away, and the repo's memory is added at session
+start. Hooks that fail never block Cursor (it fails open, and the hook always exits 0).
 
 ## Other agents (MCP)
 
@@ -94,7 +103,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
 | `checkpoint` | Checkpoint HEAD (the hook runs this; it always exits 0; skips commits that already have one unless `--force`) |
-| `adapter install\|uninstall claude-code\|codex\|opencode` | Add or remove the hooks for Claude Code or Codex, or the OpenCode plugin |
+| `adapter install\|uninstall claude-code\|codex\|opencode\|cursor [--project]` | Add or remove the hooks for Claude Code, Codex or Cursor (`--project`: this repo only), or the OpenCode plugin |
 | `sync` | Upload queued checkpoints now (offline uploads retry with backoff for 7 days) |
 | `status` | Queued uploads, last upload, adapters, and this repo's checkpoints still waiting for a push (flags those older than 30 days) |
 | `doctor` | Checks git hooks, sign-in, connection, and each adapter against the installed harness (reads its newest transcript) |

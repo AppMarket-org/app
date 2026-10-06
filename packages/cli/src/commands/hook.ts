@@ -1,5 +1,6 @@
 import { append, bufferKey } from "../buffer.ts";
 import { COMMIT_COMMAND, eventsFor, type HookInput } from "../adapters/claude-code.ts";
+import { cursorCommitted, cursorDirectory, cursorEvents, type CursorInput } from "../adapters/cursor.ts";
 import { opencodeEvents, type OpencodeInput } from "../adapters/opencode.ts";
 import { gitOr, repoRoot } from "../git.ts";
 import { log } from "../log.ts";
@@ -9,7 +10,7 @@ import { settingsPath } from "./adapter.ts";
 import { sessionStartContext } from "./memory.ts";
 
 /**
- * `appmarket hook claude-code|codex|opencode`: the harness runs this for each hook event with JSON on stdin
+ * `appmarket hook claude-code|codex|opencode|cursor`: the harness runs this for each hook event with JSON on stdin
  * (#112; OpenCode's plugin sends its own shape, #119).
  * Records only sessions working in an initialised repo and always exits 0. It prints nothing
  * (UserPromptSubmit output would be added to the conversation) except at SessionStart, where the
@@ -18,6 +19,7 @@ import { sessionStartContext } from "./memory.ts";
 export async function hook(harness: string, stdin: string, opts: { plugin?: boolean } = {}): Promise<number> {
 	try {
 		if (harness === "opencode") return opencodeHook(JSON.parse(stdin) as OpencodeInput);
+		if (harness === "cursor") return await cursorHook(JSON.parse(stdin) as CursorInput);
 		if (harness !== "claude-code" && harness !== "codex") return 0;
 		// Plugin and `adapter install` both present: the settings hooks record, the plugin's stay quiet.
 		if (opts.plugin && harness === "claude-code" && settingsHooksInstalled()) return 0;
@@ -40,6 +42,29 @@ export async function hook(harness: string, stdin: string, opts: { plugin?: bool
 		}
 	} catch (error) {
 		log("hook claude-code failed", error);
+	}
+	return 0;
+}
+
+/**
+ * #120: one Cursor hook. Cursor reads the hook's stdout: a prompt hook answers that the prompt may go
+ * ahead, and sessionStart adds the repo's memory to the agent's context.
+ */
+async function cursorHook(input: CursorInput): Promise<number> {
+	try {
+		const directory = cursorDirectory(input);
+		const root = directory ? repoRoot(directory) : null;
+		if (!root || !gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root })) return 0;
+		if (gitOr(["config", "--get", "appmarket.disabled"], "", { cwd: root }) === "true") return 0;
+		if (cursorCommitted(input)) return checkpoint({ hook: true, cwd: root });
+		const key = bufferKey(root);
+		for (const event of cursorEvents(input, root)) append(key, event);
+		if (input.hook_event_name === "sessionStart") {
+			const context = await sessionStartContext(root);
+			if (context) process.stdout.write(`${JSON.stringify({ additional_context: context })}\n`);
+		}
+	} finally {
+		if (input.hook_event_name === "beforeSubmitPrompt") process.stdout.write(`${JSON.stringify({ continue: true })}\n`);
 	}
 	return 0;
 }

@@ -68,6 +68,7 @@ function adapterInstalled(harness: HookHarness): boolean {
 
 /** Runs the adapter's transcript parser on the newest real transcript: a format change shows up as nothing found. */
 export function adapterHealth(harness: HookHarness): Check {
+	if (harness === "cursor") return cursorHealth();
 	const name = harness === "codex" ? "Codex adapter" : "Claude Code adapter";
 	const bin = harness === "codex" ? "codex" : "claude";
 	const version = versionOf(bin);
@@ -84,6 +85,22 @@ export function adapterHealth(harness: HookHarness): Check {
 	if (!settings?.model || !usage)
 		return { level: "fail", name, detail: `${version ?? bin}: could not read model/usage from its newest transcript; the format may have changed in this version. Commits still get checkpoints, without those fields.` };
 	return { level: "ok", name, detail: `${version ?? bin}; newest transcript readable (model ${settings.model})` };
+}
+
+/** #120: Cursor sends everything in its hooks; the check is that they are installed (globally or in this repo). */
+function cursorHealth(): Check {
+	const name = "Cursor adapter";
+	const root = repoRoot();
+	let inRepo = false;
+	try {
+		inRepo = !!root && readFileSync(settingsPath("cursor", root), "utf8").includes("appmarket hook cursor");
+	} catch {
+		// No .cursor/hooks.json in this repo.
+	}
+	const installed = adapterInstalled("cursor") || inRepo;
+	const app = existsSync("/Applications/Cursor.app") || !!versionOf("cursor");
+	if (installed) return { level: "ok", name, detail: "hooks installed (no token usage from Cursor)" };
+	return app ? { level: "warn", name, detail: "Cursor found but the adapter is not installed: appmarket adapter install cursor" } : { level: "ok", name, detail: "Cursor not found; nothing to check" };
 }
 
 function opencodeInstalled(): boolean {
@@ -153,7 +170,7 @@ export async function doctor(api: string): Promise<number> {
 		else if (session) checks.push({ level: "ok", name: "Sign-in", detail: `${creds.handle} on ${creds.device}, expires ${session.session.expiresAt.slice(0, 10)}` });
 		else checks.push({ level: "warn", name: "Sign-in", detail: `${creds.handle} (could not verify while offline)` });
 	}
-	checks.push(adapterHealth("claude-code"), adapterHealth("codex"), opencodeHealth());
+	checks.push(adapterHealth("claude-code"), adapterHealth("codex"), adapterHealth("cursor"), opencodeHealth());
 	const sessions = join(HOME, "sessions");
 	checks.push(existsSync(sessions) ? { level: "ok", name: "Local state", detail: HOME } : { level: "warn", name: "Local state", detail: `${HOME} has no session buffers yet` });
 
@@ -172,7 +189,7 @@ export async function status(api: string): Promise<number> {
 	console.log(`Server:            ${server}`);
 	console.log(`Queued uploads:    ${items.length}${items.length ? ` (oldest ${items.map((i) => i.firstAt).sort()[0]!.slice(0, 16).replace("T", " ")})` : ""}`);
 	console.log(`Last upload:       ${state.lastUploadAt ? state.lastUploadAt.slice(0, 16).replace("T", " ") : "never"}`);
-	console.log(`Adapters:          ${[...(["claude-code", "codex"] as const).filter(adapterInstalled), ...(opencodeInstalled() ? ["opencode"] : [])].join(", ") || "none (appmarket adapter install <harness>)"}`);
+	console.log(`Adapters:          ${[...(["claude-code", "codex", "cursor"] as const).filter(adapterInstalled), ...(opencodeInstalled() ? ["opencode"] : [])].join(", ") || "none (appmarket adapter install <harness>)"}`);
 	const root = repoRoot();
 	const repo = root ? gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root }) : "";
 	if (!root || !repo) {

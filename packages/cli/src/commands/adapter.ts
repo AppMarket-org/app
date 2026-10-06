@@ -1,9 +1,11 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { repoRoot } from "../git.ts";
+import { editCursorHooks } from "../adapters/cursor.ts";
 import { editOpencodeConfig, OPENCODE_PLUGIN, opencodeDir, opencodePluginPath } from "../adapters/opencode.ts";
 
-export type HookHarness = "claude-code" | "codex";
+export type HookHarness = "claude-code" | "codex" | "cursor";
 
 /** The command a harness runs; a machine without the CLI just skips it. */
 export const hookCommand = (harness: HookHarness) => `command -v appmarket >/dev/null 2>&1 && appmarket hook ${harness} || true`;
@@ -14,6 +16,8 @@ const HARNESSES: Record<HookHarness, { events: readonly string[]; toolMatcher: s
 	"claude-code": { events: ["SessionStart", "UserPromptSubmit", "PostToolUse", "PostToolUseFailure", "SessionEnd"], toolMatcher: "*", name: "Claude Code" },
 	// Codex matchers are regular expressions.
 	codex: { events: ["SessionStart", "UserPromptSubmit", "PostToolUse"], toolMatcher: ".*", name: "Codex" },
+	// #120: Cursor's own hooks.json shape (editCursorHooks); events listed in adapters/cursor.ts.
+	cursor: { events: [], toolMatcher: "", name: "Cursor" },
 };
 
 type HookEntry = { matcher?: string; hooks: { type: string; command: string; timeout?: number }[] };
@@ -22,8 +26,9 @@ type Settings = { hooks?: Record<string, HookEntry[]> } & Record<string, unknown
 // The Claude Code plugin's hooks carry --plugin and live in the plugin, not in settings.json.
 const ours = (entry: HookEntry, harness: HookHarness) => entry.hooks.some((h) => h.command.includes(`appmarket hook ${harness}`) && !h.command.includes("--plugin"));
 
-/** Claude Code: ~/.claude/settings.json. Codex: ~/.codex/hooks.json. */
-export function settingsPath(harness: HookHarness = "claude-code"): string {
+/** Claude Code: ~/.claude/settings.json. Codex: ~/.codex/hooks.json. Cursor: ~/.cursor/hooks.json (or the repo's .cursor/hooks.json). */
+export function settingsPath(harness: HookHarness = "claude-code", projectRoot?: string): string {
+	if (harness === "cursor") return join(projectRoot ?? homedir(), ".cursor", "hooks.json");
 	if (harness === "codex") return join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "hooks.json");
 	return process.env.CLAUDE_SETTINGS ?? join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), "settings.json");
 }
@@ -42,14 +47,20 @@ export function editHooks(settings: Settings, install: boolean, harness: HookHar
 	return Object.keys(hooks).length ? { ...rest, hooks } : rest;
 }
 
-/** `appmarket adapter install|uninstall claude-code|codex|opencode` */
-export function adapter(action: string | undefined, harness: string | undefined): number {
-	if ((harness !== "claude-code" && harness !== "codex" && harness !== "opencode") || (action !== "install" && action !== "uninstall")) {
-		console.error("Usage: appmarket adapter install|uninstall claude-code|codex|opencode");
+/** `appmarket adapter install|uninstall claude-code|codex|opencode|cursor [--project]` */
+export function adapter(action: string | undefined, harness: string | undefined, opts: { project?: boolean } = {}): number {
+	if ((harness !== "claude-code" && harness !== "codex" && harness !== "opencode" && harness !== "cursor") || (action !== "install" && action !== "uninstall")) {
+		console.error("Usage: appmarket adapter install|uninstall claude-code|codex|opencode|cursor [--project (cursor: this repo only)]");
 		return 1;
 	}
 	if (harness === "opencode") return opencodeAdapter(action === "install");
-	const path = settingsPath(harness);
+	let projectRoot: string | undefined;
+	if (opts.project) {
+		if (harness !== "cursor") return (console.error("--project is for Cursor (a repo's .cursor/hooks.json)."), 1);
+		projectRoot = repoRoot() ?? undefined;
+		if (!projectRoot) return (console.error("Run this inside the repo's Git checkout."), 1);
+	}
+	const path = settingsPath(harness, projectRoot);
 	let settings: Settings = {};
 	if (existsSync(path)) {
 		try {
@@ -60,14 +71,16 @@ export function adapter(action: string | undefined, harness: string | undefined)
 		}
 		copyFileSync(path, `${path}.appmarket-backup`);
 	} else mkdirSync(dirname(path), { recursive: true });
-	writeFileSync(path, JSON.stringify(editHooks(settings, action === "install", harness), null, 2) + "\n");
+	const edited = harness === "cursor" ? editCursorHooks(settings as Parameters<typeof editCursorHooks>[0], action === "install", hookCommand("cursor")) : editHooks(settings, action === "install", harness);
+	writeFileSync(path, JSON.stringify(edited, null, 2) + "\n");
 	const { name } = HARNESSES[harness];
 	if (action === "uninstall") console.log(`${name} adapter removed from ${path}.`);
 	else {
 		console.log(`${name} adapter installed in ${path}${existsSync(`${path}.appmarket-backup`) ? " (backup next to it)" : ""}.`);
-		console.log(`New ${name} sessions in repos where you ran \`appmarket init\` now record prompts, tools, model, effort and usage.`);
+		console.log(`New ${name} sessions in repos where you ran \`appmarket init\` now record prompts, tools, model, effort${harness === "cursor" ? " and the final answer" : " and usage"}.`);
 		// Codex runs user hooks only after you review them once (it remembers each hook's hash).
 		if (harness === "codex") console.log("Open Codex and run /hooks to review and trust the three appmarket hooks; until then Codex does not run them.");
+		if (harness === "cursor") console.log("Cursor gives hooks no token usage, so its checkpoints have none. Restart Cursor to load the hooks.");
 	}
 	return 0;
 }
