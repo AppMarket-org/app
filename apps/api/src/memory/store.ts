@@ -6,6 +6,7 @@ interface NoteRow {
 	text: string;
 	tags: string;
 	pinned: number;
+	public: number;
 	created_by: string;
 	source: MemorySource;
 	session_id: string | null;
@@ -22,6 +23,7 @@ const toNote = (r: NoteRow): MemoryNote => ({
 	text: r.text,
 	tags: JSON.parse(r.tags) as string[],
 	pinned: r.pinned === 1,
+	public: r.public === 1,
 	createdBy: r.author ?? "",
 	source: r.source,
 	sessionId: r.session_id,
@@ -88,19 +90,20 @@ function historyRow(id: string, version: number, action: MemoryChange["action"],
 
 export type CreateResult = { note: MemoryNote } | { error: "limit" };
 
-export async function createNote(repoId: string, input: { text: string; tags: string[]; pinned: boolean }, actor: Actor): Promise<CreateResult> {
+export async function createNote(repoId: string, input: { text: string; tags: string[]; pinned: boolean; public?: boolean }, actor: Actor): Promise<CreateResult> {
 	const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM memory_notes WHERE repo_id = ? AND deleted_at IS NULL").bind(repoId).first<{ n: number }>();
 	if ((count?.n ?? 0) >= MEMORY_LIMITS.notesPerRepo) return { error: "limit" };
 	const id = crypto.randomUUID();
 	const { text, count: redactions } = redact(input.text);
 	const note = { text, tags: input.tags, pinned: input.pinned };
 	await env.DB.batch([
-		env.DB.prepare("INSERT INTO memory_notes (id, repo_id, text, tags, pinned, created_by, source, session_id, redactions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
+		env.DB.prepare("INSERT INTO memory_notes (id, repo_id, text, tags, pinned, public, created_by, source, session_id, redactions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
 			id,
 			repoId,
 			text,
 			JSON.stringify(input.tags),
 			input.pinned ? 1 : 0,
+			input.public ? 1 : 0,
 			actor.userId,
 			actor.source,
 			actor.sessionId,
@@ -111,17 +114,18 @@ export async function createNote(repoId: string, input: { text: string; tags: st
 	return { note: (await getNote(repoId, id))! };
 }
 
-export async function updateNote(repoId: string, id: string, change: { text?: string; tags?: string[]; pinned?: boolean }, actor: Actor): Promise<MemoryNote | null> {
+export async function updateNote(repoId: string, id: string, change: { text?: string; tags?: string[]; pinned?: boolean; public?: boolean }, actor: Actor): Promise<MemoryNote | null> {
 	const current = await getNote(repoId, id);
 	if (!current) return null;
 	const redacted = change.text !== undefined ? redact(change.text) : null;
 	const next = { text: redacted?.text ?? current.text, tags: change.tags ?? current.tags, pinned: change.pinned ?? current.pinned };
 	const version = await nextVersion(id);
 	await env.DB.batch([
-		env.DB.prepare("UPDATE memory_notes SET text = ?, tags = ?, pinned = ?, redactions = redactions + ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND repo_id = ?").bind(
+		env.DB.prepare("UPDATE memory_notes SET text = ?, tags = ?, pinned = ?, public = ?, redactions = redactions + ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND repo_id = ?").bind(
 			next.text,
 			JSON.stringify(next.tags),
 			next.pinned ? 1 : 0,
+			(change.public ?? current.public) ? 1 : 0,
 			redacted?.count ?? 0,
 			id,
 			repoId,
@@ -176,4 +180,27 @@ export async function purgeRemovedRepoMemory(): Promise<number> {
 		env.DB.prepare(`DELETE FROM memory_notes WHERE repo_id IN (${removed})`),
 	]);
 	return (history?.meta.changes ?? 0) + (notes?.meta.changes ?? 0);
+}
+
+/** #198: the notes published with an app (its page shows them when the repo is public). */
+export async function publicNotes(repoId: string): Promise<MemoryNote[]> {
+	const { results } = await env.DB.prepare(`${SELECT} WHERE n.repo_id = ? AND n.deleted_at IS NULL AND n.public = 1 ORDER BY n.pinned DESC, n.updated_at DESC LIMIT 100`).bind(repoId).all<NoteRow>();
+	return results.map(toNote);
+}
+
+/** #198: a fork starts with its source's memory: every note for the source's own people, the public ones otherwise. */
+export async function copyNotes(fromRepoId: string, toRepoId: string, all: boolean, userId: string): Promise<number> {
+	const { results } = await env.DB.prepare(`SELECT text, tags, pinned, public FROM memory_notes WHERE repo_id = ? AND deleted_at IS NULL ${all ? "" : "AND public = 1"} ORDER BY created_at LIMIT ?`)
+		.bind(fromRepoId, MEMORY_LIMITS.notesPerRepo)
+		.all<{ text: string; tags: string; pinned: number; public: number }>();
+	const statements = results.flatMap((r) => {
+		const id = crypto.randomUUID();
+		const note = { text: r.text, tags: JSON.parse(r.tags) as string[], pinned: r.pinned === 1 };
+		return [
+			env.DB.prepare("INSERT INTO memory_notes (id, repo_id, text, tags, pinned, public, created_by, source) VALUES (?, ?, ?, ?, ?, 0, ?, 'web')").bind(id, toRepoId, r.text, r.tags, r.pinned, userId),
+			historyRow(id, 1, "create", note, { userId, source: "web", sessionId: null }),
+		];
+	});
+	for (let i = 0; i < statements.length; i += 50) await env.DB.batch(statements.slice(i, i + 50));
+	return results.length;
 }

@@ -1,6 +1,7 @@
 import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { MemoryApi } from '../../api/memory';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -140,6 +141,8 @@ export class RepoPage {
     );
   }
   protected readonly summaryLine = summaryLine;
+  /** #198: notes for agents the author published with the app. */
+  protected readonly memoryNotes = signal<{ id: string; text: string; tags: string[] }[]>([]);
   protected readonly categoryName = (slug: string) =>
     CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
 
@@ -157,6 +160,7 @@ export class RepoPage {
       return;
     }
     const app = data.repo;
+    if (app.state === 'published') inject(MemoryApi).published(app.fullName).subscribe({ next: (r) => this.memoryNotes.set(r.notes), error: () => undefined });
     seo.set({
       title: app.name,
       description: app.summary,

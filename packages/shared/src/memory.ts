@@ -16,6 +16,8 @@ export interface MemoryNote {
 	text: string;
 	tags: string[];
 	pinned: boolean;
+	/** #198: shown with the app on its page (when the repo is public) and copied to forks. */
+	public: boolean;
 	createdBy: string;
 	source: MemorySource;
 	sessionId: string | null;
@@ -40,6 +42,7 @@ export interface MemoryInput {
 	text?: unknown;
 	tags?: unknown;
 	pinned?: unknown;
+	public?: unknown;
 	source?: unknown;
 	session?: unknown;
 }
@@ -53,8 +56,8 @@ export function cleanMemoryTags(tags: unknown): string[] | null {
 }
 
 /** Validates a create (all fields) or an update (only the given ones); returns a problem or the values. */
-export function parseMemoryInput(input: MemoryInput, partial: boolean): { error: string } | { text?: string; tags?: string[]; pinned?: boolean; source: MemorySource; sessionId: string | null } {
-	const out: { text?: string; tags?: string[]; pinned?: boolean; source: MemorySource; sessionId: string | null } = {
+export function parseMemoryInput(input: MemoryInput, partial: boolean): { error: string } | { text?: string; tags?: string[]; pinned?: boolean; public?: boolean; source: MemorySource; sessionId: string | null } {
+	const out: { text?: string; tags?: string[]; pinned?: boolean; public?: boolean; source: MemorySource; sessionId: string | null } = {
 		source: MEMORY_SOURCES.includes(input.source as MemorySource) ? (input.source as MemorySource) : "web",
 		sessionId: typeof input.session === "string" && /^[0-9a-f-]{36}$/.test(input.session) ? input.session : null,
 	};
@@ -73,6 +76,10 @@ export function parseMemoryInput(input: MemoryInput, partial: boolean): { error:
 		if (typeof input.pinned !== "boolean") return { error: "pinned is true or false." };
 		out.pinned = input.pinned;
 	}
-	if (partial && out.text === undefined && out.tags === undefined && out.pinned === undefined) return { error: "Nothing to change." };
+	if (input.public !== undefined) {
+		if (typeof input.public !== "boolean") return { error: "public is true or false." };
+		out.public = input.public;
+	}
+	if (partial && out.text === undefined && out.tags === undefined && out.pinned === undefined && out.public === undefined) return { error: "Nothing to change." };
 	return out;
 }

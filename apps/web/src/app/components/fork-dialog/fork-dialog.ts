@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -18,7 +19,7 @@ export interface ForkDialogData {
 /** #26: "Use this template": copy a published app into a repo of your own (or an organization's). */
 @Component({
   selector: 'app-fork-dialog',
-  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, MatSelectModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, MatSelectModule],
   templateUrl: './fork-dialog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -33,6 +34,8 @@ export class ForkDialog {
   protected readonly form = inject(FormBuilder).nonNullable.group({
     owner: [this.auth.owner()?.handle ?? '', Validators.required],
     name: [this.data.repo.name, [Validators.required, Validators.maxLength(80)]],
+    // #198: start with the app's memory (its public notes; all of them for your own repos).
+    copyMemory: [true],
   });
 
   protected async fork(): Promise<void> {
