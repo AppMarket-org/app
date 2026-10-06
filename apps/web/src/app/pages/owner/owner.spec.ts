@@ -24,4 +24,11 @@ it('updates the workspace heading when navigating between profiles with a reused
   await fixture.whenStable();
   expect(TestBed.inject(Seo).heading()).toEqual([{ label: 'second' }]);
   expect(fixture.nativeElement.querySelector('.handle').textContent).toBe('second');
+  fixture.componentRef.setInput('page', null);
+  await fixture.whenStable();
+  const missing = fixture.nativeElement as HTMLElement;
+  expect(missing.querySelector('app-not-found-view img')?.getAttribute('src')).toBe('/brand/404.webp');
+  expect(missing.textContent).toContain('There is no user or organization with that name.');
+  expect(missing.querySelector('app-not-found-view a')?.getAttribute('href')).toBe('/');
+  expect(missing.querySelector('.handle')).toBeNull();
 });

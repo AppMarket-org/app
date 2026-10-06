@@ -21,6 +21,5 @@
     </article>
   </div>
 } @else {
-  <p class="not-found">This legal document could not be found.</p>
-  <a mat-button routerLink="/legal/terms">View Terms of Service</a>
+  <app-not-found-view message="This legal document could not be found." returnUrl="/legal/terms" returnLabel="View Terms of Service" />
 }

@@ -1,11 +1,10 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { RouterLink } from '@angular/router';
 import { Seo } from '../../seo/seo';
 
 @Component({
   selector: 'app-not-found',
-  imports: [MatButtonModule, RouterLink],
+  imports: [NotFoundView],
   templateUrl: './not-found.html',
   styleUrl: './not-found.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

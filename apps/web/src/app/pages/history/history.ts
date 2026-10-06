@@ -1,3 +1,4 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,7 +17,7 @@ import type { HistoryData } from './history-resolver';
 /** #117 (G7): the build history buyers see: published checkpoints only, server-rendered. */
 @Component({
   selector: 'app-history',
-  imports: [DatePipe, RouterLink, CheckpointDetails, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule],
+  imports: [NotFoundView, DatePipe, RouterLink, CheckpointDetails, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule],
   templateUrl: './history.html',
   styleUrl: './history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,13 +1,13 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { CATEGORIES, type RepoPage } from '@appmarket/shared';
 import { RepoResults } from '../../components/repo-results/repo-results';
 import { Seo } from '../../seo/seo';
 
 @Component({
   selector: 'app-category',
-  imports: [MatButtonModule, RouterLink, RepoResults],
+  imports: [NotFoundView, RepoResults],
   templateUrl: './category.html',
   styleUrl: './category.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

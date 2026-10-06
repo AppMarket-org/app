@@ -5,8 +5,7 @@
     <mat-progress-bar mode="indeterminate" aria-label="Loading deployment" />
   }
   @case (null) {
-    <h1>Deployment not found</h1>
-    <p>It does not exist or belongs to another account.</p>
+    <app-not-found-view title="Deployment not found" message="It does not exist or belongs to another account." returnUrl="/dashboard" returnLabel="Back to dashboard" />
   }
   @default {
     @let d = deployment()!;

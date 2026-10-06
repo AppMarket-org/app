@@ -1,3 +1,4 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -41,7 +42,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
 
 @Component({
   selector: 'app-repo',
-  imports: [
+  imports: [NotFoundView, 
     Conformance,
     RepoGraph,
     InstallApp,

@@ -218,9 +218,5 @@
     </div>
   </article>
 } @else {
-  <section>
-    <h1>App not found</h1>
-    <p>This app does not exist or is not published.</p>
-    <a mat-button routerLink="/search">Browse apps</a>
-  </section>
+  <app-not-found-view title="App not found" message="This app does not exist or is not published." />
 }
