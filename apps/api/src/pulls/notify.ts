@@ -2,27 +2,45 @@ import { env } from "cloudflare:workers";
 import { EmailStopped, sendEmail } from "../email/send.ts";
 import { unsubscribeQuery } from "../email/unsubscribe.ts";
 import { logEvent } from "../observability/log.ts";
-import { pullEmail } from "./notify-email.ts";
+import { issueEmail, pullEmail } from "./notify-email.ts";
+
+interface ThreadEvent {
+	repo: string;
+	number: number;
+	title: string;
+	/** Who acted; never emailed. Empty for appmarket.org itself (e.g. a merge closing an issue). */
+	actorId: string;
+	actor: string;
+	what: string;
+	excerpt?: string;
+	userIds: string[];
+}
 
 /**
  * Emails the people a pull request event concerns (never the one who acted), if they did not turn
  * pull request emails off. Best effort: failures are logged, never returned to the user.
  */
-export async function notifyPull(input: { repo: string; number: number; title: string; actorId: string; actor: string; what: string; excerpt?: string; userIds: string[] }): Promise<void> {
+export const notifyPull = (input: ThreadEvent) => notifyThread("pulls", input);
+
+/** #298: the same for issues (topic "issues"). */
+export const notifyIssue = (input: ThreadEvent) => notifyThread("issues", input);
+
+async function notifyThread(topic: "pulls" | "issues", input: ThreadEvent): Promise<void> {
 	if (!env.EMAIL_FROM) return;
-	const ids = [...new Set(input.userIds)].filter((id) => id !== input.actorId).slice(0, 50);
+	const ids = [...new Set(input.userIds)].filter((id) => id && id !== input.actorId).slice(0, 50);
 	if (!ids.length) return;
 	const { results } = await env.DB.prepare(
-		`SELECT u.id, u.email, u.name, p.pulls FROM "user" u LEFT JOIN email_preferences p ON p.user_id = u.id WHERE u.id IN (${ids.map(() => "?").join(",")})`,
+		`SELECT u.id, u.email, u.name, p.${topic} AS wanted FROM "user" u LEFT JOIN email_preferences p ON p.user_id = u.id WHERE u.id IN (${ids.map(() => "?").join(",")})`,
 	)
 		.bind(...ids)
-		.all<{ id: string; email: string; name: string; pulls: number | null }>();
-	const url = `${env.PUBLIC_ORIGIN}/${input.repo}/pulls/${input.number}`;
+		.all<{ id: string; email: string; name: string; wanted: number | null }>();
+	const url = `${env.PUBLIC_ORIGIN}/${input.repo}/${topic}/${input.number}`;
 	for (const person of results) {
-		if (!person.email || person.pulls === 0) continue;
-		const query = await unsubscribeQuery(env.BETTER_AUTH_SECRET, person.id, "pulls");
+		if (!person.email || person.wanted === 0) continue;
+		const query = await unsubscribeQuery(env.BETTER_AUTH_SECRET, person.id, topic);
 		const oneClick = `${env.PUBLIC_ORIGIN}/api/email/unsubscribe?${query}`;
-		const message = pullEmail({ ...input, excerpt: (input.excerpt ?? "").slice(0, 600), url, unsubscribe: `${env.PUBLIC_ORIGIN}/email/unsubscribe?${query}` });
+		const fields = { ...input, excerpt: (input.excerpt ?? "").slice(0, 600), url, unsubscribe: `${env.PUBLIC_ORIGIN}/email/unsubscribe?${query}` };
+		const message = topic === "issues" ? issueEmail(fields) : pullEmail(fields);
 		try {
 			await sendEmail({
 				to: { email: person.email, name: person.name },
@@ -30,7 +48,7 @@ export async function notifyPull(input: { repo: string; number: number; title: s
 				headers: { ...(oneClick.startsWith("https://") ? { "List-Unsubscribe": `<${oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : {}), "Auto-Submitted": "auto-generated" },
 			});
 		} catch (error) {
-			logEvent(error instanceof EmailStopped ? "email.stopped" : "email.failed", { topic: "pulls", error: error instanceof Error ? error.message : String(error) }, "warn");
+			logEvent(error instanceof EmailStopped ? "email.stopped" : "email.failed", { topic, error: error instanceof Error ? error.message : String(error) }, "warn");
 			if (error instanceof EmailStopped) return;
 		}
 	}

@@ -6,11 +6,12 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 
-type Topic = 'impacts' | 'pulls';
+type Topic = 'impacts' | 'pulls' | 'issues';
 
 interface EmailPreferences {
   impacts: boolean;
   pulls: boolean;
+  issues: boolean;
   /** False until appmarket.org sends email in this environment. */
   sending: boolean;
 }

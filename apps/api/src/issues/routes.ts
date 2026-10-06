@@ -6,7 +6,8 @@ import { logEvent } from "../observability/log.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { nextNumber } from "../repos/numbers.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { boardWork, syncIssueTask } from "./board.ts";
+import { notifyIssue } from "../pulls/notify.ts";
+import { boardWork, issueParticipants, syncIssueTask } from "./board.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -128,6 +129,8 @@ export const issueRoutes = new Hono<Ctx>()
 		logEvent("issue.opened", { repo: repo.fullName, number, type: input.type ?? "task", agents: who.forAgents });
 		const created = (await issueRow(repo.id, number))!;
 		if (who.forAgents) await syncIssueTask(created);
+		// #298: whoever it is assigned to hears about it.
+		if (who.assigneeId) c.executionCtx.waitUntil(notifyIssue({ repo: repo.fullName, number, title: created.title, actorId: session.user.id, actor: session.user.name, what: "assigned you an issue", excerpt: created.body, userIds: [who.assigneeId] }).catch(() => undefined));
 		return c.json(toIssue(created, repo, session, await boardWork(repo.id, who.forAgents ? [id] : [])), 201);
 	})
 	.get("/:owner/:slug/issues/:number{[0-9]+}", async (c) => {
@@ -176,6 +179,13 @@ export const issueRoutes = new Hono<Ctx>()
 			if (state && state !== row.state) logEvent(state === "closed" ? "issue.closed" : "issue.reopened", { repo: repo.fullName, number: row.number });
 		}
 		const updated = (await issueRow(repo.id, row.number))!;
+		// #298: a new assignee, and everyone in the issue when it is closed or reopened.
+		const event = { repo: repo.fullName, number: row.number, title: updated.title, actorId: session.user.id, actor: session.user.name };
+		if (updated.assignee_id && updated.assignee_id !== row.assignee_id) c.executionCtx.waitUntil(notifyIssue({ ...event, what: "assigned you an issue", excerpt: updated.body, userIds: [updated.assignee_id] }).catch(() => undefined));
+		if (updated.state !== row.state) {
+			const what = updated.state === "open" ? "reopened this issue" : updated.reason === "not_planned" ? "closed this issue as not planned" : "closed this issue";
+			c.executionCtx.waitUntil(issueParticipants(row.id).then((userIds) => notifyIssue({ ...event, what, userIds })).catch(() => undefined));
+		}
 		// The board follows: on it while open and for agents, off it (unless already being worked on) otherwise.
 		if (sets.length && (row.for_agents === 1 || updated.for_agents === 1)) await syncIssueTask(updated);
 		return c.json(toIssue(updated, repo, session, await boardWork(repo.id, updated.for_agents === 1 ? [updated.id] : [])));
@@ -219,6 +229,12 @@ export const issueRoutes = new Hono<Ctx>()
 			env.DB.prepare("INSERT INTO issue_comments (id, issue_id, author_id, body) VALUES (?, ?, ?, ?)").bind(id, row.id, session.user.id, redactSecrets(body.body.trim()).text),
 			env.DB.prepare("UPDATE issues SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.id),
 		]);
+		// #298: the author, the assignee and everyone who commented.
+		c.executionCtx.waitUntil(
+			issueParticipants(row.id)
+				.then((userIds) => notifyIssue({ repo: repo.fullName, number: row.number, title: row.title, actorId: session.user.id, actor: session.user.name, what: "commented", excerpt: body.body as string, userIds }))
+				.catch(() => undefined),
+		);
 		return c.json({ id }, 201);
 	})
 	.patch("/:owner/:slug/issues/:number{[0-9]+}/comments/:id", async (c) => {

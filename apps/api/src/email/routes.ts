@@ -15,8 +15,8 @@ const setTopic = (userId: string, topic: EmailTopic, on: boolean) =>
 		.run();
 
 async function preferences(userId: string) {
-	const row = await env.DB.prepare("SELECT impacts, pulls FROM email_preferences WHERE user_id = ?").bind(userId).first<{ impacts: number; pulls: number }>();
-	return { impacts: row?.impacts !== 0, pulls: row?.pulls !== 0, sending: !!env.EMAIL_FROM };
+	const row = await env.DB.prepare("SELECT impacts, pulls, issues FROM email_preferences WHERE user_id = ?").bind(userId).first<{ impacts: number; pulls: number; issues: number }>();
+	return { impacts: row?.impacts !== 0, pulls: row?.pulls !== 0, issues: row?.issues !== 0, sending: !!env.EMAIL_FROM };
 }
 
 /** #230: the signed-in user's email settings. Mounted under /api/me. */
