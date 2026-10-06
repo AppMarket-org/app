@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { DatePipe, LowerCasePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { runningApps } from '@appmarket/shared';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -46,7 +47,7 @@ export class DashboardRepositories {
 
 @Component({
   selector: 'app-dashboard-running-apps',
-  imports: [DatePipe, MatButtonModule, MatCardModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
+  imports: [DatePipe, LowerCasePipe, MatButtonModule, MatCardModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
   templateUrl: './running-apps.html',
   styleUrl: './dashboard-pages.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,10 +58,12 @@ export class DashboardRunningApps {
     .get<{ items: { repo: string; name: string; amountCents: number; status: string; purchasedAt: string }[] }>('/api/me/purchases')
     .pipe(map((r) => r.items), catchError(() => of([]))));
   protected readonly deployStatus: Record<string, string> = { queued: 'Queued', building: 'Building', deploying: 'Deploying', succeeded: 'Live', failed: 'Failed' };
+  /** #307: one entry per app (Worker and account), not per deployment. */
+  protected readonly apps = computed(() => runningApps(this.deployments() ?? []));
 
   constructor() {
     const counts = inject(DashboardCounts);
-    effect(() => counts.apps.set(this.deployments()?.length));
+    effect(() => counts.apps.set(this.deployments() ? this.apps().length : undefined));
     setPage('Running apps', '/dashboard/apps', 'Your Cloudflare deployments and purchased apps.');
   }
 }
