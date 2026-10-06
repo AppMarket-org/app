@@ -37,10 +37,12 @@ export const ownerRoutes = new Hono<Ctx>()
 			to = today;
 		}
 		const privacy = await owners().privacy(owner.id);
-		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to, privacy.privateContributions);
+		// You always see your own private contributions (as counts); others only when you opted in.
+		const self = c.get("session")?.user.id === owner.id;
+		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to, privacy.privateContributions || self);
 		// The profile page is cached at the edge (and purged on changes); privacy changes must show at once here.
-		c.header("Cache-Control", "no-cache");
-		return c.json({ from, to, ...data } satisfies ContributionCalendar);
+		c.header("Cache-Control", self ? "private, no-store" : "no-cache");
+		return c.json({ from, to, ...data, ...(self && !privacy.privateContributions ? { privateOnlyForYou: true } : {}) } satisfies ContributionCalendar);
 	})
 	// #145: activity by month (users: theirs; organizations: on their repos).
 	.get("/:handle/activity", async (c) => {
@@ -56,7 +58,9 @@ export const ownerRoutes = new Hono<Ctx>()
 		c.header("Cache-Control", "no-cache");
 		// #146: a hidden feed is hidden from the API too.
 		if (privacy.hideActivity) return c.json({ months: [], next: null, hidden: true } satisfies ActivityPage);
-		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper, 3, owner.kind === "user" && privacy.privateContributions);
+		const self = owner.kind === "user" && c.get("session")?.user.id === owner.id;
+		if (self) c.header("Cache-Control", "private, no-store");
+		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper, 3, owner.kind === "user" && (privacy.privateContributions || self));
 		return c.json(page);
 	})
 	.get("/:handle", async (c) => {
