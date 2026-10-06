@@ -1,7 +1,7 @@
 import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { DatePipe, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, inject, input, signal, type OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, DestroyRef, PLATFORM_ID, computed, inject, input, signal, type OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -134,6 +134,8 @@ export class AgentsPage implements OnInit {
 
   constructor() {
     inject(Seo).set({ title: 'Agents', description: 'Tasks and agents working on this repo.', path: '/dashboard', noindex: true, heading: [{ label: 'Dashboard', link: '/dashboard' }] });
+    const seo = inject(Seo);
+    effect(() => seo.setHeading([{label: this.owner(), link: '/' + this.owner()}, {label: this.slug(), link: '/dashboard/repos/' + this.path()}]));
     this.destroyRef.onDestroy(() => {
       this.closed = true;
       this.socket?.close();

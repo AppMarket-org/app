@@ -1,6 +1,6 @@
 import { RepositoryNav } from '../../../components/repository-nav/repository-nav';
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal, type OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, type OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatChipsModule } from '@angular/material/chips';
@@ -34,6 +34,8 @@ export class PullListPage implements OnInit {
 
   constructor() {
     inject(Seo).set({ title: 'Pull requests', description: 'Proposed changes to this repo.', path: '/', noindex: true });
+    const seo = inject(Seo);
+    effect(() => seo.setHeading([{label: this.owner(), link: '/' + this.owner()}, {label: this.slug(), link: (this.managed() ? '/dashboard/repos/' : '/') + this.path}]));
   }
 
   protected get path(): string {
