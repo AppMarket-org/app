@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -18,7 +21,10 @@ import { Avatar } from './components/avatar/avatar';
     RouterLink,
     MatToolbarModule,
     MatButtonModule,
+    MatDividerModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
     MatMenuModule,
     MatTooltipModule,
   ],
@@ -36,6 +42,12 @@ export class App {
 
   constructor() {
     void this.auth.load();
+  }
+
+  protected search(event: Event, query: string): void {
+    event.preventDefault();
+    const q = query.trim();
+    void this.router.navigate(['/search'], { queryParams: q ? { q } : {} });
   }
 
   protected async signOut(): Promise<void> {
