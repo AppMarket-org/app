@@ -24,10 +24,10 @@ export class CowbellStore {
 		return { cowbelled: !!row?.cowbelled, count: row?.count ?? 0 };
 	}
 
-	/** Public repos the user rang, newest cowbell first. */
+	/** Repos the user rang (not deleted), newest cowbell first; the route keeps the ones they can see. */
 	async repoIdsFor(userId: string): Promise<string[]> {
 		const { results } = await this.db
-			.prepare("SELECT c.repo_id FROM cowbells c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND r.state = 'published' ORDER BY c.created_at DESC LIMIT 100")
+			.prepare("SELECT c.repo_id FROM cowbells c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND r.state != 'removed' ORDER BY c.created_at DESC LIMIT 100")
 			.bind(userId)
 			.all<{ repo_id: string }>();
 		return results.map((r) => r.repo_id);

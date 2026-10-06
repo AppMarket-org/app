@@ -12,6 +12,7 @@ describe("CowbellStore", () => {
 		insert.run("r1", "a", "A", "a-1", "published");
 		insert.run("r2", "b", "B", "b-1", "published");
 		insert.run("r3", "c", "C", "c-1", "draft");
+		insert.run("r4", "d", "D", "d-1", "removed");
 		store = new CowbellStore(db.d1);
 	});
 
@@ -24,10 +25,11 @@ describe("CowbellStore", () => {
 		expect(await store.set("u1", "r1", false)).toEqual({ cowbelled: false, count: 1 });
 	});
 
-	it("lists a user's public cowbelled repos", async () => {
+	it("lists a user's cowbelled repos, private ones too, but not deleted ones", async () => {
 		await store.set("u1", "r1", true);
 		await store.set("u1", "r2", true);
 		await store.set("u1", "r3", true);
-		expect((await store.repoIdsFor("u1")).sort()).toEqual(["r1", "r2"]);
+		await store.set("u1", "r4", true);
+		expect((await store.repoIdsFor("u1")).sort()).toEqual(["r1", "r2", "r3"]);
 	});
 });
