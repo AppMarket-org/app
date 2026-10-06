@@ -1,3 +1,4 @@
+import { handoffText, type SessionSummary } from "@appmarket/shared";
 import { ApiError, call as apiCall } from "../api.ts";
 import { apiBase } from "../config.ts";
 import { loadCredentials } from "../credentials.ts";
@@ -36,6 +37,12 @@ export const MEMORY_TOOLS = [
 		name: "memory_forget",
 		description: "Delete a note (its id from memory_recall) that is wrong or no longer true. Its history is kept.",
 		inputSchema: obj({ id: str("The note id.") }, ["id"]),
+	},
+	{
+		name: "session_history",
+		description:
+			"What the latest agent sessions in this repo did (any agent: Claude Code, Codex, …), newest first: what was asked, the result, commits and files, failed tool calls. Read it to pick up where another session stopped.",
+		inputSchema: obj({ sessions: { type: "number", description: "How many sessions, 1 to 10 (default 5)." } }),
 	},
 ] as const;
 
@@ -113,6 +120,11 @@ export async function callMemoryTool(name: string, args: Record<string, unknown>
 				if (args.pinned !== undefined) body.pinned = args.pinned;
 				await deps.call(api, `${base}/${id}`, { method: "PATCH", token, body });
 				return text(`Updated [${id}].`);
+			}
+			case "session_history": {
+				const n = typeof args.sessions === "number" ? Math.min(Math.max(Math.round(args.sessions), 1), 10) : 5;
+				const r = await deps.call<{ sessions: SessionSummary[] }>(api, `/api/repos/${repo}/handoff?limit=${n}`, { token });
+				return text(handoffText(r.sessions, 12_000) || "No agent sessions with checkpoints in this repo yet.");
 			}
 			case "memory_forget": {
 				if (!id) return text("id is required (from memory_recall).", true);

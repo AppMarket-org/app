@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { handoffText, type SessionSummary } from "@appmarket/shared";
 import { ApiError, call as apiCall } from "../api.ts";
 import { apiBase } from "../config.ts";
 import { loadCredentials } from "../credentials.ts";
@@ -51,15 +52,21 @@ export function contextFrom(notes: Note[], repo: string, budget = 4000): string 
 	return `${head}${lines.join("\n")}${more > 0 ? `\n(${more} more notes: memory_recall)` : ""}\n`;
 }
 
-/** For the SessionStart hook: the context, or "" when signed out, offline or slow (2 s), never an error. */
+/**
+ * For the SessionStart hook: the repo's memory (#196) and what the latest sessions did (#71), or ""
+ * when signed out, offline or slow (2 s). Each part fails on its own; never an error.
+ */
 export async function sessionStartContext(cwd: string, deps: MemoryDeps = defaults): Promise<string> {
 	try {
 		const at = where(cwd);
 		if (!at) return "";
 		const token = await deps.token(at.api);
 		if (!token) return "";
-		const r = await deps.call<{ notes: Note[] }>(at.api, `/api/repos/${at.repo}/memory?limit=50`, { token, timeoutMs: 2000 });
-		return contextFrom(r.notes, at.repo);
+		const [memory, handoff] = await Promise.all([
+			deps.call<{ notes: Note[] }>(at.api, `/api/repos/${at.repo}/memory?limit=50`, { token, timeoutMs: 2000 }).catch(() => ({ notes: [] as Note[] })),
+			deps.call<{ sessions: SessionSummary[] }>(at.api, `/api/repos/${at.repo}/handoff?limit=3`, { token, timeoutMs: 2000 }).catch(() => ({ sessions: [] as SessionSummary[] })),
+		]);
+		return [contextFrom(memory.notes ?? [], at.repo), handoffText(handoff.sessions ?? [])].filter(Boolean).join("\n");
 	} catch {
 		return "";
 	}

@@ -78,7 +78,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `setup-git [--remove]` | Let plain `git` sign in to appmarket.org remotes with this login (no tokens to copy, nothing in the keychain) |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
-| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`), issues (`issue_*`), pull requests (`pr_*`), repo memory (`memory_*`) and the code graph tools (`code_*`); see below |
+| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`), issues (`issue_*`), pull requests (`pr_*`), repo memory (`memory_*`, `session_history`) and the code graph tools (`code_*`); see below |
 | `session start [owner/repo] [--harness h]` / `session end [id] [--discard]` / `session list` | Agent sessions: work in the repo on their own branches with a sign-in that renews itself; protected branches and tags are off limits |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
@@ -111,7 +111,10 @@ read and keep the repo's memory: short notes about its conventions, decisions an
 its people and agents across sessions and vendors. Notes are redacted on your machine before they
 are sent (and again on the server); pinned notes come first. With the Claude Code or Codex adapter (or the Claude Code
 plugin), each session starts with the repo's memory in its context: pinned notes first, then the
-most recent, within about 4,000 characters. Offline or signed out, sessions start without it.
+most recent, within about 4,000 characters, followed by what the latest three agent sessions in the
+repo did (any vendor: what was asked, the result, commits and files), so a Codex session can pick
+up where a Claude Code session stopped. `session_history` gives more. Offline or signed out,
+sessions start without it.
 
 See [docs/agent-collaboration.md](https://github.com/AppMarket-org/app/blob/main/docs/agent-collaboration.md).
 
