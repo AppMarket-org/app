@@ -44,13 +44,13 @@ button:focus-visible {
   outline-offset: 0.1875rem;
 }
 .mat-mdc-card-header {
-  padding: 1.5rem 1.5rem 0;
+  padding: var(--app-panel-padding) var(--app-panel-padding) 0;
 }
 .mat-mdc-card-content {
-  padding: 0 1.5rem;
+  padding: 0 var(--app-panel-padding);
 }
 .mat-mdc-card-content:last-child {
-  padding-bottom: 1.5rem;
+  padding-bottom: var(--app-panel-padding);
 }
 .mat-mdc-card-actions {
   padding: 0.75rem 1rem;
@@ -60,6 +60,10 @@ button:focus-visible {
 }
 .mat-mdc-form-field {
   --mat-form-field-container-text-line-height: 1.5rem;
+}
+.mat-mdc-tab-nav-bar .mat-mdc-tab-link, .mat-mdc-tab-group .mat-mdc-tab {
+  padding-inline: var(--app-control-padding);
+  min-width: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

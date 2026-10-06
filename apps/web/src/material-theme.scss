@@ -57,13 +57,15 @@ html {
     (
       filled-container-color: #20251f,
       filled-label-text-color: #fcfbf8,
-      filled-container-shape: 0.625rem,
-      outlined-container-shape: 0.625rem,
-      protected-container-shape: 0.625rem,
-      text-container-shape: 0.625rem,
-      filled-container-height: 2.875rem,
-      outlined-container-height: 2.875rem,
-      text-container-height: 2.75rem,
+      filled-container-shape: var(--app-control-radius),
+      outlined-container-shape: var(--app-control-radius),
+      protected-container-shape: var(--app-control-radius),
+      text-container-shape: var(--app-control-radius),
+      filled-container-height: var(--app-control-height),
+      outlined-container-height: var(--app-control-height),
+      text-container-height: var(--app-control-height),
+      filled-horizontal-padding: var(--app-control-padding),
+      outlined-horizontal-padding: var(--app-control-padding),
       outlined-outline-color: #c7cac0,
       outlined-label-text-color: #20251f,
       text-label-text-color: #20251f,
@@ -75,23 +77,28 @@ html {
   @include mat.card-overrides(
     (
       outlined-container-color: #fcfbf8,
-      outlined-container-shape: 1rem,
+      outlined-container-shape: var(--app-radius),
       outlined-outline-color: #dedfd6,
       elevated-container-color: #fcfbf8,
-      elevated-container-shape: 1rem,
+      elevated-container-shape: var(--app-radius),
     )
   );
   @include mat.form-field-overrides(
     (
-      outlined-container-shape: 0.625rem,
+      outlined-container-shape: var(--app-control-radius),
+      container-height: var(--app-field-height),
+      container-vertical-padding: var(--app-field-padding),
+      filled-with-label-container-padding-top: var(--app-field-label-top),
+      filled-with-label-container-padding-bottom: var(--app-field-label-bottom),
       outlined-outline-color: #b4b8ad,
       outlined-hover-outline-color: #62665e,
     )
   );
+  @include mat.tabs-overrides((container-height: var(--app-tab-height)));
   @include mat.chips-overrides(
     (
       outline-color: #dedfd6,
-      container-shape-radius: 0.625rem,
+      container-shape-radius: var(--app-control-radius),
       label-text-color: #41483d,
     )
   );
@@ -112,8 +119,35 @@ html {
   --app-border: #dedfd6;
   --app-paper: #f8f7f4;
   --app-space-section: clamp(4rem, 8vw, 7rem);
-  --app-radius: 1rem;
+  // Shared app density: adjust these semantic tokens to propagate spacing changes.
+  --app-space-sm: 0.5rem;
+  --app-space-md: 0.75rem;
+  --app-space-lg: 1rem;
+  --app-space-xl: 1.5rem;
+  --app-page-padding: var(--app-space-lg);
+  --app-panel-padding: var(--app-space-lg);
+  --app-content-gap: var(--app-space-lg);
+  --app-control-height: 2.5rem;
+  --app-control-padding: 1rem;
+  --app-field-height: 3rem;
+  --app-field-padding: 0.75rem;
+  --app-field-label-top: 1.125rem;
+  --app-field-label-bottom: 0.375rem;
+  --app-tab-height: 2.5rem;
+  --app-control-radius: 0.375rem;
+  --app-radius: 0.625rem;
   --app-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (pointer: coarse), (max-width: 37.5rem) {
+  html {
+    --app-control-height: 2.75rem;
+    --app-field-height: 3.25rem;
+    --app-field-padding: 0.875rem;
+    --app-field-label-top: 1.25rem;
+    --app-field-label-bottom: 0.5rem;
+    --app-tab-height: 2.75rem;
+  }
 }
 
 body {

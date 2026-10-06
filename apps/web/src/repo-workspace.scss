@@ -2,12 +2,12 @@
 app-manage-repo {
   .mat-mdc-card {
     background: var(--mat-sys-surface);
-    border-radius: 1rem;
+    border-radius: var(--app-radius);
     box-shadow: 0 0.25rem 1rem rgb(34 39 31 / 2%);
   }
   .mat-mdc-card-header {
-    padding: 1.5rem 1.5rem 0;
-    margin-bottom: 1.25rem;
+    padding: var(--app-panel-padding) var(--app-panel-padding) 0;
+    margin-bottom: var(--app-content-gap);
   }
   .mat-mdc-card-header-text {
     min-width: 0;
@@ -23,10 +23,10 @@ app-manage-repo {
     overflow-wrap: anywhere;
   }
   .mat-mdc-card-content {
-    padding-inline: 1.5rem;
+    padding-inline: var(--app-panel-padding);
   }
   .mat-mdc-card-content:last-child {
-    padding-bottom: 1.5rem;
+    padding-bottom: var(--app-panel-padding);
   }
   .mat-mdc-card-content p {
     font-size: 0.875rem;
@@ -34,7 +34,7 @@ app-manage-repo {
     margin-top: 0;
   }
   .mat-mdc-card-actions {
-    padding: 0 1.5rem 1.5rem;
+    padding: 0 var(--app-panel-padding) var(--app-panel-padding);
     gap: 0.5rem;
     flex-wrap: wrap;
   }
@@ -43,7 +43,7 @@ app-manage-repo {
     box-shadow: none;
   }
   .source-notice .mat-mdc-card-header {
-    margin-bottom: 1.25rem;
+    margin-bottom: var(--app-content-gap);
   }
   .source-notice .mat-mdc-card-title {
     font-size: 0.875rem;
@@ -83,10 +83,10 @@ app-manage-repo {
   }
   .details-card app-repo-form form,
   .details-card app-repo-form .row {
-    gap: 1.25rem;
+    gap: var(--app-content-gap);
   }
   .workspace-section .form {
-    gap: 1.25rem;
+    gap: var(--app-content-gap);
   }
   app-sessions-card pre {
     padding: 1rem;
@@ -96,13 +96,13 @@ app-manage-repo {
   }
   @media (max-width: 37.5rem) {
     .mat-mdc-card-header {
-      padding: 1.25rem 1.25rem 0;
+      padding: var(--app-panel-padding) var(--app-panel-padding) 0;
     }
     .mat-mdc-card-content {
-      padding-inline: 1.25rem;
+      padding-inline: var(--app-panel-padding);
     }
     .mat-mdc-card-actions {
-      padding-inline: 1.25rem;
+      padding-inline: var(--app-panel-padding);
     }
   }
 }

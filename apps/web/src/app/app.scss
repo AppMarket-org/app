@@ -236,14 +236,14 @@ mat-toolbar.workspace {
 }
 main.workspace {
   max-width: none;
-  padding: 1.5rem;
+  padding: var(--app-page-padding);
 }
 main.workspace:has(> app-code) {
   padding: 0;
 }
 @media (max-width: 37.5rem) {
   main.workspace {
-    padding: 1rem;
+    padding: var(--app-page-padding);
   }
   mat-toolbar.workspace {
     padding: 0 0.5rem;

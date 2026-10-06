@@ -2,12 +2,14 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { serverApiInterceptor } from './api/server-api';
 import { routes } from './app.routes';
 import { provideBrandIcons } from './brand/icons';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { subscriptSizing: 'dynamic' } },
     // The interceptor only acts during SSR (see api/server-api.ts).
     provideHttpClient(withFetch(), withInterceptors([serverApiInterceptor])),
     provideBrowserGlobalErrorListeners(),
