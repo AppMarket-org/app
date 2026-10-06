@@ -72,13 +72,13 @@ export async function listBranches(gitRepo: string): Promise<{ defaultBranch: st
 }
 
 /** #34: all branches and tags (peeled to commits), read like listBranches. */
-export async function listRefs(gitRepo: string): Promise<{ remote: string; refs: Record<string, string> }> {
+export async function listRefs(gitRepo: string): Promise<{ remote: string; defaultBranch: string; refs: Record<string, string> }> {
 	using git = await env.ARTIFACTS.get(gitRepo);
 	const [info, token] = await Promise.all([git.info(), git.createToken("read", 300)]);
 	try {
 		const response = await fetch(`${info.remote}/info/refs?service=git-upload-pack`, { headers: { Authorization: `Bearer ${token.plaintext}` } });
 		if (!response.ok) throw new Error(`info/refs: HTTP ${response.status}`);
-		return { remote: info.remote, refs: parseRefs(await response.text()) };
+		return { remote: info.remote, defaultBranch: info.defaultBranch, refs: parseRefs(await response.text()) };
 	} finally {
 		await git.revokeToken(token.id).catch(() => false);
 	}

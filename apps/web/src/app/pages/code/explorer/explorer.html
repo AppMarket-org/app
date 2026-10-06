@@ -1,11 +1,16 @@
 <div class="tools" [class.overview]="overview()">
   @if (!overview()) { <h2><mat-icon aria-hidden="true">account_tree</mat-icon>Files</h2> }
-  @if (branches().length) {
+  @if (branches().length || tags()?.length) {
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Branch</mat-label>
+      <mat-label>{{ ref().startsWith('refs/tags/') ? 'Tag' : 'Branch' }}</mat-label>
       <mat-select [value]="ref()" (selectionChange)="selectBranch.emit($event.value)">
         @for (branch of branches(); track branch) {
           <mat-option [value]="branch">{{ branch }}</mat-option>
+        }
+        @if (tags()?.length) {
+          <mat-optgroup label="Tags">
+            @for (tag of tags(); track tag) { <mat-option [value]="'refs/tags/' + tag">{{ tag }}</mat-option> }
+          </mat-optgroup>
         }
       </mat-select>
     </mat-form-field>
@@ -40,6 +45,14 @@
     </mat-autocomplete>
   </mat-form-field>
 </div>
+@if (tags(); as tags) {
+  <div class="ref-counts" aria-label="Repository refs">
+    <button mat-button [matMenuTriggerFor]="branchMenu" [disabled]="!branches().length"><mat-icon>fork_right</mat-icon>{{ branches().length }} {{ branches().length === 1 ? 'branch' : 'branches' }}</button>
+    <button mat-button [matMenuTriggerFor]="tagMenu" [disabled]="!tags.length"><mat-icon>sell</mat-icon>{{ tags.length }} {{ tags.length === 1 ? 'tag' : 'tags' }}</button>
+    <mat-menu #branchMenu="matMenu">@for (branch of branches(); track branch) { <button mat-menu-item (click)="selectBranch.emit(branch)">{{ branch }}</button> }</mat-menu>
+    <mat-menu #tagMenu="matMenu">@for (tag of tags; track tag) { <button mat-menu-item (click)="selectBranch.emit('refs/tags/' + tag)">{{ tag }}</button> }</mat-menu>
+  </div>
+}
 <ng-content />
 <nav class="tree" [class.overview-tree]="overview()" aria-label="Repository files">
   <ng-container *ngTemplateOutlet="branch; context: { $implicit: nodes(), level: 0 }" />

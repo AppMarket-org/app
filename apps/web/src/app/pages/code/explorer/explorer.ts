@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatMenuModule } from '@angular/material/menu';
 
 export interface FileNode {
   name: string;
@@ -28,6 +29,7 @@ export interface FileNode {
     MatInputModule,
     MatSelectModule,
     MatProgressBarModule,
+    MatMenuModule,
   ],
   templateUrl: './explorer.html',
   styleUrl: './explorer.scss',
@@ -40,6 +42,7 @@ export class CodeExplorer {
   readonly selected = input<string | null>(null);
   readonly ref = input('');
   readonly branches = input<string[]>([]);
+  readonly tags = input<string[] | null>(null);
   readonly files = input<string[]>([]);
   readonly indexing = input(false);
   readonly indexError = input(false);

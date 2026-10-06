@@ -1,3 +1,4 @@
+import { RepositoryHeader } from '../../../components/repository-header/repository-header';
 import { RepositoryNav } from '../../../components/repository-nav/repository-nav';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, type OnInit } from '@angular/core';
@@ -17,7 +18,7 @@ import { Seo } from '../../../seo/seo';
 /** #259: a repo's pull requests. */
 @Component({
   selector: 'app-pull-list',
-  imports: [RepositoryNav, DatePipe, MatButtonModule, MatButtonToggleModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
+  imports: [RepositoryHeader, RepositoryNav, DatePipe, MatButtonModule, MatButtonToggleModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
   templateUrl: './pull-list.html',
   styleUrl: './pull-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

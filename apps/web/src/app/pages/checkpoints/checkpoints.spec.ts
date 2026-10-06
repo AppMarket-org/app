@@ -59,7 +59,7 @@ describe('CheckpointsPage', () => {
     fixture.componentRef.setInput('slug', 'app');
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('/api/repos/dev/app').flush({ name: 'App', fullName: 'dev/app', checkpointVisibility: 'private' });
+    http.expectOne('/api/repos/dev/app').flush({ name: 'App', fullName: 'dev/app', state: 'draft', cowbells: 0, checkpointVisibility: 'private' });
     http.expectOne((r) => r.url === '/api/repos/dev/app/checkpoints').flush({ items: [checkpoint(2), checkpoint(1, { state: 'attached' })], next: null, summary: { total: 2, harnesses: { 'claude-code': 2 } } });
     // #135: the moderator access log loads after the repo.
     await vi.waitFor(() => http.expectOne('/api/repos/dev/app/checkpoints/access-log').flush({ items: [] }));

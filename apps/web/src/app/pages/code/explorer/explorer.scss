@@ -12,6 +12,7 @@
 }
 .tools.overview { grid-template-columns: minmax(9rem, 13rem) minmax(12rem, 1fr); align-items: center; padding: 0.75rem; }
 .overview-tree { padding: 0; overflow: visible; }
+.ref-counts { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem 0.5rem; border-bottom: 0.0625rem solid var(--app-border); }
 .overview-tree .entry { height: 2.75rem; border-bottom: 0.0625rem solid var(--mat-sys-outline-variant); border-radius: 0; }
 .overview-tree .filename { font-size: 0.875rem; }
 .overview-tree .entry:last-child { border-bottom: 0; }

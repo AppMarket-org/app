@@ -1,4 +1,5 @@
 @if (!embedded() && tree()) {
+  <app-repository-header [owner]="owner" [slug]="slug" [managed]="!!tree()?.editor" />
   <app-repository-nav [owner]="owner" [slug]="slug" [managed]="!!tree()?.editor" active="code" />
 }
 @if (file()) {
@@ -119,6 +120,7 @@
             [selected]="file()"
             [ref]="ref() || tree()!.ref"
             [branches]="branches()"
+            [tags]="tags()"
             [files]="files()"
             [indexing]="indexing()"
             [indexError]="indexError()"
