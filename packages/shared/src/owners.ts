@@ -97,6 +97,8 @@ export interface ContributionCalendar {
 	days: Record<string, number>;
 	/** Years with any contributions, newest first, for the year selector. */
 	years: number[];
+	/** The viewer is the user: private contributions are counted for them, but hidden from others (setting off). */
+	privateOnlyForYou?: boolean;
 }
 
 export const PROFILE_LIMITS = { name: 80, bio: 160, location: 80, website: 200 } as const;

@@ -1,3 +1,6 @@
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatListModule } from '@angular/material/list';
@@ -9,7 +12,7 @@ import { monthLabels, monthTotals, tooltip, weeks } from './calendar';
 /** #144: GitHub-style contribution calendar: 53 weeks × 7 days, five levels from the theme. */
 @Component({
   selector: 'app-contribution-graph',
-  imports: [MatFormFieldModule, MatListModule, MatSelectModule, MatTooltipModule],
+  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatListModule, MatSelectModule, MatTooltipModule, RouterLink],
   templateUrl: './contribution-graph.html',
   styleUrl: './contribution-graph.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

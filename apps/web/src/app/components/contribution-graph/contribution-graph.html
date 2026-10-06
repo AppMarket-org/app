@@ -11,6 +11,13 @@
       </mat-select>
     </mat-form-field>
   </div>
+  @if (calendar().privateOnlyForYou) {
+    <p class="private-note">
+      <mat-icon aria-hidden="true">lock</mat-icon>
+      Includes contributions to your private repos, which only you see here.
+      <a mat-button routerLink="/settings/privacy">Show them on your profile</a>
+    </p>
+  }
 
   <div class="frame">
     <div class="scroll" tabindex="0" role="region" aria-label="Contribution calendar (scrolls sideways)">
