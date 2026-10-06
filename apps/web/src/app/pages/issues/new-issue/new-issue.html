@@ -1,0 +1,65 @@
+<form class="new-issue" (submit)="$event.preventDefault(); create()">
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Creating the issue" />
+  }
+  <h1>Create new issue in {{ owner() }}/{{ slug() }}</h1>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="title">
+    <mat-label>Title</mat-label>
+    <input matInput required name="title" [maxlength]="limits.title" [ngModel]="title()" (ngModelChange)="title.set($event)" autofocus (keydown.meta.enter)="create()" (keydown.control.enter)="create()" />
+  </mat-form-field>
+
+  <app-markdown-editor [(value)]="body" [maxLength]="limits.body" (submit)="create()" />
+
+  <div class="chips" role="group" aria-label="Issue details">
+    <button mat-stroked-button type="button" [matMenuTriggerFor]="assigneeMenu" [class.set]="assignee() !== null">
+      <mat-icon>{{ assignee() === 'agents' ? 'smart_toy' : 'person_add' }}</mat-icon>{{ assigneeLabel() }}
+    </button>
+    <mat-menu #assigneeMenu="matMenu">
+      <button mat-menu-item type="button" (click)="assignee.set('agents')">
+        <mat-icon>smart_toy</mat-icon><span>Agents</span>
+      </button>
+      @if (me(); as handle) {
+        <button mat-menu-item type="button" (click)="assignee.set(handle)"><mat-icon>person</mat-icon><span>Me ({{ handle }})</span></button>
+      }
+      <button mat-menu-item type="button" (click)="assignee.set(null)"><mat-icon>person_off</mat-icon><span>No one</span></button>
+    </mat-menu>
+
+    <button mat-stroked-button type="button" [matMenuTriggerFor]="typeMenu" [class.set]="type() !== null">
+      @if (type(); as t) {
+        <app-issue-type [type]="t" />
+      } @else {
+        <mat-icon>radio_button_unchecked</mat-icon>Issue type
+      }
+    </button>
+    <mat-menu #typeMenu="matMenu" class="type-menu">
+      @for (t of types; track t) {
+        <button mat-menu-item type="button" (click)="type.set(t)">
+          <span class="type-option"><app-issue-type [type]="t" /><span class="help">{{ typeLabels[t].help }}</span></span>
+        </button>
+      }
+    </mat-menu>
+
+    <button mat-stroked-button type="button" [matMenuTriggerFor]="priorityMenu" [class.set]="priority() !== 'none'">
+      <mat-icon>flag</mat-icon>{{ priority() === 'none' ? 'Priority' : priorityLabels[priority()] }}
+    </button>
+    <mat-menu #priorityMenu="matMenu">
+      @for (p of priorities; track p) {
+        <button mat-menu-item type="button" (click)="priority.set(p)">{{ priorityLabels[p] }}</button>
+      }
+    </mat-menu>
+  </div>
+
+  @if (assignee() === 'agents') {
+    <p class="hint"><mat-icon aria-hidden="true">smart_toy</mat-icon>Agents working on this repo will see it on the Agents board and can pick it up.</p>
+  }
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  <div class="actions">
+    <mat-checkbox [checked]="more()" (change)="more.set($event.checked)">Create more</mat-checkbox>
+    <a mat-button [routerLink]="['/', owner(), slug(), 'issues']">Cancel</a>
+    <button mat-flat-button type="submit" [disabled]="!title().trim() || busy()">Create <kbd>⌘↵</kbd></button>
+  </div>
+</form>

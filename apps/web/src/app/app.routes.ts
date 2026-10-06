@@ -42,6 +42,10 @@ export const routes: Routes = [
   { path: 'admin', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },
   // Code browser (read-only; Shiki loads in the browser).
   // #259: pull requests.
+  // #295: issues.
+  { path: ':owner/:slug/issues/new', canActivate: [authGuard(), repoGuard], loadComponent: () => import('./pages/issues/new-issue/new-issue').then((m) => m.NewIssuePage) },
+  { path: ':owner/:slug/issues/:number', canActivate: [repoGuard], loadComponent: () => import('./pages/issues/issue/issue').then((m) => m.IssuePage) },
+  { path: ':owner/:slug/issues', canActivate: [repoGuard], loadComponent: () => import('./pages/issues/issue-list/issue-list').then((m) => m.IssueListPage) },
   { path: ':owner/:slug/pulls/new', canActivate: [authGuard(), repoGuard], loadComponent: () => import('./pages/pulls/new-pull/new-pull').then((m) => m.NewPullPage) },
   { path: ':owner/:slug/pulls/:number', canActivate: [repoGuard], loadComponent: () => import('./pages/pulls/pull/pull').then((m) => m.PullPage) },
   { path: ':owner/:slug/pulls', canActivate: [repoGuard], loadComponent: () => import('./pages/pulls/pull-list/pull-list').then((m) => m.PullListPage) },
