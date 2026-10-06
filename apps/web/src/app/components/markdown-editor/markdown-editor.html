@@ -1,0 +1,39 @@
+<div class="editor">
+  <div class="bar">
+    <mat-tab-group mat-stretch-tabs="false" [selectedIndex]="tab()" (selectedIndexChange)="tab.set($event)" animationDuration="0ms" [attr.aria-label]="label() + ' editor'">
+      <mat-tab label="Write" />
+      <mat-tab label="Preview" />
+    </mat-tab-group>
+    @if (tab() === 0) {
+      <div class="tools" role="toolbar" [attr.aria-label]="'Format ' + label().toLowerCase()">
+        @for (tool of tools; track tool.icon) {
+          <button mat-icon-button type="button" (click)="apply(tool)" [attr.aria-label]="tool.label" [matTooltip]="tool.label"><mat-icon>{{ tool.icon }}</mat-icon></button>
+        }
+      </div>
+    }
+  </div>
+  @if (tab() === 0) {
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="write">
+      <mat-label>{{ label() }}</mat-label>
+      <textarea
+        #text
+        matInput
+        [rows]="rows()"
+        [attr.maxlength]="maxLength()"
+        [placeholder]="placeholder()"
+        [value]="value()"
+        (input)="value.set(text.value)"
+        (keydown)="keydown($event)"
+      ></textarea>
+      <mat-hint>Markdown is supported. {{ value().length > maxLength() * 0.9 ? value().length + ' / ' + maxLength() : '' }}</mat-hint>
+    </mat-form-field>
+  } @else {
+    <div class="preview" aria-live="polite">
+      @if (value().trim()) {
+        <app-markdown [source]="value()" [shiftHeadings]="false" />
+      } @else {
+        <p class="empty">Nothing to preview.</p>
+      }
+    </div>
+  }
+</div>

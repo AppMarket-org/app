@@ -1,0 +1,58 @@
+<app-repository-header [owner]="owner()" [slug]="slug()" [managed]="managed()" />
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="issues" [managed]="managed()" />
+<header class="head">
+  <div class="title">
+    <h1>Issues</h1>
+    @if (managed()) {
+      <a mat-flat-button [routerLink]="['/', owner(), slug(), 'issues', 'new']"><mat-icon>add</mat-icon>New issue</a>
+    }
+  </div>
+  <div class="filters">
+    <mat-button-toggle-group [value]="state()" (change)="show($event.value)" aria-label="Show" hideSingleSelectionIndicator>
+      <mat-button-toggle value="open">Open {{ counts().open ?? 0 }}</mat-button-toggle>
+      <mat-button-toggle value="closed">Closed {{ counts().closed ?? 0 }}</mat-button-toggle>
+    </mat-button-toggle-group>
+    <mat-chip-listbox aria-label="Filter by type" [value]="type()" (change)="filterType($event.value ?? null)">
+      @for (t of types; track t) {
+        <mat-chip-option [value]="t">{{ typeLabels[t].label }}</mat-chip-option>
+      }
+    </mat-chip-listbox>
+    <mat-chip-listbox aria-label="Filter by assignee" [value]="agentsOnly()" (change)="filterAgents(!!$event.value)">
+      <mat-chip-option [value]="true"><mat-icon matChipAvatar aria-hidden="true">smart_toy</mat-icon>For agents</mat-chip-option>
+    </mat-chip-listbox>
+  </div>
+</header>
+
+@switch (items()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">Issues are not available for this repo.</p>
+  }
+  @default {
+    <mat-nav-list aria-label="Issues">
+      @for (i of items()!; track i.number) {
+        <a mat-list-item [routerLink]="['/', owner(), slug(), 'issues', i.number]">
+          <mat-icon matListItemIcon aria-hidden="true" [class]="i.state + ' ' + (i.reason ?? '')">{{ stateIcon(i) }}</mat-icon>
+          <span matListItemTitle>{{ i.title }} <span class="number">#{{ i.number }}</span></span>
+          <span matListItemLine class="line">
+            <app-issue-type [type]="i.type" />
+            @if (i.priority !== 'none') {
+              <span class="priority" [class]="i.priority">{{ priorityLabels[i.priority] }}</span>
+            }
+            <span>{{ i.author }} · {{ i.createdAt | date: 'mediumDate' }}</span>
+            @if (i.assignee) {
+              <span class="assignee"><mat-icon aria-hidden="true">{{ i.assignee.kind === 'agents' ? 'smart_toy' : 'person' }}</mat-icon>{{ assigneeLabel(i) }}</span>
+            }
+            @if (i.comments) {
+              <span class="assignee"><mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>{{ i.comments }}</span>
+            }
+          </span>
+        </a>
+      } @empty {
+        <p class="empty">No {{ state() }} issues{{ type() ? ' of type ' + typeLabels[type()!].label : '' }}{{ agentsOnly() ? ' for agents' : '' }}.</p>
+      }
+    </mat-nav-list>
+  }
+}

@@ -1,0 +1,80 @@
+:host {
+  display: block;
+  padding: 0.5rem 0 3rem;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  h1 {
+    font: var(--mat-sys-headline-small);
+    margin: 0;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.number {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+mat-icon.open {
+  color: var(--mat-sys-primary);
+}
+
+mat-icon.closed {
+  color: var(--mat-sys-tertiary);
+}
+
+mat-icon.not_planned {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.priority {
+  font: var(--mat-sys-label-medium);
+
+  &.high,
+  &.urgent {
+    color: var(--mat-sys-error);
+  }
+}
+
+.assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+  padding: 1rem;
+}

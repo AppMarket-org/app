@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  --mat-icon-button-state-layer-size: 2.25rem;
+
+  button {
+    padding: 0.375rem;
+  }
+}
+
+.write {
+  width: 100%;
+
+  textarea {
+    font-family: var(--app-font-mono);
+    min-height: 8rem;
+  }
+}
+
+.preview {
+  min-height: 10rem;
+  padding: 0.75rem 1rem;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-small);
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+@media (max-width: 37.5rem) {
+  .tools {
+    width: 100%;
+  }
+}

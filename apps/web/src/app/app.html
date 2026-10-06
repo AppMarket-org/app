@@ -71,11 +71,8 @@
       <mat-icon>add</mat-icon><mat-icon class="caret">arrow_drop_down</mat-icon>
     </button>
     <mat-menu #create="matMenu" xPosition="before">
+      <button mat-menu-item type="button" (click)="newIssue()"><mat-icon>radio_button_unchecked</mat-icon>New issue</button>
       <a mat-menu-item routerLink="/dashboard/new"><mat-icon>create_new_folder</mat-icon>New repository</a>
-      <a mat-menu-item routerLink="/dashboard/new" [queryParams]="{ import: 'github' }"><mat-icon>upload_file</mat-icon>Import repository</a>
-      <mat-divider />
-      <a mat-menu-item routerLink="/dashboard/cloudflare"><mat-icon>cloud</mat-icon>Connect Cloudflare</a>
-      <a mat-menu-item routerLink="/search"><mat-icon>rocket_launch</mat-icon>Deploy an app</a>
       <mat-divider />
       <a mat-menu-item routerLink="/settings/orgs/new"><mat-icon>corporate_fare</mat-icon>New organization</a>
     </mat-menu>

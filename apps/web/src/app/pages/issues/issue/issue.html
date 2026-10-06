@@ -1,0 +1,138 @@
+@switch (issue()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">This issue does not exist, or you cannot see it.</p>
+  }
+  @default {
+    @let i = issue()!;
+    <header class="head">
+      <a mat-button [routerLink]="['/', owner(), slug(), 'issues']"><mat-icon>arrow_back</mat-icon>Issues</a>
+      @if (editing()) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="title-field">
+          <mat-label>Title</mat-label>
+          <input matInput [maxlength]="limits.title" [ngModel]="draftTitle()" (ngModelChange)="draftTitle.set($event)" />
+        </mat-form-field>
+      } @else {
+        <div class="title-row">
+          <h1>{{ i.title }} <span class="number">#{{ i.number }}</span></h1>
+          @if (i.canEdit) {
+            <button mat-stroked-button type="button" (click)="edit(i)">Edit</button>
+          }
+        </div>
+      }
+      <div class="meta">
+        <mat-chip-set aria-label="State">
+          <mat-chip [class]="i.state + ' ' + (i.reason ?? '')" [highlighted]="i.state === 'open'">
+            <mat-icon matChipAvatar aria-hidden="true">{{ stateIcon(i) }}</mat-icon>
+            {{ i.state === 'open' ? 'Open' : i.reason === 'not_planned' ? 'Closed as not planned' : 'Closed' }}
+          </mat-chip>
+        </mat-chip-set>
+        <span>{{ i.author }} opened this {{ i.createdAt | date: 'medium' }} · {{ i.comments }} {{ i.comments === 1 ? 'comment' : 'comments' }}</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <div class="main">
+        <mat-card appearance="outlined">
+          <mat-card-header><mat-card-title>{{ i.author }}</mat-card-title><mat-card-subtitle>{{ i.createdAt | date: 'medium' }}</mat-card-subtitle></mat-card-header>
+          <mat-card-content>
+            @if (editing()) {
+              <app-markdown-editor [(value)]="draftBody" [maxLength]="limits.body" (submit)="save()" />
+              <div class="actions">
+                <button mat-button type="button" (click)="editing.set(false)">Cancel</button>
+                <button mat-flat-button type="button" (click)="save()" [disabled]="busy() || !draftTitle().trim()">Save</button>
+              </div>
+            } @else if (i.body) {
+              <app-markdown [source]="i.body" [shiftHeadings]="false" />
+            } @else {
+              <p class="empty">No description.</p>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        @for (c of comments(); track c.id) {
+          <mat-card appearance="outlined">
+            <mat-card-header><mat-card-title>{{ c.author }}</mat-card-title><mat-card-subtitle>{{ c.createdAt | date: 'medium' }}</mat-card-subtitle></mat-card-header>
+            <mat-card-content><app-markdown [source]="c.body" [shiftHeadings]="false" /></mat-card-content>
+            @if (c.canDelete) {
+              <mat-card-actions align="end"><button mat-button type="button" (click)="remove(c)" [disabled]="busy()">Delete</button></mat-card-actions>
+            }
+          </mat-card>
+        }
+
+        @if (auth.user()) {
+          <mat-card appearance="outlined" class="reply">
+            <mat-card-content>
+              <app-markdown-editor [(value)]="reply" label="Comment" placeholder="Add a comment…" [rows]="5" [maxLength]="limits.comment" (submit)="comment()" />
+              @if (error(); as message) {
+                <p class="error" role="alert">{{ message }}</p>
+              }
+              <div class="actions">
+                @if (i.canTriage) {
+                  @if (i.state === 'open') {
+                    <button mat-stroked-button type="button" (click)="comment('completed')" [disabled]="busy()"><mat-icon>check_circle</mat-icon>{{ reply().trim() ? 'Close with comment' : 'Close issue' }}</button>
+                    <button mat-button type="button" (click)="comment('not_planned')" [disabled]="busy()"><mat-icon>block</mat-icon>Close as not planned</button>
+                  } @else {
+                    <button mat-stroked-button type="button" (click)="reopen()" [disabled]="busy()"><mat-icon>replay</mat-icon>Reopen issue</button>
+                  }
+                }
+                <button mat-flat-button type="button" (click)="comment()" [disabled]="busy() || !reply().trim()">Comment</button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+
+      <aside class="side" aria-label="Issue details">
+        <section>
+          <h2>Assignee</h2>
+          @if (i.canTriage) {
+            <button mat-button type="button" class="pick" [matMenuTriggerFor]="assigneeMenu">
+              <mat-icon>{{ i.assignee?.kind === 'agents' ? 'smart_toy' : i.assignee ? 'person' : 'person_add' }}</mat-icon>{{ assigneeLabel(i) }}
+            </button>
+            <mat-menu #assigneeMenu="matMenu">
+              <button mat-menu-item type="button" (click)="update({ assignee: 'agents' })"><mat-icon>smart_toy</mat-icon><span>Agents</span></button>
+              @if (me(); as handle) {
+                <button mat-menu-item type="button" (click)="update({ assignee: handle })"><mat-icon>person</mat-icon><span>Me ({{ handle }})</span></button>
+              }
+              <button mat-menu-item type="button" (click)="update({ assignee: null })"><mat-icon>person_off</mat-icon><span>No one</span></button>
+            </mat-menu>
+          } @else {
+            <p>{{ assigneeLabel(i) }}</p>
+          }
+          @if (i.assignee?.kind === 'agents' && i.state === 'open') {
+            <p class="hint">On the Agents board for any agent to pick up.</p>
+          }
+        </section>
+        <section>
+          <h2>Type</h2>
+          @if (i.canTriage) {
+            <button mat-button type="button" class="pick" [matMenuTriggerFor]="typeMenu"><app-issue-type [type]="i.type" /></button>
+            <mat-menu #typeMenu="matMenu">
+              @for (t of types; track t) {
+                <button mat-menu-item type="button" (click)="update({ type: t })"><app-issue-type [type]="t" /></button>
+              }
+            </mat-menu>
+          } @else {
+            <p><app-issue-type [type]="i.type" /></p>
+          }
+        </section>
+        <section>
+          <h2>Priority</h2>
+          @if (i.canTriage) {
+            <button mat-button type="button" class="pick" [matMenuTriggerFor]="priorityMenu"><mat-icon>flag</mat-icon>{{ priorityLabels[i.priority] }}</button>
+            <mat-menu #priorityMenu="matMenu">
+              @for (p of priorities; track p) {
+                <button mat-menu-item type="button" (click)="update({ priority: p })">{{ priorityLabels[p] }}</button>
+              }
+            </mat-menu>
+          } @else {
+            <p>{{ priorityLabels[i.priority] }}</p>
+          }
+        </section>
+      </aside>
+    </div>
+  }
+}
