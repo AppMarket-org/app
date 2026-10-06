@@ -13,10 +13,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import type { MemoryChange, MemoryNote } from '@appmarket/shared';
+import { RouterLink } from '@angular/router';
+import type { MemoryChange, MemoryNote, MemorySuggestion } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { MemoryApi, type NoteChange } from '../../api/memory';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
+import { MemorySuggestions } from '../../components/memory-suggestions/memory-suggestions';
 import { RepositoryHeader } from '../../components/repository-header/repository-header';
 import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { Seo } from '../../seo/seo';
@@ -26,7 +28,7 @@ const SOURCE_LABELS: Record<string, string> = { web: 'website', cli: 'CLI', 'cla
 /** #198: the repo's memory: notes its people and agents keep, with history; some published with the app. */
 @Component({
   selector: 'app-memory',
-  imports: [RepositoryHeader, RepositoryNav, DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSlideToggleModule, MatTooltipModule],
+  imports: [RepositoryHeader, RepositoryNav, DatePipe, MemorySuggestions, RouterLink, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSlideToggleModule, MatTooltipModule],
   templateUrl: './memory.html',
   styleUrl: './memory.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,7 @@ export class MemoryPage implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   protected readonly notes = signal<MemoryNote[] | null | undefined>(undefined);
   protected readonly total = signal(0);
+  protected readonly suggestions = signal<MemorySuggestion[]>([]);
   protected readonly limit = signal(500);
   protected readonly query = signal('');
   protected readonly tag = signal('');
@@ -62,7 +65,8 @@ export class MemoryPage implements OnInit {
 
   protected async load(): Promise<void> {
     try {
-      const r = await firstValueFrom(this.api.list(this.path(), this.query().trim(), this.tag()));
+      const [r, s] = await Promise.all([firstValueFrom(this.api.list(this.path(), this.query().trim(), this.tag())), firstValueFrom(this.api.suggestions(this.path())).catch(() => ({ items: [] }))]);
+      this.suggestions.set(s.items);
       this.notes.set(r.notes);
       this.total.set(r.total);
       this.limit.set(r.limits.notesPerRepo);

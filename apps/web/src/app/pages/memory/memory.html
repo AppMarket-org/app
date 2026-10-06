@@ -38,6 +38,14 @@
   </mat-card-content>
 </mat-card>
 
+@if (suggestions().length) {
+  <section class="suggested" aria-labelledby="suggested-heading">
+    <h2 id="suggested-heading">Suggested from checkpoints <span class="count">{{ suggestions().length }}</span></h2>
+    <p class="lead">Learned in recent agent sessions: commands that work, gotchas and conventions. Nothing is added until you choose.</p>
+    <app-memory-suggestions [path]="path()" [items]="suggestions()" (decided)="load()" />
+  </section>
+}
+
 <div class="filters">
   <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
     <mat-icon matPrefix aria-hidden="true">search</mat-icon>
@@ -91,6 +99,9 @@
                 <mat-icon aria-hidden="true" class="flag">public</mat-icon>Public with the app ·
               }
               {{ n.createdBy }} via {{ sources[n.source] ?? n.source }} · {{ n.updatedAt | date: 'medium' }}
+              @if (n.checkpointSha) {
+                · <a mat-button class="from" [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']">from checkpoint {{ n.checkpointSha.slice(0, 7) }}</a>
+              }
               @if (n.redactions) {
                 · {{ n.redactions }} secret{{ n.redactions === 1 ? '' : 's' }} redacted
               }

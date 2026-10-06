@@ -5,7 +5,7 @@ import type { AuthVariables } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { type Actor, createNote, deleteNote, getNote, listNotes, noteHistory, publicNotes, updateNote } from "./store.ts";
+import { type Actor, createNote, decideSuggestion, deleteNote, getNote, listNotes, noteHistory, pendingSuggestions, publicNotes, updateNote } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -58,6 +58,25 @@ export const memoryRoutes = new Hono<Ctx>()
 		if ("error" in result) return c.json({ error: "limit", message: `A repo keeps at most ${MEMORY_LIMITS.notesPerRepo} notes; delete some first.` }, 409);
 		logEvent("memory.created", { repo: repo.fullName, source: input.source, redactions: result.note.redactions });
 		return c.json(result.note, 201);
+	})
+	// #197: notes suggested from checkpoints, waiting for a person to accept or dismiss them.
+	.get("/:owner/:slug/memory-suggestions", async (c) => {
+		const repo = await repoFor(c);
+		if (!repo) return notFound(c);
+		const commit = c.req.query("commit");
+		return c.json({ items: await pendingSuggestions(repo.id, commit && /^[0-9a-f]{40}$/.test(commit) ? commit : undefined) });
+	})
+	.post("/:owner/:slug/memory-suggestions/:id/:decision{accept|dismiss}", async (c) => {
+		const repo = await repoFor(c);
+		if (!repo) return notFound(c);
+		const blocked = await limited(c);
+		if (blocked) return blocked;
+		const raw = await body(c);
+		const edit = parseMemoryInput({ text: raw.text, tags: raw.tags }, true);
+		const changes = "error" in edit ? undefined : { text: edit.text, tags: edit.tags };
+		const result = await decideSuggestion(repo.id, c.req.param("id"), c.req.param("decision") === "accept", { userId: c.get("session")!.user.id, source: "web", sessionId: null }, changes);
+		if ("error" in result) return result.error === "limit" ? c.json({ error: "limit", message: `A repo keeps at most ${MEMORY_LIMITS.notesPerRepo} notes; delete some first.` }, 409) : notFound(c);
+		return c.json(result.note ?? { ok: true });
 	})
 	.get("/:owner/:slug/memory/:id", async (c) => {
 		const repo = await repoFor(c);

@@ -130,3 +130,12 @@ mat-chip.missing {
   background: var(--mat-sys-tertiary-container);
   color: var(--mat-sys-on-tertiary-container);
 }
+
+.memory-suggestions {
+  margin-top: 1rem;
+
+  h3 {
+    font: var(--mat-sys-title-small);
+    margin: 0 0 0.5rem;
+  }
+}

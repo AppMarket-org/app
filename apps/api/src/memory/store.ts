@@ -1,4 +1,5 @@
-import { MEMORY_LIMITS, type MemoryChange, type MemoryNote, type MemorySource, redactSecrets } from "@appmarket/shared";
+import { MEMORY_LIMITS, type MemoryChange, type MemoryNote, type MemorySource, type MemorySuggestion, redactSecrets } from "@appmarket/shared";
+import { suggestNotes } from "./suggest.ts";
 import { env } from "cloudflare:workers";
 
 interface NoteRow {
@@ -7,6 +8,7 @@ interface NoteRow {
 	tags: string;
 	pinned: number;
 	public: number;
+	checkpoint_sha: string | null;
 	created_by: string;
 	source: MemorySource;
 	session_id: string | null;
@@ -24,6 +26,7 @@ const toNote = (r: NoteRow): MemoryNote => ({
 	tags: JSON.parse(r.tags) as string[],
 	pinned: r.pinned === 1,
 	public: r.public === 1,
+	checkpointSha: r.checkpoint_sha,
 	createdBy: r.author ?? "",
 	source: r.source,
 	sessionId: r.session_id,
@@ -90,20 +93,21 @@ function historyRow(id: string, version: number, action: MemoryChange["action"],
 
 export type CreateResult = { note: MemoryNote } | { error: "limit" };
 
-export async function createNote(repoId: string, input: { text: string; tags: string[]; pinned: boolean; public?: boolean }, actor: Actor): Promise<CreateResult> {
+export async function createNote(repoId: string, input: { text: string; tags: string[]; pinned: boolean; public?: boolean; checkpointSha?: string }, actor: Actor): Promise<CreateResult> {
 	const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM memory_notes WHERE repo_id = ? AND deleted_at IS NULL").bind(repoId).first<{ n: number }>();
 	if ((count?.n ?? 0) >= MEMORY_LIMITS.notesPerRepo) return { error: "limit" };
 	const id = crypto.randomUUID();
 	const { text, count: redactions } = redact(input.text);
 	const note = { text, tags: input.tags, pinned: input.pinned };
 	await env.DB.batch([
-		env.DB.prepare("INSERT INTO memory_notes (id, repo_id, text, tags, pinned, public, created_by, source, session_id, redactions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
+		env.DB.prepare("INSERT INTO memory_notes (id, repo_id, text, tags, pinned, public, checkpoint_sha, created_by, source, session_id, redactions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
 			id,
 			repoId,
 			text,
 			JSON.stringify(input.tags),
 			input.pinned ? 1 : 0,
 			input.public ? 1 : 0,
+			input.checkpointSha ?? null,
 			actor.userId,
 			actor.source,
 			actor.sessionId,
@@ -203,4 +207,43 @@ export async function copyNotes(fromRepoId: string, toRepoId: string, all: boole
 	});
 	for (let i = 0; i < statements.length; i += 50) await env.DB.batch(statements.slice(i, i + 50));
 	return results.length;
+}
+
+/** #197: suggestions from a saved checkpoint (best effort; existing notes and earlier suggestions are skipped). */
+export async function suggestFromCheckpoint(repoId: string, commit: string, record: { prompts: { text: string }[]; tools: { name: string; args_summary: string; outcome: "ok" | "error" }[] }): Promise<number> {
+	const [notes, earlier] = await Promise.all([
+		env.DB.prepare("SELECT text FROM memory_notes WHERE repo_id = ? AND deleted_at IS NULL").bind(repoId).all<{ text: string }>(),
+		env.DB.prepare("SELECT text FROM memory_suggestions WHERE repo_id = ?").bind(repoId).all<{ text: string }>(),
+	]);
+	const found = suggestNotes(record, [...notes.results, ...earlier.results].map((r) => r.text));
+	if (!found.length) return 0;
+	await env.DB.batch(
+		found.map((s) =>
+			env.DB.prepare("INSERT OR IGNORE INTO memory_suggestions (id, repo_id, commit_sha, kind, text, tags) VALUES (?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), repoId, commit, s.kind, redact(s.text).text, JSON.stringify(s.tags)),
+		),
+	);
+	return found.length;
+}
+
+export async function pendingSuggestions(repoId: string, commit?: string): Promise<MemorySuggestion[]> {
+	const { results } = await env.DB.prepare(
+		`SELECT id, commit_sha, kind, text, tags, created_at FROM memory_suggestions WHERE repo_id = ? AND status = 'pending' ${commit ? "AND commit_sha = ?" : ""} ORDER BY created_at DESC LIMIT 100`,
+	)
+		.bind(...(commit ? [repoId, commit] : [repoId]))
+		.all<{ id: string; commit_sha: string; kind: MemorySuggestion["kind"]; text: string; tags: string; created_at: string }>();
+	return results.map((r) => ({ id: r.id, commit: r.commit_sha, kind: r.kind, text: r.text, tags: JSON.parse(r.tags) as string[], createdAt: r.created_at }));
+}
+
+/** Accepting saves the suggestion (as given, or edited) as a note linked to its checkpoint. */
+export async function decideSuggestion(repoId: string, id: string, accept: boolean, actor: Actor, edit?: { text?: string; tags?: string[] }): Promise<{ note?: MemoryNote } | { error: "not_found" | "limit" }> {
+	const row = await env.DB.prepare("SELECT commit_sha, text, tags FROM memory_suggestions WHERE id = ? AND repo_id = ? AND status = 'pending'").bind(id, repoId).first<{ commit_sha: string; text: string; tags: string }>();
+	if (!row) return { error: "not_found" };
+	if (!accept) {
+		await env.DB.prepare("UPDATE memory_suggestions SET status = 'dismissed', decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(id).run();
+		return {};
+	}
+	const created = await createNote(repoId, { text: edit?.text ?? row.text, tags: edit?.tags ?? (JSON.parse(row.tags) as string[]), pinned: false, checkpointSha: row.commit_sha }, actor);
+	if ("error" in created) return created;
+	await env.DB.prepare("UPDATE memory_suggestions SET status = 'accepted', note_id = ?, decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(created.note.id, id).run();
+	return { note: created.note };
 }

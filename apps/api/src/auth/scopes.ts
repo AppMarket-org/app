@@ -33,6 +33,8 @@ const RULES: readonly Rule[] = [
 	// #194: repo memory. CI tokens read only.
 	{ scope: "memory:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/memory(/[0-9a-f-]{36}(/history)?)?$`) },
 	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/public-memory$`) },
+	{ scope: "memory:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/memory-suggestions$`) },
+	{ scope: "memory:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/memory-suggestions/[0-9a-f-]{36}/(accept|dismiss)$`) },
 	{ scope: "memory:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/memory$`) },
 	{ scope: "memory:write", methods: ["PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/memory/[0-9a-f-]{36}$`) },
 	// #260: pull requests from the CLI and agents. Reading with repos:read; changes with pulls:write.

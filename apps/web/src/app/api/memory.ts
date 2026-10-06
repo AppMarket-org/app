@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { MemoryChange, MemoryNote } from '@appmarket/shared';
+import type { MemoryChange, MemoryNote, MemorySuggestion } from '@appmarket/shared';
 import type { Observable } from 'rxjs';
 
 export interface NoteChange {
@@ -41,5 +41,14 @@ export class MemoryApi {
   /** Notes published with an app (its public page). */
   published(path: string): Observable<{ notes: Pick<MemoryNote, 'id' | 'text' | 'tags' | 'pinned' | 'updatedAt'>[] }> {
     return this.http.get<{ notes: Pick<MemoryNote, 'id' | 'text' | 'tags' | 'pinned' | 'updatedAt'>[] }>(`/api/repos/${path}/public-memory`);
+  }
+
+  /** #197: notes suggested from checkpoints (optionally one commit's). */
+  suggestions(path: string, commit?: string): Observable<{ items: MemorySuggestion[] }> {
+    return this.http.get<{ items: MemorySuggestion[] }>(`/api/repos/${path}/memory-suggestions`, { params: commit ? { commit } : {} });
+  }
+
+  decide(path: string, id: string, decision: 'accept' | 'dismiss', edit?: { text?: string; tags?: string[] }): Observable<MemoryNote | { ok: true }> {
+    return this.http.post<MemoryNote | { ok: true }>(`/api/repos/${path}/memory-suggestions/${id}/${decision}`, edit ?? {});
   }
 }
