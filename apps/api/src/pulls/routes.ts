@@ -6,8 +6,10 @@ import type { AppSession, AuthVariables } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { normalizePath } from "../plane/model.ts";
 import { startMerge } from "../plane/merge.ts";
+import { tellBoard } from "../plane/merge-workflow.ts";
 import { changedFiles, diffRange, fileDiff } from "./diff.ts";
 import { notifyPull, participants, repoOwners } from "./notify.ts";
+import { insertPull, pullSettings, savePullSettings } from "./store.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { pickBranch } from "../repos/pick-branch.ts";
 import { RepoStore } from "../repos/repository.ts";
@@ -32,6 +34,7 @@ interface PullRow {
 	created_at: string;
 	updated_at: string;
 	closed_at: string | null;
+	task_id: string | null;
 }
 
 const SELECT = `SELECT p.*, u.name AS author, so.handle || '/' || s.slug AS source_name
@@ -53,8 +56,7 @@ async function reviewsOf(pullId: string) {
 	return reviewDecision(results.map((r) => ({ reviewerId: r.reviewer_id, state: r.state, counts: r.counts === 1, createdAt: r.created_at })));
 }
 
-const requiresApproval = async (repoId: string) =>
-	(await env.DB.prepare("SELECT require_approval FROM repo_pull_settings WHERE repo_id = ?").bind(repoId).first<{ require_approval: number }>())?.require_approval === 1;
+const requiresApproval = async (repoId: string) => (await pullSettings(repoId)).requireApproval;
 
 /** Why the pull request cannot be merged now (null when it can). */
 function blocked(state: PullState, review: { decision: string | null }, requireApproval: boolean): string | null {
@@ -187,21 +189,7 @@ export const pullRoutes = new Hono<Ctx>()
 			.first<{ number: number }>();
 		if (existing) return c.json({ error: "conflict", message: `Pull request #${existing.number} is already open for this branch.`, number: existing.number }, 409);
 
-		const id = crypto.randomUUID();
-		const text = redactSecrets(input.body ?? "").text;
-		for (let attempt = 0; attempt < 3; attempt++) {
-			try {
-				await env.DB.prepare(
-					`INSERT INTO pull_requests (id, repo_id, number, title, body, author_id, source_repo_id, source_branch, target_branch, head_sha)
-					 VALUES (?, ?, (SELECT COALESCE(MAX(number), 0) + 1 FROM pull_requests WHERE repo_id = ?), ?, ?, ?, ?, ?, ?, ?)`,
-				)
-					.bind(id, repo.id, repo.id, redactSecrets(input.title!).text, text, session.user.id, source.id, head.name, base.name, head.sha)
-					.run();
-				break;
-			} catch (error) {
-				if (attempt === 2 || !String(error).includes("UNIQUE")) throw error;
-			}
-		}
+		const { id } = await insertPull({ repoId: repo.id, title: input.title!, body: input.body ?? "", authorId: session.user.id, sourceRepoId: source.id, sourceBranch: head.name, targetBranch: base.name, headSha: head.sha });
 		const row = (await env.DB.prepare(`${SELECT} WHERE p.id = ?`).bind(id).first<PullRow>())!;
 		logEvent("pull.opened", { repo: repo.fullName, number: row.number, fork: source.id !== repo.id });
 		c.executionCtx.waitUntil(
@@ -231,6 +219,9 @@ export const pullRoutes = new Hono<Ctx>()
 			if (row.state === "merged") return invalid(c, "A merged pull request stays merged.", 409);
 			if (body.state !== "open" && body.state !== "closed") return invalid(c, "state is open or closed.");
 			state = body.state;
+		}
+		if (state === "closed" && row.state === "open" && row.task_id) {
+			c.executionCtx.waitUntil(tellBoard(repo.id, row.task_id, { id: row.id, status: "failed", sha: null, error: `Pull request #${row.number} was closed without merging.`, pull: row.number }).catch(() => undefined));
 		}
 		await env.DB.prepare(
 			`UPDATE pull_requests SET title = ?, body = ?, state = ?, closed_at = CASE WHEN ? = 'closed' THEN COALESCE(closed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ELSE NULL END,
@@ -407,7 +398,8 @@ export const pullRoutes = new Hono<Ctx>()
 		if (!canEdit(repo, session)) return invalid(c, "Only the repo's owners and members can merge.", 403);
 		const why = blocked(row.state, await reviewsOf(row.id), await requiresApproval(repo.id));
 		if (why) return invalid(c, why, 409);
-		await startMerge({ repo, sourceRepoId: row.source_repo_id, branch: row.source_branch, pullId: row.id, baseBranch: row.target_branch });
+		// A pull request opened by the agent board (#260) reports its merge to the board task too.
+		await startMerge({ repo, sourceRepoId: row.source_repo_id, branch: row.source_branch, pullId: row.id, baseBranch: row.target_branch, ...(row.task_id ? { taskId: row.task_id } : {}) });
 		logEvent("pull.merge_requested", { repo: repo.fullName, number: row.number });
 		return c.json(await toPull((await pullRow(repo.id, row.number))!, repo, session), 202);
 	})
@@ -460,15 +452,15 @@ export const pullRoutes = new Hono<Ctx>()
 	.get("/:owner/:slug/pull-settings", async (c) => {
 		const repo = await target(c);
 		if (!repo || !canEdit(repo, c.get("session"))) return notFound(c);
-		return c.json({ requireApproval: await requiresApproval(repo.id) });
+		return c.json(await pullSettings(repo.id));
 	})
 	.put("/:owner/:slug/pull-settings", async (c) => {
 		const repo = await target(c);
 		if (!repo || !canEdit(repo, c.get("session"))) return notFound(c);
 		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
-		if (typeof body.requireApproval !== "boolean") return invalid(c, "requireApproval is true or false.");
-		await env.DB.prepare("INSERT INTO repo_pull_settings (repo_id, require_approval) VALUES (?, ?) ON CONFLICT (repo_id) DO UPDATE SET require_approval = excluded.require_approval")
-			.bind(repo.id, body.requireApproval ? 1 : 0)
-			.run();
-		return c.json({ requireApproval: body.requireApproval });
+		const keys = ["requireApproval", "reviewAgentWork"] as const;
+		if (!keys.some((k) => body[k] !== undefined) || keys.some((k) => body[k] !== undefined && typeof body[k] !== "boolean")) return invalid(c, "requireApproval and reviewAgentWork are true or false.");
+		const next = { ...(await pullSettings(repo.id)), ...Object.fromEntries(keys.filter((k) => body[k] !== undefined).map((k) => [k, body[k] as boolean])) };
+		await savePullSettings(repo.id, next);
+		return c.json(next);
 	});

@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -31,14 +32,17 @@ export interface PlaneTask {
 }
 export interface TaskMerge {
   id: string;
-  status: 'queued' | 'rebasing' | 'checking' | 'merging' | 'merged' | 'conflict' | 'failed';
+  status: 'queued' | 'rebasing' | 'checking' | 'merging' | 'merged' | 'conflict' | 'failed' | 'review';
   sha: string | null;
   error: string | null;
   conflicts?: string[];
+  /** The pull request opened for the task (review on). */
+  pull?: number;
 }
 
 /** #238: what each merge stage is called on the board. */
 export const MERGE_LABELS: Record<TaskMerge['status'], string> = {
+  review: 'Waiting for review',
   queued: 'Merge queued',
   rebasing: 'Rebasing onto the base branch',
   checking: 'Running checks',
@@ -82,6 +86,7 @@ export interface PlaneState {
     MatIconModule,
     MatInputModule,
     MatListModule,
+    MatSlideToggleModule,
     MatProgressBarModule,
     MatTooltipModule,
     ReactiveFormsModule,
@@ -111,6 +116,8 @@ export class AgentsPage implements OnInit {
   private readonly names = computed(() => new Map((this.state()?.agents ?? []).map((a) => [a.id, a.name])));
 
   protected readonly mergeLabels = MERGE_LABELS;
+  /** #260: finished tasks open a pull request for review instead of merging. */
+  protected readonly reviewAgentWork = signal<boolean | null>(null);
   protected readonly merging = signal<string | null>(null);
 
   protected readonly form = new FormGroup({
@@ -134,6 +141,9 @@ export class AgentsPage implements OnInit {
   ngOnInit(): void {
     if (!this.browser) return;
     void this.refresh();
+    void firstValueFrom(this.http.get<{ reviewAgentWork: boolean }>(`/api/repos/${this.path()}/pull-settings`))
+      .then((s) => this.reviewAgentWork.set(s.reviewAgentWork))
+      .catch(() => undefined);
     this.connect();
   }
 
@@ -188,6 +198,18 @@ export class AgentsPage implements OnInit {
       this.snackBar.open(message, undefined, { duration: 4000 });
     } finally {
       this.merging.set(null);
+    }
+  }
+
+  protected async setReview(on: boolean): Promise<void> {
+    const before = this.reviewAgentWork();
+    this.reviewAgentWork.set(on);
+    try {
+      const s = await firstValueFrom(this.http.put<{ reviewAgentWork: boolean }>(`/api/repos/${this.path()}/pull-settings`, { reviewAgentWork: on }));
+      this.reviewAgentWork.set(s.reviewAgentWork);
+    } catch {
+      this.reviewAgentWork.set(before);
+      this.snackBar.open('Could not save the setting.', undefined, { duration: 4000 });
     }
   }
 

@@ -10,6 +10,12 @@
     Post tasks for your agents. Each agent works in its own agent session, claims a task that matches what it can do, and leases the files it
     will change, so two agents never edit the same files at once.
   </p>
+  @if (reviewAgentWork() !== null) {
+    <mat-slide-toggle [checked]="!!reviewAgentWork()" (change)="setReview($event.checked)">
+      Review agent work before merging
+      <span class="hint">A finished task opens a pull request for you to review and merge, instead of merging once its checks pass.</span>
+    </mat-slide-toggle>
+  }
 </header>
 
 @switch (state()) {
@@ -105,7 +111,7 @@
                 }
                 @if (t.merge; as m) {
                   <div class="merge" [class]="'merge ' + m.status" role="status">
-                    <mat-icon aria-hidden="true">{{ m.status === 'merged' ? 'merge' : inFlight(m) ? 'pending' : 'error_outline' }}</mat-icon>
+                    <mat-icon aria-hidden="true">{{ m.status === 'merged' ? 'merge' : m.status === 'review' ? 'rate_review' : inFlight(m) ? 'pending' : 'error_outline' }}</mat-icon>
                     <span>
                       {{ mergeLabels[m.status] }}
                       @if (m.sha) {
@@ -113,6 +119,9 @@
                       }
                     </span>
                   </div>
+                  @if (m.pull) {
+                    <a mat-button [routerLink]="['/', owner(), slug(), 'pulls', m.pull]"><mat-icon>call_split</mat-icon>Pull request #{{ m.pull }}</a>
+                  }
                   @if (inFlight(m)) {
                     <mat-progress-bar mode="indeterminate" aria-label="Merging" />
                   }
@@ -122,7 +131,7 @@
                 }
               </mat-card-content>
             }
-            @if (t.status === 'done' && t.branch && (!t.merge || t.merge.status === 'conflict' || t.merge.status === 'failed')) {
+            @if (t.status === 'done' && t.branch && !t.merge?.pull && (!t.merge || t.merge.status === 'conflict' || t.merge.status === 'failed')) {
               <mat-card-actions align="end">
                 <button mat-stroked-button type="button" [disabled]="merging() === t.id" (click)="merge(t)"><mat-icon>merge</mat-icon>{{ t.merge ? 'Merge again' : 'Merge' }}</button>
               </mat-card-actions>
