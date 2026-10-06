@@ -100,4 +100,5 @@ jobs:
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" bin/* --repo "$GITHUB_REPOSITORY" --title "appmarket CLI ${GITHUB_REF_NAME#cli-v}" --notes "Standalone binaries for machines without Node (npm: \`npm install -g appmarket\`). Not code-signed: check the file against SHA256SUMS, or run \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`. On macOS, clear the quarantine flag once: \`xattr -d com.apple.quarantine appmarket-darwin-*\`."
+        run: |
+          gh release create "$GITHUB_REF_NAME" bin/* --repo "$GITHUB_REPOSITORY" --title "appmarket CLI ${GITHUB_REF_NAME#cli-v}" --notes "Standalone binaries for machines without Node (or use npm: \`npm install -g appmarket\`). Not code-signed: check a file against SHA256SUMS, or run \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`. On macOS, clear the quarantine flag once: \`xattr -d com.apple.quarantine appmarket-darwin-*\`."
