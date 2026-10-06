@@ -80,7 +80,7 @@
 
   @if (l.state !== 'removed') {
     @if (visited().has('code')) {
-      <section class="code-overview" [hidden]="tab() !== 'code'" aria-label="Repository code">
+      <section class="code-overview" [class.file-open]="fileOpen()" [hidden]="tab() !== 'code'" aria-label="Repository code">
         <app-code [embedded]="true" />
         <aside class="about" aria-label="About this repository">
           <h2>About</h2><p>{{ l.summary || 'No description provided.' }}</p>

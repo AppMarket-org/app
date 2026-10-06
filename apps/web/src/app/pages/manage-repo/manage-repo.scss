@@ -11,7 +11,8 @@
 .repo-identity h1 { font: 600 1.125rem/1.5 var(--app-font-body); letter-spacing: 0; margin: 0; overflow-wrap: anywhere; }
 .repo-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .code-overview { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 2rem; max-width: 90rem; margin: 0 auto; }
-.code-overview > * { min-width: 0; }
+.file-open { display: block; max-width: none; }
+.file-open .about { display: none; }
 .about h2 { font: 600 1rem/1.5 var(--app-font-body); margin: 0 0 0.75rem; }
 .about p { font-size: 0.875rem; line-height: 1.7; margin: 0 0 1rem; overflow-wrap: anywhere; }
 .about-facts { padding-block: 1rem; border-block: 0.0625rem solid var(--app-border); font-size: 0.8125rem; }
@@ -32,9 +33,6 @@
   max-width: 78rem;
 }
 .section-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 .section-heading h2 {

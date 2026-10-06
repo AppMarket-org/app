@@ -82,6 +82,7 @@ export class ManageRepo {
     return tab === 'deployments' || tab === 'marketplace' || tab === 'settings' ? tab : 'code';
   });
   protected readonly visited = signal(new Set<string>());
+  protected readonly fileOpen = computed(() => !!this.query().get('file'));
   /** From the route /dashboard/repos/:owner/:slug. */
   readonly owner = input.required<string>();
   readonly slug = input.required<string>();
