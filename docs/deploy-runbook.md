@@ -79,9 +79,11 @@ Settings → Environments → create `staging` and `production`:
 - **Deployment branches**: `main` only.
 - Required reviewers need a paid GitHub plan for private repos (the org is on Free), so the approval
   gate is that only the owner starts a deploy (or explicitly approves one started for them).
-- Secret `CLOUDFLARE_API_TOKEN`: an API token for this account with Workers Scripts Edit, Workers
-  Routes Edit, D1 Edit, Workers R2 Storage Edit, Containers Edit, Artifacts Edit, Zone → Workers
-  Routes Edit and DNS Edit for `appmarket.org` (custom domains).
+- Secret `CLOUDFLARE_API_TOKEN`: a custom API token (My Profile → API Tokens), limited to this
+  account (Account Resources: Include → the account, not All accounts):
+  - Account: Workers Scripts Edit, D1 Edit, Workers R2 Storage Edit, Containers Edit, Artifacts Edit;
+  - Zone `appmarket.org` (Zone Resources: Include → Specific zone): Workers Routes Edit and DNS Edit
+    (custom domains). Workers Routes is a zone permission; there is no account-level one.
 - Variable `CLOUDFLARE_ACCOUNT_ID`: `aada0f21d612f647ef27d21e1c09b648`.
 
 ## Before the first production deploy
