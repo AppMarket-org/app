@@ -1,6 +1,6 @@
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="checkpoints" />
 <header class="head">
   <div>
-    <a mat-button [routerLink]="['/dashboard/repos', owner(), slug()]"><mat-icon>arrow_back</mat-icon>{{ repo()?.name ?? path() }}</a>
     <h1>Checkpoints</h1>
     <p class="lead">The prompts, harness and effort behind each commit. {{ items().length ? summary() : '' }}</p>
   </div>

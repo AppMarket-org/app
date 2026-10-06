@@ -1,49 +1,27 @@
 @if (repo(); as l) {
-  <header class="head">
-    <div>
-      <a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Dashboard</a>
-      <p class="eyebrow">Repository workspace / {{ owner() }}</p>
-      <h1>{{ l.name }}</h1>
-      <div class="status">
-        <mat-chip-set aria-label="Status">
-          <mat-chip [class]="l.state">{{ states[l.state].label }}</mat-chip>
-        </mat-chip-set>
-        <span>{{ states[l.state].help }}</span>
-      </div>
+  <header class="repo-head">
+    <div class="repo-identity">
+      <mat-icon aria-hidden="true">folder_open</mat-icon>
+      <a mat-button class="owner-link" [routerLink]="['/', owner()]">{{ owner() }}</a><span class="slash">/</span>
+      <h1>{{ slug() }}</h1>
+      <mat-chip-set aria-label="Status"><mat-chip [class]="l.state">{{ states[l.state].label }}</mat-chip></mat-chip-set>
     </div>
-    <div class="head-actions">
-      <a mat-stroked-button [routerLink]="['/', owner(), slug(), 'code']"><mat-icon>code</mat-icon>Code</a>
-      <a mat-stroked-button [routerLink]="['/', owner(), slug(), 'pulls']"><mat-icon>call_split</mat-icon>Pull requests</a>
-      <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'agents']"><mat-icon>smart_toy</mat-icon>Agents</a>
-      <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"
-        ><mat-icon>history_edu</mat-icon>Checkpoints</a
-      >
+    <div class="repo-actions">
+      @if (l.state === 'published') {
+        <a mat-stroked-button [routerLink]="'/' + l.fullName"><mat-icon>storefront</mat-icon>App page</a>
+      }
       @if (l.state !== 'removed') {
-        <a mat-stroked-button [routerLink]="'/' + l.fullName">View public page</a>
+        <a mat-stroked-button [routerLink]="[]" [queryParams]="{tab: 'deployments'}"><mat-icon>cloud_upload</mat-icon>Deploy</a>
+        <button mat-flat-button [matMenuTriggerFor]="codeMenu"><mat-icon>code</mat-icon>Code<mat-icon>expand_more</mat-icon></button>
+        <mat-menu #codeMenu="matMenu">
+          <button mat-menu-item [disabled]="!remote()" (click)="copy(remote()!, 'Clone URL')"><mat-icon>content_copy</mat-icon>Copy clone URL</button>
+          <a mat-menu-item [routerLink]="[]" [queryParams]="{tab: 'settings'}"><mat-icon>key</mat-icon>Set up Git access</a>
+        </mat-menu>
       }
     </div>
   </header>
-
-  @if (busy()) {
-    <mat-progress-bar mode="indeterminate" aria-label="Working" />
-  }
-
-  @if (l.state !== 'removed') {
-    <nav class="workspace-nav" aria-label="Repository sections">
-      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#code-agents'"
-        ><mat-icon>terminal</mat-icon>Code &amp; agents</a
-      >
-      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#deployment'"
-        ><mat-icon>cloud_upload</mat-icon>Deployment</a
-      >
-      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#marketplace'"
-        ><mat-icon>storefront</mat-icon>Marketplace</a
-      >
-      <a mat-button [attr.href]="'/dashboard/repos/' + owner() + '/' + slug() + '#access-history'"
-        ><mat-icon>key</mat-icon>Access &amp; history</a
-      >
-    </nav>
-  }
+  <app-repository-nav [owner]="owner()" [slug]="slug()" [active]="tab()" />
+  @if (busy()) { <mat-progress-bar mode="indeterminate" aria-label="Working" /> }
   <div class="repo-origins">
     @if (l.sessionOf) {
       <mat-card appearance="outlined" class="wide source-notice">
@@ -101,71 +79,24 @@
   </div>
 
   @if (l.state !== 'removed') {
-    <section class="workspace-section" id="code-agents" aria-labelledby="code-agents-heading">
+    @if (visited().has('code')) {
+      <section class="code-overview" [class.file-open]="fileOpen()" [hidden]="tab() !== 'code'" aria-label="Repository code">
+        <app-code [embedded]="true" />
+        <aside class="about" aria-label="About this repository">
+          <h2>About</h2><p>{{ l.summary || 'No description provided.' }}</p>
+          <div class="about-facts"><span>Runtime</span><p>{{ l.runtimeDetected ? runtimeName(l.runtime) : 'Detected after your first push' }}</p>
+            <span>License</span><p>{{ l.license || 'No license specified' }}</p>
+          </div>
+          <a mat-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"><mat-icon>history</mat-icon>Commit checkpoints</a>
+          <a mat-button [routerLink]="[]" [queryParams]="{tab:'marketplace'}"><mat-icon>storefront</mat-icon>{{ l.publishedTag ? 'Version ' + l.publishedTag : 'Prepare app listing' }}</a>
+          <div class="visibility-note"><mat-icon aria-hidden="true">{{ l.state === 'published' ? 'public' : 'lock' }}</mat-icon><p>{{ states[l.state].help }}</p></div>
+        </aside>
+      </section>
+    }
+    @if (visited().has('deployments')) {
+  <section class="workspace-section" id="deployment" [hidden]="tab() !== 'deployments'" aria-labelledby="deployment-heading">
       <div class="section-heading">
-        <span class="section-number">01</span>
-        <div>
-          <h2 id="code-agents-heading">Code &amp; agents</h2>
-          <p>Push code, work with your agents, and keep every change in Git.</p>
-        </div>
-      </div>
-      <div class="grid">
-        <mat-card appearance="outlined" class="push-card">
-          <mat-card-header>
-            <mat-card-title>Push your code</mat-card-title>
-            <mat-card-subtitle
-              >Your Git remote and short-lived credentials for pushing code.</mat-card-subtitle
-            >
-          </mat-card-header>
-          <mat-card-content>
-            @if (remote(); as url) {
-              <p>Git remote (no credentials in it):</p>
-              <div class="copyable">
-                <code>{{ url }}</code>
-                <button
-                  mat-icon-button
-                  type="button"
-                  aria-label="Copy remote URL"
-                  (click)="copy(url, 'Remote URL')"
-                >
-                  <mat-icon>content_copy</mat-icon>
-                </button>
-              </div>
-            }
-            @if (token()) {
-              <p>
-                Run these from your project. The token works for 1 hour and is shown only now; do
-                not save it in Git config.
-              </p>
-              @for (cmd of pushCommands(); track $index) {
-                <div class="copyable">
-                  <code>{{ cmd }}</code>
-                  <button
-                    mat-icon-button
-                    type="button"
-                    aria-label="Copy command"
-                    (click)="copy(cmd, 'Command')"
-                  >
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </div>
-              }
-            } @else {
-              <button mat-flat-button type="button" [disabled]="busy()" (click)="createPushToken()">
-                Create push token
-              </button>
-            }
-          </mat-card-content>
-        </mat-card>
-        @if (!l.sessionOf) {
-          <app-sessions-card [path]="path()" />
-        }
-      </div>
-    </section>
 
-    <section class="workspace-section" id="deployment" aria-labelledby="deployment-heading">
-      <div class="section-heading">
-        <span class="section-number">02</span>
         <div>
           <h2 id="deployment-heading">Deployment</h2>
           <p>Ship from Git to your own Cloudflare account.</p>
@@ -180,10 +111,12 @@
         }
       </div>
     </section>
+  }
 
-    <section class="workspace-section" id="marketplace" aria-labelledby="marketplace-heading">
+    @if (visited().has('marketplace')) {
+  <section class="workspace-section" id="marketplace" [hidden]="tab() !== 'marketplace'" aria-labelledby="marketplace-heading">
       <div class="section-heading">
-        <span class="section-number">03</span>
+
         <div>
           <h2 id="marketplace-heading">Marketplace</h2>
           <p>Prepare your app’s public page, submit a version, and set up sales.</p>
@@ -360,16 +293,68 @@
       </div>
     </section>
   }
-  <section class="workspace-section" id="access-history" aria-labelledby="access-history-heading">
+  }
+  @if (visited().has('settings')) {
+  <section class="workspace-section" id="access-history" [hidden]="tab() !== 'settings'" aria-labelledby="access-history-heading">
     <div class="section-heading">
-      <span class="section-number">04</span>
+
       <div>
-        <h2 id="access-history-heading">Access &amp; history</h2>
+        <h2 id="access-history-heading">Repository settings</h2>
         <p>Manage repository access and review its activity.</p>
       </div>
     </div>
     <div class="grid">
       @if (l.state !== 'removed') {
+        <mat-card appearance="outlined" class="push-card">
+          <mat-card-header>
+            <mat-card-title>Push your code</mat-card-title>
+            <mat-card-subtitle
+              >Your Git remote and short-lived credentials for pushing code.</mat-card-subtitle
+            >
+          </mat-card-header>
+          <mat-card-content>
+            @if (remote(); as url) {
+              <p>Git remote (no credentials in it):</p>
+              <div class="copyable">
+                <code>{{ url }}</code>
+                <button
+                  mat-icon-button
+                  type="button"
+                  aria-label="Copy remote URL"
+                  (click)="copy(url, 'Remote URL')"
+                >
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+            }
+            @if (token()) {
+              <p>
+                Run these from your project. The token works for 1 hour and is shown only now; do
+                not save it in Git config.
+              </p>
+              @for (cmd of pushCommands(); track $index) {
+                <div class="copyable">
+                  <code>{{ cmd }}</code>
+                  <button
+                    mat-icon-button
+                    type="button"
+                    aria-label="Copy command"
+                    (click)="copy(cmd, 'Command')"
+                  >
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </div>
+              }
+            } @else {
+              <button mat-flat-button type="button" [disabled]="busy()" (click)="createPushToken()">
+                Create push token
+              </button>
+            }
+          </mat-card-content>
+        </mat-card>
+
+
+        @if (!l.sessionOf) { <app-sessions-card [path]="path()" /> }
         <mat-card appearance="outlined" class="wide">
           <mat-card-header>
             <mat-card-title>Tokens</mat-card-title>
@@ -509,6 +494,7 @@
       }
     </div>
   </section>
+  }
 } @else if (loadError()) {
   <p class="error" role="alert">
     This app could not be loaded. It may not exist, or it is not yours.

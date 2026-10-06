@@ -1,6 +1,7 @@
+import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
@@ -13,7 +14,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
 import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointAccess, type CheckpointSummary, type CheckpointVisibility, type Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { CheckpointsApi } from '../../api/checkpoints';
@@ -31,8 +31,8 @@ const PAGE = 50;
 @Component({
   selector: 'app-checkpoints',
   imports: [
+    RepositoryNav,
     DatePipe,
-    RouterLink,
     CheckpointDetails,
     MatButtonModule,
     MatButtonToggleModule,
@@ -86,6 +86,8 @@ export class CheckpointsPage {
 
   constructor() {
     inject(Seo).set({ title: 'Checkpoints', description: 'The prompts behind your commits.', path: '/dashboard', noindex: true, heading: [{ label: 'Dashboard', link: '/dashboard' }] });
+    const seo = inject(Seo);
+    effect(() => seo.setHeading([{label: this.owner(), link: '/' + this.owner()}, {label: this.slug(), link: '/dashboard/repos/' + this.path()}]));
     // New commits show up within 10 s while the page is open and visible.
     const timer = setInterval(() => {
       if (this.document.visibilityState === 'visible' && !this.loading()) void this.refresh();

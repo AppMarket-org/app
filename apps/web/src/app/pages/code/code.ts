@@ -1,7 +1,9 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { Markdown } from '../../components/markdown/markdown';
@@ -46,12 +48,17 @@ interface CodeFile {
     CodeExplorer,
     MatButtonToggleModule,
     Markdown,
+    RepositoryNav,
+    NgTemplateOutlet,
   ],
   templateUrl: './code.html',
   styleUrl: './code.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CodePage {
+  readonly embedded = input(false);
+  protected readonly readme = signal<CodeFile | null>(null);
+  protected readonly readmeLoading = signal(false);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
@@ -76,7 +83,8 @@ export class CodePage {
   protected readonly branches = signal<string[]>([]);
 
   constructor() {
-    inject(Seo).set({
+    const seo = inject(Seo);
+    effect(() => { if (!this.embedded()) seo.set({
       title: `Code · ${this.full}`,
       description: `Source code of ${this.full}.`,
       path: `/${this.full}/code`,
@@ -86,7 +94,7 @@ export class CodePage {
         { label: this.slug, link: `/${this.full}` },
         { label: 'Code' },
       ],
-    });
+    }); });
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(() => void this.load());
   }
 
@@ -120,6 +128,11 @@ export class CodePage {
       relativeTo: this.route,
       queryParams: { ref: this.ref(), file },
     });
+  }
+
+  protected closeFile(): void {
+    this.showFiles.set(true);
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { ref: this.ref() } });
   }
 
   protected copy(): void {
@@ -229,6 +242,18 @@ export class CodePage {
     if (generation !== this.generation) return;
     this.tree.set(tree);
     this.nodes.set(tree ? this.entries(tree) : []);
+    this.readme.set(null);
+    const readme = tree?.entries.find((entry) => entry.type !== 'tree' && /^readme\.(md|markdown)$/i.test(entry.name));
+    this.readmeLoading.set(!!readme);
+    if (readme && tree?.commit) {
+      void firstValueFrom(this.http.get<CodeFile>(`${this.base}/blob`, {
+        params: { ...this.revision(), path: readme.name },
+      })).then((file) => {
+        if (generation === this.generation) this.readme.set(file);
+      }).catch(() => {}).finally(() => {
+        if (generation === this.generation) this.readmeLoading.set(false);
+      });
+    }
     if (tree?.editor) {
       const b = await firstValueFrom(
         this.http.get<{ branches: string[] }>(`${this.base}/branches`),

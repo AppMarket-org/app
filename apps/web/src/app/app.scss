@@ -214,7 +214,7 @@ main.workspace {
   max-width: none;
   padding: 1.5rem;
 }
-main.workspace:has(app-code) {
+main.workspace:has(> app-code) {
   padding: 0;
 }
 @media (max-width: 37.5rem) {

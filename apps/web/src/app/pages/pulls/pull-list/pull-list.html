@@ -1,5 +1,5 @@
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="pulls" [managed]="managed()" />
 <header class="head">
-  <a mat-button [routerLink]="'/' + path"><mat-icon>arrow_back</mat-icon>{{ path }}</a>
   <div class="title">
     <h1>Pull requests</h1>
     @if (auth.user()) {
