@@ -22,9 +22,7 @@
     @if (!file()) {
       <section class="source-tree" aria-label="Files on this branch">
         <ng-container *ngTemplateOutlet="explorer; context: { overview: true }" />
-        <div class="revision-bar"><mat-icon aria-hidden="true">commit</mat-icon><span>{{ tree()!.ref }}</span><code>{{ tree()!.commit?.slice(0, 7) }}</code>
-          <a mat-button [routerLink]="tree()!.editor ? '/dashboard/repos/' + full + '/checkpoints' : '/' + full + '/history'"><mat-icon>history</mat-icon>{{ tree()!.editor ? 'Checkpoints' : 'Build history' }}</a>
-        </div>
+
         @if (tree()!.empty) { <div class="placeholder"><mat-icon>folder_open</mat-icon><h2>This repository is empty</h2><p>Use Code → Set up Git access to push your first commit.</p></div> }
       </section>
       @if (readmeLoading()) { <mat-progress-bar mode="indeterminate" aria-label="Loading README" /> }
@@ -129,5 +127,11 @@
             (selectFile)="openFile($event)"
             (selectBranch)="chooseRef($event)"
             (search)="searchFiles()"
-          />
+          >
+            @if (overview) {
+        <div class="revision-bar"><mat-icon aria-hidden="true">commit</mat-icon><span>{{ tree()!.ref }}</span><code>{{ tree()!.commit?.slice(0, 7) }}</code>
+          <a mat-button [routerLink]="tree()!.editor ? '/dashboard/repos/' + full + '/checkpoints' : '/' + full + '/history'"><mat-icon>history</mat-icon>{{ tree()!.editor ? 'Checkpoints' : 'Build history' }}</a>
+        </div>
+            }
+          </app-code-explorer>
 </ng-template>

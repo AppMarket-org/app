@@ -40,6 +40,7 @@
     </mat-autocomplete>
   </mat-form-field>
 </div>
+<ng-content />
 <nav class="tree" [class.overview-tree]="overview()" aria-label="Repository files">
   <ng-container *ngTemplateOutlet="branch; context: { $implicit: nodes(), level: 0 }" />
 </nav>
