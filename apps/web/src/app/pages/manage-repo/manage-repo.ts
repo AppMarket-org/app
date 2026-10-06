@@ -19,7 +19,7 @@ import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { CodePage } from '../code/code';
-import { RUNTIMES, SCREENSHOT_LIMITS, canTransition, type Repo, type RepoEvent, type RepoInput, type RepoState, type GitToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
+import { RUNTIMES, SCREENSHOT_LIMITS, canTransition, hasPendingUpdate, type Repo, type RepoEvent, type RepoInput, type RepoState, type GitToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { Developer } from '../../api/developer';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
@@ -141,8 +141,16 @@ export class ManageRepo {
 
   protected can(to: RepoState): boolean {
     const l = this.repo();
-    return !!l && canTransition(l.state, to, 'owner');
+    if (!l) return false;
+    // A published app takes one update at a time, and only a pending update can be withdrawn.
+    if (l.state === 'published' && to === 'submitted' && hasPendingUpdate(l)) return false;
+    if (l.state === 'published' && to === 'draft' && !hasPendingUpdate(l)) return false;
+    return canTransition(l.state, to, 'owner');
   }
+  protected readonly pendingUpdate = computed(() => {
+    const l = this.repo();
+    return l && hasPendingUpdate(l) ? l.submittedTag : null;
+  });
 
   protected copy(text: string, what: string): void {
     this.snackBar.open(this.clipboard.copy(text) ? `${what} copied` : 'Copy failed; select the text instead', undefined, { duration: 2500 });

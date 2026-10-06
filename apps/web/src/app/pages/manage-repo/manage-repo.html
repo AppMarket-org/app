@@ -145,10 +145,23 @@
           </mat-card-content>
         </mat-card>
 
+        @if (pendingUpdate(); as tag) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-icon mat-card-avatar aria-hidden="true">pending</mat-icon>
+              <mat-card-title>Update {{ tag }} in review</mat-card-title>
+              <mat-card-subtitle>{{ l.name }} stays public on {{ l.publishedTag }} until an admin approves it; then copies with updates on get a pull request.</mat-card-subtitle>
+            </mat-card-header>
+          </mat-card>
+        }
         @if (canSubmit()) {
           <mat-card appearance="outlined">
             <mat-card-header
-              ><mat-card-title>Submit a version for review</mat-card-title></mat-card-header
+              ><mat-card-title>{{ l.state === 'published' ? 'Submit an update for review' : 'Submit a version for review' }}</mat-card-title>
+              @if (l.state === 'published') {
+                <mat-card-subtitle>{{ l.name }} stays public on {{ l.publishedTag }} while the update is reviewed.</mat-card-subtitle>
+              }
+            </mat-card-header
             >
             <mat-card-content>
               <form
@@ -446,7 +459,7 @@
                 [disabled]="busy()"
                 (click)="change('draft')"
               >
-                Withdraw from review
+                {{ l.state === 'published' ? 'Withdraw update' : 'Withdraw from review' }}
               </button>
             }
             @if (can('unpublished')) {

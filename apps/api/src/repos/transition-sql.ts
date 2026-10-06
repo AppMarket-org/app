@@ -29,8 +29,11 @@ export function transitionUpdate(
 		removed: [CLEAR_SUBMITTED, []],
 	};
 	const [setSql, setParams] = set[request.to];
+	// An update to a published app keeps it public: submitting or sending the update back only
+	// changes the submitted version; publishing promotes it.
+	const state = repo.state === "published" && (request.to === "submitted" || request.to === "draft") ? "published" : request.to;
 	return {
 		sql: `UPDATE repos SET state = ?, ${setSql}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND state = ?`,
-		params: [request.to, ...setParams, repo.id, repo.state],
+		params: [state, ...setParams, repo.id, repo.state],
 	};
 }

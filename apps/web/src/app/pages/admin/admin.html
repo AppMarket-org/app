@@ -9,7 +9,7 @@
         <mat-card appearance="outlined">
           <mat-card-header>
             <mat-card-title>{{ l.name }}</mat-card-title>
-            <mat-card-subtitle>by {{ l.owner.name }} · {{ l.submittedTag }} · commit {{ l.submittedCommit?.slice(0, 12) }}</mat-card-subtitle>
+            <mat-card-subtitle>by {{ l.owner.name }} · {{ l.state === 'published' ? 'update ' + l.submittedTag + ' (live: ' + l.publishedTag + ')' : l.submittedTag }} · commit {{ l.submittedCommit?.slice(0, 12) }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <p>{{ l.summary }}</p>

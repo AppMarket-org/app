@@ -16,10 +16,16 @@ const TRANSITIONS: Record<RepoState, Partial<Record<RepoState, readonly Transiti
 	draft: { submitted: ["owner"], removed: ["owner", "admin"] },
 	// Admins send a submission back to draft to request changes (with a note).
 	submitted: { draft: ["owner", "admin"], published: ["admin"], removed: ["owner", "admin"] },
-	published: { unpublished: ["owner", "admin"], removed: ["owner", "admin"] },
+	// An update to a published app: the owner submits a new version while the app stays public on
+	// the current one; an admin publishes it (published -> published) or sends it back (-> draft,
+	// which only clears the update). The API allows the last two only while an update is pending.
+	published: { submitted: ["owner"], published: ["admin"], draft: ["owner", "admin"], unpublished: ["owner", "admin"], removed: ["owner", "admin"] },
 	unpublished: { submitted: ["owner"], removed: ["owner", "admin"] },
 	removed: {},
 };
+
+/** A published app with a newer version waiting for review (it stays public meanwhile). */
+export const hasPendingUpdate = (repo: { state: RepoState; submittedTag: string | null }) => repo.state === "published" && !!repo.submittedTag;
 
 export function canTransition(from: RepoState, to: RepoState, actor?: TransitionActor): boolean {
 	const actors = TRANSITIONS[from][to];

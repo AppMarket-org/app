@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, slugify } from "./repo";
+import { canTransition, hasPendingUpdate, slugify } from "./repo";
 import { repoInputSchema, repoSearchSchema, repoUpdateSchema, tokenRequestSchema, transitionSchema } from "./schemas";
 
 describe("slugify", () => {
@@ -51,7 +51,17 @@ describe("canTransition", () => {
 
 	it("lets admins send a submission back to draft (request changes)", () => {
 		expect(canTransition("submitted", "draft", "admin")).toBe(true);
-		expect(canTransition("published", "draft", "admin")).toBe(false);
+	});
+
+	it("lets owners submit updates to a published app, and admins publish or send them back", () => {
+		// The app stays public meanwhile (transition-sql keeps the state; the API needs a pending update).
+		expect(canTransition("published", "submitted", "owner")).toBe(true);
+		expect(canTransition("published", "submitted", "admin")).toBe(false);
+		expect(canTransition("published", "published", "admin")).toBe(true);
+		expect(canTransition("published", "published", "owner")).toBe(false);
+		expect(canTransition("published", "draft", "admin")).toBe(true);
+		expect(hasPendingUpdate({ state: "published", submittedTag: "v2" })).toBe(true);
+		expect(hasPendingUpdate({ state: "submitted", submittedTag: "v2" })).toBe(false);
 	});
 
 	it("lets owners submit, withdraw and resubmit", () => {
