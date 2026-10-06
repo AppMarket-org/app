@@ -145,7 +145,10 @@ export async function doctor(api: string): Promise<number> {
 export async function status(api: string): Promise<number> {
 	const items = queued();
 	const state = readState();
-	console.log(`Server:            ${api}`);
+	// In a repo set up with `init --api`, its checkpoints go to that server, not the default.
+	const here = repoRoot();
+	const server = here ? gitOr(["config", "--get", "appmarket.api"], api, { cwd: here }) : api;
+	console.log(`Server:            ${server}`);
 	console.log(`Queued uploads:    ${items.length}${items.length ? ` (oldest ${items.map((i) => i.firstAt).sort()[0]!.slice(0, 16).replace("T", " ")})` : ""}`);
 	console.log(`Last upload:       ${state.lastUploadAt ? state.lastUploadAt.slice(0, 16).replace("T", " ") : "never"}`);
 	console.log(`Adapters:          ${(["claude-code", "codex"] as const).filter(adapterInstalled).join(", ") || "none (appmarket adapter install <harness>)"}`);
