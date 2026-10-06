@@ -11,7 +11,7 @@
     @if (repo()?.state === 'published') {
       <app-cowbell-button [path]="path()" [name]="repo()!.name" [initialCount]="repo()!.cowbells" />
     } @else {
-      <mat-chip-set aria-label="Repository cowbells"><mat-chip><mat-icon svgIcon="cowbell" aria-hidden="true" />{{ repo()?.cowbells ?? '—' }} cowbells</mat-chip></mat-chip-set>
+      <mat-chip-set aria-label="Repository cowbells"><mat-chip class="cowbell-count"><mat-icon svgIcon="cowbell" aria-hidden="true" />{{ repo()?.cowbells ?? '—' }} cowbells</mat-chip></mat-chip-set>
     }
     @if (managed() && repo()?.state !== 'removed') {
       <a mat-stroked-button [routerLink]="['/dashboard/repos', owner(), slug()]" [queryParams]="{tab: 'deployments'}"><mat-icon>cloud_upload</mat-icon>Deploy</a>
