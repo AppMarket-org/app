@@ -189,3 +189,35 @@ export interface WorkerConfig {
 export const CONFIG_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 /** Workers allow 5 KB per variable and per secret. */
 export const CONFIG_VALUE_MAX = 5 * 1024;
+
+/**
+ * #307: one app running in a Cloudflare account (a Worker), from its deployments. Each deploy
+ * replaces the Worker's version, so an app is live from its latest successful deployment.
+ */
+export interface RunningApp {
+	key: string;
+	accountId: string;
+	workerName: string;
+	repoName: string;
+	repoFullName: string;
+	/** The deployment that is live (the latest that succeeded), if any. */
+	live: Deployment | null;
+	/** The latest deployment of any status (newer than `live` when a deploy failed or is running). */
+	latest: Deployment;
+	deployments: number;
+}
+
+/** Groups deployments (any order) into apps, most recently deployed first. */
+export function runningApps(deployments: readonly Deployment[]): RunningApp[] {
+	const apps = new Map<string, RunningApp>();
+	for (const d of [...deployments].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+		const key = `${d.accountId}/${d.workerName}`;
+		const app = apps.get(key);
+		if (!app) apps.set(key, { key, accountId: d.accountId, workerName: d.workerName, repoName: d.repoName, repoFullName: d.repoFullName, live: d.status === "succeeded" ? d : null, latest: d, deployments: 1 });
+		else {
+			app.deployments++;
+			if (!app.live && d.status === "succeeded") app.live = d;
+		}
+	}
+	return [...apps.values()];
+}

@@ -7,24 +7,24 @@
       <mat-progress-bar mode="indeterminate" aria-label="Loading running apps" />
     } @else if (deployments() === null) {
       <p class="error" role="alert">Could not load your running apps. Reload to try again.</p>
-    } @else if (deployments()?.length) {
+    } @else if (apps().length) {
       <mat-card appearance="outlined">
         <mat-nav-list aria-labelledby="running-heading">
-          @for (d of deployments(); track d.id) {
-            <a mat-list-item [routerLink]="['/dashboard/deployments', d.id]">
-              <mat-icon matListItemIcon aria-hidden="true">{{
-                d.status === 'succeeded'
-                  ? 'check_circle'
-                  : d.status === 'failed'
-                    ? 'error'
-                    : 'pending'
-              }}</mat-icon>
-              <span matListItemTitle>{{ d.repoName }} → {{ d.workerName }}</span>
-              <span matListItemLine
-                >{{ deployStatus[d.status] }} ·
-                {{ d.previewBranch ? 'from branch ' + d.previewBranch : d.versionTag }} ·
-                {{ d.createdAt | date: 'medium' }}</span
-              >
+          @for (a of apps(); track a.key) {
+            <a mat-list-item [routerLink]="['/dashboard/deployments', a.latest.id]">
+              <mat-icon matListItemIcon aria-hidden="true">{{ a.live ? 'check_circle' : a.latest.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
+              <span matListItemTitle>{{ a.repoName }} → {{ a.workerName }}</span>
+              <span matListItemLine>
+                @if (a.live) {
+                  Live since {{ a.live.createdAt | date: 'medium' }}
+                  @if (a.latest.id !== a.live.id) {
+                    · newest deploy {{ deployStatus[a.latest.status] | lowercase }} {{ a.latest.createdAt | date: 'short' }}
+                  }
+                } @else {
+                  {{ deployStatus[a.latest.status] }} · {{ a.latest.createdAt | date: 'medium' }}
+                }
+                · {{ a.deployments }} {{ a.deployments === 1 ? 'deployment' : 'deployments' }}
+              </span>
             </a>
           }
         </mat-nav-list>

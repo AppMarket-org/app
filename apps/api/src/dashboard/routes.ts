@@ -1,3 +1,4 @@
+import { runningApps } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
@@ -19,5 +20,5 @@ export const dashboardCountRoutes = new Hono<Ctx>().get("/counts", requireRole()
 		cowbelledRepos(session),
 	]);
 	c.header("Cache-Control", "private, no-store");
-	return c.json({ repositories: repositories.length, apps: apps.length, cowbells: cowbells.length });
+	return c.json({ repositories: repositories.length, apps: runningApps(apps).length, cowbells: cowbells.length });
 });
