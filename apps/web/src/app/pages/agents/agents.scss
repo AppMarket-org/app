@@ -153,3 +153,31 @@
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-small);
 }
+
+// #296: the issue behind a task.
+.issue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  font: var(--mat-sys-label-medium);
+
+  .issue-number {
+    --mat-button-text-horizontal-padding: 0.25rem;
+    --mat-button-text-container-height: 1.5rem;
+    min-width: 0;
+    margin-left: -0.25rem;
+  }
+
+  .priority.high,
+  .priority.urgent {
+    color: var(--mat-sys-error);
+  }
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}

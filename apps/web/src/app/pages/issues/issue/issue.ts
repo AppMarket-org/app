@@ -11,7 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
-import { ISSUE_LIMITS, ISSUE_PRIORITIES, ISSUE_TYPES, ISSUE_TYPE_LABELS, type Issue, type IssueComment, type IssueInput } from '@appmarket/shared';
+import { ISSUE_LIMITS, ISSUE_PRIORITIES, ISSUE_TYPES, ISSUE_TYPE_LABELS, type Issue, type IssueComment, type IssueInput, type IssueWork } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { IssuesApi } from '../../../api/issues';
 import { Auth } from '../../../auth/auth';
@@ -51,6 +51,11 @@ export class IssuePage implements OnInit {
   protected readonly assigneeLabel = assigneeLabel;
   protected readonly stateIcon = stateIcon;
   protected readonly me = computed(() => this.auth.owner()?.handle ?? null);
+  protected readonly workIcon: Record<IssueWork['status'], string> = { open: 'schedule', claimed: 'smart_toy', review: 'rate_review', done: 'task_alt', failed: 'error_outline' };
+  protected workLabel(w: IssueWork): string {
+    const who = w.agent ?? 'An agent';
+    return { open: 'Waiting for an agent', claimed: `${who} is working on it`, review: `${who} finished; waiting for review`, done: `${who} finished it`, failed: `${who} could not finish it` }[w.status];
+  }
 
   constructor() {
     const seo = inject(Seo);

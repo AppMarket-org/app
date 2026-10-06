@@ -1,9 +1,10 @@
-import type { Repo } from "@appmarket/shared";
+import { redactSecrets, type Repo } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { logEvent } from "../observability/log.ts";
+import { nextNumber } from "../repos/numbers.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { agentCard, dispatch } from "./a2a.ts";
 import { sessionFork, startMerge } from "./merge.ts";
@@ -64,11 +65,24 @@ export const planeRoutes = new Hono<Ctx>()
 		const title = text(body.title, 200);
 		if (!title) return c.json({ error: "title_required" }, 400);
 		if ((await p.stub.state()).tasks.filter((t) => t.status === "open" || t.status === "claimed").length >= 200) return c.json({ error: "too_many_tasks" }, 429);
-		return reply(c, await p.stub.createTask({ id: crypto.randomUUID(), title, description: text(body.description, 4000), capabilities: cleanTags(body.capabilities) }));
+		// #296: a task is an issue (type Task, assigned to Agents), numbered with the repo's issues.
+		const id = crypto.randomUUID();
+		const description = text(body.description, 4000);
+		const number = await nextNumber(env.DB, p.repo.id);
+		await env.DB.prepare("INSERT INTO issues (id, repo_id, number, title, body, type, priority, for_agents, author_id) VALUES (?, ?, ?, ?, ?, 'task', 'none', 1, ?)")
+			.bind(id, p.repo.id, number, redactSecrets(title).text, redactSecrets(description).text, c.get("session")!.user.id)
+			.run();
+		return reply(c, await p.stub.createTask({ id, title, description, capabilities: cleanTags(body.capabilities), issue: { number, type: "task", priority: "none" } }));
 	})
 	.delete("/:owner/:slug/plane/tasks/:id", async (c) => {
 		const p = await plane(c);
 		if (!p || c.get("session")!.deviceScopes) return c.json({ error: "not_found" }, 404);
+		// #296: cancelling the task closes its issue as not planned.
+		await env.DB.prepare(
+			"UPDATE issues SET state = 'closed', reason = 'not_planned', closed_by = ?, closed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND repo_id = ? AND state = 'open'",
+		)
+			.bind(c.get("session")!.user.id, c.req.param("id"), p.repo.id)
+			.run();
 		return reply(c, await p.stub.deleteTask(c.req.param("id")));
 	})
 	// Agent Card: the agent session joins the board with its name and capabilities.
@@ -209,7 +223,7 @@ async function openTaskPull(repo: Repo, task: PlaneTask, forkId: string, branch:
 	}
 	const targets = await listBranches(repo.gitRepo!);
 	const base = pickBranch(targets.defaultBranch, targets.branches);
-	const body = [note, task.description, "Opened by the Agents board for this task; merging it completes the task."].filter(Boolean).join("\n\n");
+	const body = [task.issue ? `Closes #${task.issue.number}` : "", note, task.description, "Opened by the Agents board for this task; merging it completes the task."].filter(Boolean).join("\n\n");
 	const pull = await insertPull({ repoId: repo.id, title: task.title, body, authorId, sourceRepoId: forkId, sourceBranch: branch, targetBranch: base?.name ?? targets.defaultBranch, headSha: head.sha, taskId: task.id });
 	await tellBoard(repo.id, task.id, { id: pull.id, status: "review", sha: head.sha, error: null, pull: pull.number });
 	logEvent("plane.pull_opened", { repo: repo.fullName, number: pull.number, task: task.id });

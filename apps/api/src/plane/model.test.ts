@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { claimProblem, cleanTags, leaseConflicts, leaseHints, normalizePath, type PlaneAgent, type PlaneTask, pathsOverlap } from "./model";
 
-const task = (o: Partial<PlaneTask> = {}): PlaneTask => ({ id: "t1", title: "T", description: "", capabilities: ["typescript"], status: "open", claimedBy: null, branch: null, note: null, merge: null, createdAt: "", updatedAt: "", ...o });
+const task = (o: Partial<PlaneTask> = {}): PlaneTask => ({ id: "t1", title: "T", description: "", capabilities: ["typescript"], status: "open", claimedBy: null, branch: null, note: null, issue: null, merge: null, createdAt: "", updatedAt: "", ...o });
 const agent = (o: Partial<PlaneAgent> = {}): PlaneAgent => ({ id: "a1", name: "Claude", vendor: "anthropic", capabilities: ["typescript", "frontend"], lastSeen: "", ...o });
 
 describe("collaboration plane rules (#236)", () => {

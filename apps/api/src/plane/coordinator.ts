@@ -41,6 +41,12 @@ export class RepoPlane extends DurableObject {
 			this.sql.exec(`CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, name TEXT NOT NULL, vendor TEXT NOT NULL, capabilities TEXT NOT NULL, last_seen TEXT NOT NULL)`);
 			// #238: the task's latest merge (JSON), added after the table first shipped.
 			if (!this.sql.exec("SELECT name FROM pragma_table_info('tasks') WHERE name = 'merge'").toArray().length) this.sql.exec("ALTER TABLE tasks ADD COLUMN merge TEXT");
+			// #296: tasks are issues; the board keeps the number, type and priority to show them.
+			if (!this.sql.exec("SELECT name FROM pragma_table_info('tasks') WHERE name = 'issue_number'").toArray().length) {
+				this.sql.exec("ALTER TABLE tasks ADD COLUMN issue_number INTEGER");
+				this.sql.exec("ALTER TABLE tasks ADD COLUMN issue_type TEXT");
+				this.sql.exec("ALTER TABLE tasks ADD COLUMN issue_priority TEXT");
+			}
 			this.sql.exec(`CREATE TABLE IF NOT EXISTS leases (agent_id TEXT NOT NULL, task_id TEXT, path TEXT NOT NULL, expires_at INTEGER NOT NULL, PRIMARY KEY (agent_id, path))`);
 		});
 	}
@@ -61,12 +67,38 @@ export class RepoPlane extends DurableObject {
 		};
 	}
 
-	createTask(input: { id: string; title: string; description: string; capabilities: string[] }): PlaneResult {
+	createTask(input: { id: string; title: string; description: string; capabilities: string[]; issue?: { number: number; type: string; priority: string } }): PlaneResult {
 		const now = new Date().toISOString();
 		this.sql.exec(
-			"INSERT INTO tasks (id, title, description, capabilities, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'open', ?, ?)",
-			input.id, input.title, input.description, JSON.stringify(input.capabilities), now, now,
+			"INSERT INTO tasks (id, title, description, capabilities, status, created_at, updated_at, issue_number, issue_type, issue_priority) VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?)",
+			input.id, input.title, input.description, JSON.stringify(input.capabilities), now, now, input.issue?.number ?? null, input.issue?.type ?? null, input.issue?.priority ?? null,
 		);
+		return this.changed();
+	}
+
+	/**
+	 * #296: keeps the task of an issue in step with it. An open issue for agents is a task (created,
+	 * or its text, type and priority updated); otherwise a task nobody has claimed yet goes, while
+	 * work already in progress stays on the board to finish.
+	 */
+	syncIssue(issue: { id: string; title: string; description: string; number: number; type: string; priority: string; wanted: boolean }): PlaneResult {
+		const existing = this.sql.exec<{ status: string }>("SELECT status FROM tasks WHERE id = ?", issue.id).toArray()[0];
+		const now = new Date().toISOString();
+		if (issue.wanted && !existing) {
+			this.sql.exec(
+				"INSERT INTO tasks (id, title, description, capabilities, status, created_at, updated_at, issue_number, issue_type, issue_priority) VALUES (?, ?, ?, '[]', 'open', ?, ?, ?, ?, ?)",
+				issue.id, issue.title, issue.description, now, now, issue.number, issue.type, issue.priority,
+			);
+		} else if (issue.wanted && existing) {
+			this.sql.exec(
+				"UPDATE tasks SET title = ?, description = ?, issue_number = ?, issue_type = ?, issue_priority = ?, updated_at = ? WHERE id = ?",
+				issue.title, issue.description, issue.number, issue.type, issue.priority, now, issue.id,
+			);
+		} else if (existing?.status === "open") {
+			return this.deleteTask(issue.id);
+		} else if (!existing) {
+			return { ok: true, value: this.state() };
+		}
 		return this.changed();
 	}
 
@@ -220,6 +252,7 @@ function toTask(r: Record<string, string | null>): PlaneTask {
 		claimedBy: r.claimed_by ?? null,
 		branch: r.branch ?? null,
 		note: r.note ?? null,
+		issue: r.issue_number ? { number: Number(r.issue_number), type: r.issue_type ?? "task", priority: r.issue_priority ?? "none" } : null,
 		merge: r.merge ? (JSON.parse(r.merge) as TaskMerge) : null,
 		createdAt: r.created_at!,
 		updatedAt: r.updated_at!,

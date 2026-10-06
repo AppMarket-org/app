@@ -1,4 +1,4 @@
-import { ISSUE_LIMITS, type Issue, type IssueAssignee, type IssueComment, type IssueCloseReason, type IssuePriority, type IssueState, type IssueType, parseIssueInput, redactSecrets, type Repo } from "@appmarket/shared";
+import { ISSUE_LIMITS, type Issue, type IssueAssignee, type IssueComment, type IssueCloseReason, type IssuePriority, type IssueState, type IssueType, type IssueWork, parseIssueInput, redactSecrets, type Repo } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AppSession, AuthVariables } from "../auth/middleware.ts";
@@ -6,6 +6,7 @@ import { logEvent } from "../observability/log.ts";
 import { canEdit, canView } from "../repos/access.ts";
 import { nextNumber } from "../repos/numbers.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { boardWork, syncIssueTask } from "./board.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -35,7 +36,7 @@ const SELECT = `SELECT i.*, au.name AS author, ao.handle AS assignee_handle, asu
 	(SELECT COUNT(*) FROM issue_comments c WHERE c.issue_id = i.id AND c.deleted_at IS NULL) AS comments
 	FROM issues i LEFT JOIN "user" au ON au.id = i.author_id LEFT JOIN owners ao ON ao.user_id = i.assignee_id LEFT JOIN "user" asu ON asu.id = i.assignee_id`;
 
-function toIssue(row: IssueRow, repo: Repo, session: AppSession | null): Issue {
+function toIssue(row: IssueRow, repo: Repo, session: AppSession | null, work: Map<string, IssueWork> = new Map()): Issue {
 	const triage = canEdit(repo, session);
 	const assignee: IssueAssignee | null = row.for_agents ? { kind: "agents" } : row.assignee_handle ? { kind: "user", handle: row.assignee_handle, name: row.assignee_name ?? row.assignee_handle } : null;
 	return {
@@ -49,6 +50,7 @@ function toIssue(row: IssueRow, repo: Repo, session: AppSession | null): Issue {
 		assignee,
 		author: row.author ?? "",
 		comments: row.comments,
+		work: work.get(row.id) ?? null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 		closedAt: row.closed_at,
@@ -103,7 +105,8 @@ export const issueRoutes = new Hono<Ctx>()
 			.all<IssueRow>();
 		const counts = await env.DB.prepare("SELECT state, COUNT(*) AS n FROM issues WHERE repo_id = ? GROUP BY state").bind(repo.id).all<{ state: IssueState; n: number }>();
 		const session = c.get("session");
-		return c.json({ items: results.map((r) => toIssue(r, repo, session)), counts: Object.fromEntries(counts.results.map((r) => [r.state, r.n])) });
+		const work = await boardWork(repo.id, results.filter((r) => r.for_agents === 1).map((r) => r.id));
+		return c.json({ items: results.map((r) => toIssue(r, repo, session, work)), counts: Object.fromEntries(counts.results.map((r) => [r.state, r.n])) });
 	})
 	.post("/:owner/:slug/issues", async (c) => {
 		const session = c.get("session");
@@ -123,13 +126,15 @@ export const issueRoutes = new Hono<Ctx>()
 			.bind(id, repo.id, number, redactSecrets(input.title!).text, redactSecrets(input.body ?? "").text, input.type ?? "task", input.priority ?? "none", who.assigneeId, who.forAgents ? 1 : 0, session.user.id)
 			.run();
 		logEvent("issue.opened", { repo: repo.fullName, number, type: input.type ?? "task", agents: who.forAgents });
-		return c.json(toIssue((await issueRow(repo.id, number))!, repo, session), 201);
+		const created = (await issueRow(repo.id, number))!;
+		if (who.forAgents) await syncIssueTask(created);
+		return c.json(toIssue(created, repo, session, await boardWork(repo.id, who.forAgents ? [id] : [])), 201);
 	})
 	.get("/:owner/:slug/issues/:number{[0-9]+}", async (c) => {
 		const repo = await target(c);
 		const row = repo ? await issueRow(repo.id, Number(c.req.param("number"))) : null;
 		if (!repo || !row) return notFound(c);
-		return c.json(toIssue(row, repo, c.get("session")));
+		return c.json(toIssue(row, repo, c.get("session"), await boardWork(repo.id, row.for_agents === 1 ? [row.id] : [])));
 	})
 	.patch("/:owner/:slug/issues/:number{[0-9]+}", async (c) => {
 		const session = c.get("session");
@@ -170,7 +175,10 @@ export const issueRoutes = new Hono<Ctx>()
 				.run();
 			if (state && state !== row.state) logEvent(state === "closed" ? "issue.closed" : "issue.reopened", { repo: repo.fullName, number: row.number });
 		}
-		return c.json(toIssue((await issueRow(repo.id, row.number))!, repo, session));
+		const updated = (await issueRow(repo.id, row.number))!;
+		// The board follows: on it while open and for agents, off it (unless already being worked on) otherwise.
+		if (sets.length && (row.for_agents === 1 || updated.for_agents === 1)) await syncIssueTask(updated);
+		return c.json(toIssue(updated, repo, session, await boardWork(repo.id, updated.for_agents === 1 ? [updated.id] : [])));
 	})
 	.get("/:owner/:slug/issues/:number{[0-9]+}/comments", async (c) => {
 		const repo = await target(c);
