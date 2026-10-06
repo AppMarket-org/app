@@ -1,3 +1,4 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -22,7 +23,7 @@ import type { OwnerPageData } from './owner-resolver';
 /** #102, #139: appmarket.org/<handle>: a user's or organization's profile and public repos. */
 @Component({
   selector: 'app-owner',
-  imports: [ActivityFeed, Avatar, ContributionGraph, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
+  imports: [NotFoundView, ActivityFeed, Avatar, ContributionGraph, DatePipe, MatButtonModule, MatChipsModule, MatIconModule, MatListModule, MatTooltipModule, RepoCard, RouterLink],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -119,9 +119,5 @@
     </div>
   </div>
 } @else {
-  <section>
-    <h1>Not found</h1>
-    <p>There is no user or organization with that name.</p>
-    <a mat-button routerLink="/search">Browse apps</a>
-  </section>
+  <app-not-found-view message="There is no user or organization with that name." />
 }

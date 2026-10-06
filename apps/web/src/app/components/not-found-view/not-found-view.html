@@ -1,0 +1,6 @@
+<section class="not-found" aria-labelledby="not-found-heading">
+  <img src="/brand/404.webp" width="1536" height="1024" alt="A lost cow holding a map beside a 404 sign" fetchpriority="high" />
+  <h2 id="not-found-heading">{{ title() }}</h2>
+  <p>{{ message() }}</p>
+  <a mat-flat-button [routerLink]="returnUrl()">{{ returnLabel() }}</a>
+</section>

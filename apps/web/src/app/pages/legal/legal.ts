@@ -1,3 +1,4 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
@@ -39,7 +40,7 @@ const PAGES: Record<string, { title: string; description: string; markdown: stri
  */
 @Component({
   selector: 'app-legal',
-  imports: [MatButtonModule, Markdown, RouterLink],
+  imports: [NotFoundView, MatButtonModule, Markdown, RouterLink],
   templateUrl: './legal.html',
   styleUrl: './legal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

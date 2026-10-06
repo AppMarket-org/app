@@ -1,3 +1,4 @@
+import { NotFoundView } from '../../../components/not-found-view/not-found-view';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -30,7 +31,7 @@ const ERRORS: Record<string, string> = {
 /** #102: an organization's members. Owners add, remove and promote; members can leave. */
 @Component({
   selector: 'app-org-settings',
-  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, Avatar, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
+  imports: [NotFoundView, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, Avatar, AvatarEditor, MatSlideToggleModule, MatSnackBarModule, ProfileForm, ReactiveFormsModule, RouterLink],
   templateUrl: './org-settings.html',
   styleUrl: './org-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

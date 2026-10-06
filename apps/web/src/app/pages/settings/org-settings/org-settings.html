@@ -87,9 +87,7 @@
     </mat-card>
   }
 } @else if (notFound()) {
-  <h1>Organization not found</h1>
-  <p>It does not exist, or you are not a member.</p>
-  <a mat-button routerLink="/settings">Back to settings</a>
+  <app-not-found-view title="Organization not found" message="It does not exist, or you are not a member." returnUrl="/settings" returnLabel="Back to settings" />
 } @else {
   <mat-progress-bar mode="indeterminate" aria-label="Loading organization" />
 }

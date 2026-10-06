@@ -1,3 +1,4 @@
+import { NotFoundView } from '../../components/not-found-view/not-found-view';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -32,7 +33,7 @@ const POLL_MS = 3000;
 /** PRD D6: progress and result of one deploy; polls until it finishes. */
 @Component({
   selector: 'app-deployment',
-  imports: [ConfigCard, DomainsCard, EjectCard, LogsCard, VersionsCard, DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
+  imports: [NotFoundView, ConfigCard, DomainsCard, EjectCard, LogsCard, VersionsCard, DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
   templateUrl: './deployment.html',
   styleUrl: './deployment.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
