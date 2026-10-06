@@ -26,8 +26,8 @@ import { Router, RouterLink } from '@angular/router';
     </mat-form-field>
   `,
   styles: `
-    :host { display: block; margin-bottom: 1.5rem; }
-    nav { --mat-tab-header-active-label-text-color: var(--mat-sys-on-surface); --mat-tab-header-active-indicator-color: var(--mat-sys-primary); --mat-tab-header-label-text-size: 0.875rem; }
+    :host { display: block; margin-bottom: var(--app-content-gap); }
+    nav { --mat-tab-header-active-label-text-color: var(--mat-sys-on-surface); --mat-tab-header-active-indicator-color: var(--mat-sys-primary); --mat-tab-label-text-size: 0.875rem; }
     mat-icon { font-size: 1.125rem; width: 1.125rem; height: 1.125rem; margin-right: 0.5rem; }
     .mobile-picker { display: none; width: 100%; }
     @media (max-width: 48rem) { .desktop-nav { display: none; } .mobile-picker { display: block; } }

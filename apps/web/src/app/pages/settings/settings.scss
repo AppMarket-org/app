@@ -86,7 +86,7 @@
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
   align-items: start;
-  gap: 3rem;
+  gap: var(--app-space-xl);
   max-width: 78rem;
   margin: 1rem auto 3rem;
 }
@@ -101,13 +101,13 @@
 .settings-content { min-width: 0; max-width: 54rem; }
 .settings-section[hidden] { display: none; }
 mat-card { max-width: none; margin: 0; border: 0; background: transparent; box-shadow: none; }
-mat-card-header { padding: 0 0 1.5rem; margin-bottom: 1.5rem; border-bottom: 0.0625rem solid var(--app-border); }
+mat-card-header { padding: 0 0 var(--app-content-gap); margin-bottom: var(--app-content-gap); border-bottom: 0.0625rem solid var(--app-border); }
 mat-card-title { font: 600 1.5rem/1.4 var(--app-font-display); letter-spacing: -0.035em; }
 mat-card-subtitle { font: 400 0.875rem/1.7 var(--app-font-body); color: var(--app-muted); margin-top: 0.5rem; }
 mat-card-content { padding: 0; }
 mat-card-actions { padding: 1rem 0 0; }
 .privacy { padding-top: 0; gap: 0; }
-.privacy mat-slide-toggle { padding: 1rem 0; border-bottom: 0.0625rem solid var(--app-border); }
+.privacy mat-slide-toggle { padding: var(--app-space-md) 0; border-bottom: 0.0625rem solid var(--app-border); }
 .privacy mat-slide-toggle:last-child { border-bottom: 0; }
 @media (max-width: 48rem) {
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; margin-top: 0; }

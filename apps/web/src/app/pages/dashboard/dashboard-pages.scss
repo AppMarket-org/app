@@ -24,16 +24,16 @@ h2 {
 .explain {
   font-size: 0.875rem;
   color: var(--app-muted);
-  margin: 0 0 1.5rem;
+  margin: 0 0 var(--app-content-gap);
   max-width: 46rem;
 }
 .repositories {
   margin-bottom: 2rem;
 }
 .repo-row {
-  padding: 1.5rem;
+  padding: var(--app-panel-padding);
   margin-bottom: 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: var(--app-radius);
 }
 .repo-top {
   display: flex;
@@ -46,7 +46,7 @@ h2 {
   flex-shrink: 0;
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 0.75rem;
+  border-radius: var(--app-radius);
   color: var(--mat-sys-primary);
   background: var(--mat-sys-primary-container);
 }
@@ -79,7 +79,7 @@ h3 {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
-  margin: 1.25rem 0 0 3.75rem;
+  margin: var(--app-space-md) 0 0 3.75rem;
 }
 .updated {
   margin-left: auto;
@@ -113,7 +113,7 @@ h3 {
 }
 @media (max-width: 37.5rem) {
   .repo-row {
-    padding: 1.25rem;
+    padding: var(--app-panel-padding);
   }
   .repo-top {
     flex-wrap: wrap;

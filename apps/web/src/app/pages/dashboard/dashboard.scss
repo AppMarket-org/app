@@ -1,8 +1,8 @@
 :host { display: block; }
 .dashboard-nav {
-  margin: -1.5rem -1.5rem 2rem;
+  margin: calc(-1 * var(--app-page-padding)) calc(-1 * var(--app-page-padding)) var(--app-content-gap);
   padding-inline: 1rem;
-  --mat-tab-header-label-text-size: 0.875rem;
+  --mat-tab-label-text-size: 0.875rem;
 }
 .tab-content { display: flex; align-items: center; gap: 0.625rem; white-space: nowrap; }
 .tab-content mat-icon { width: 1.25rem; height: 1.25rem; font-size: 1.25rem; }
@@ -14,8 +14,8 @@
 }
 
 @media (max-width: 37.5rem) {
-  .dashboard-nav { margin: -1rem -1rem 1.5rem; padding-inline: 0; --mat-tab-header-label-text-size: 0.75rem; }
-  .dashboard-nav a { min-width: 0; padding-inline: 0.5rem; }
+  .dashboard-nav { margin: calc(-1 * var(--app-page-padding)) calc(-1 * var(--app-page-padding)) var(--app-content-gap); padding-inline: 0; --mat-tab-label-text-size: 0.75rem; }
+  .dashboard-nav a.mat-mdc-tab-link { min-width: 0; padding-inline: var(--app-space-sm); }
   .tab-content { gap: 0.375rem; }
   .tab-content mat-icon { display: none; }
   .tab-count { min-width: 1.5rem; padding-inline: 0.375rem; }
