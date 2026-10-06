@@ -39,6 +39,11 @@ const RULES: readonly Rule[] = [
 	{ scope: "pulls:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/pulls(/[0-9]+/(merge|comments|reviews))?$`) },
 	{ scope: "pulls:write", methods: ["PATCH"], path: new RegExp(`^/api/repos/${REPO}/pulls/[0-9]+$`) },
 	{ scope: "pulls:write", methods: ["PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/pulls/[0-9]+/comments/[0-9a-f-]{36}$`) },
+	// #294: issues. Reading with repos:read; opening, triaging and commenting with issues:write.
+	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/issues(/[0-9]+(/comments)?)?$`) },
+	{ scope: "issues:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/issues(/[0-9]+/comments)?$`) },
+	{ scope: "issues:write", methods: ["PATCH"], path: new RegExp(`^/api/repos/${REPO}/issues/[0-9]+$`) },
+	{ scope: "issues:write", methods: ["PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/issues/[0-9]+/comments/[0-9a-f-]{36}$`) },
 	// #240: the code graph, for agents (definitions, importers, impact).
 	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/code-graph(/(symbols|references|impact))?$`) },
 	// #239: the board over A2A (Agent Card readable like the repo; JSON-RPC like the plane routes).
