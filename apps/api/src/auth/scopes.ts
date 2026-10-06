@@ -25,6 +25,8 @@ const RULES: readonly Rule[] = [
 	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}(/(versions|readme|screenshots|releases|repo-map|git|events))?$`) },
 	{ scope: "repos:read", methods: ["GET"], path: /^\/api\/owners\/[^/]+$/ },
 	{ scope: "checkpoints:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
+	// #71: the session handoff, assembled from checkpoints.
+	{ scope: "checkpoints:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/handoff$`) },
 	{ scope: "checkpoints:write", methods: ["POST", "PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/checkpoints(/[^/]+(/transcript)?)?$`) },
 	{ scope: "releases:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/releases$`) },
 	{ scope: "sessions:write", methods: ["GET", "POST"], path: new RegExp(`^/api/repos/${REPO}/sessions$`) },

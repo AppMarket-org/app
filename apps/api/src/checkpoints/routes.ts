@@ -1,4 +1,4 @@
-import { CHECKPOINT_LIMITS, type Checkpoint, type CheckpointVisibility, type Repo } from "@appmarket/shared";
+import { CHECKPOINT_LIMITS, type Checkpoint, type CheckpointVisibility, type Repo, summarizeSessions, type CheckpointRecord } from "@appmarket/shared";
 import { checkpointPatchSchema, checkpointRecordSchema, checkpointTranscriptSchema, checkpointVisibilitySchema, sessionVisibilitySchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -137,6 +137,23 @@ export const checkpointRoutes = new Hono<Ctx>()
 		return c.json({ visibility: body.data.visibility });
 	})
 	// #130: preview before publishing a session: how many private checkpoints would become visible.
+	// #71 (G6): what the latest agent sessions did, for the next session's context (owners and members:
+	// it reads private checkpoints). Assembled from the newest 80 checkpoints.
+	.get("/:owner/:slug/handoff", requireRole(), async (c) => {
+		const repo = await repoFor(c);
+		if (!repo || !ownedBy(c, repo)) return c.json({ error: "not_found" }, 404);
+		const limit = Math.min(Math.max(Number(c.req.query("limit")) || 3, 1), 10);
+		const { results } = await env.DB.prepare("SELECT record FROM checkpoints WHERE repo_id = ? ORDER BY created_at DESC LIMIT 80").bind(repo.id).all<{ record: string }>();
+		const records = results.flatMap((r) => {
+			try {
+				return [JSON.parse(r.record) as CheckpointRecord];
+			} catch {
+				return [];
+			}
+		});
+		c.header("Cache-Control", "private, no-store");
+		return c.json({ sessions: summarizeSessions(records, limit) });
+	})
 	.get("/:owner/:slug/checkpoints/visibility-preview", requireRole(), async (c) => {
 		const repo = await repoFor(c);
 		const session = c.req.query("session") ?? "";
