@@ -1,6 +1,11 @@
 /** appmarket.org's own Cloudflare account: Artifacts repos and deploy builds (D6) live here. */
 export const CLOUDFLARE_ACCOUNT_ID = "aada0f21d612f647ef27d21e1c09b648";
 
+// R22: the Cloudflare Access team domain and the /admin application's AUD tag come from the deploy's
+// GitHub environment variables (ACCESS_TEAM_DOMAIN, ACCESS_AUD), so the public repo doesn't name the
+// owner's Zero Trust team. Read when the config loads (cf deploy, preflight); Worker code gets bindings.
+const accessFromEnv = () => ({ teamDomain: process.env.ACCESS_TEAM_DOMAIN ?? "", aud: process.env.ACCESS_AUD ?? "" });
+
 // PRD R4: one Artifacts namespace (and Worker name) per environment, selected by `cf --mode`.
 // `cf dev` uses "development", builds default to "production"; API commands leave the mode undefined.
 
@@ -38,9 +43,8 @@ export const ENVIRONMENTS = {
 		releasesBucket: "appmarket-releases-staging",
 		// D6 build workspace snapshots between Workflow steps.
 		buildsBucket: "appmarket-builds-staging",
-		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
-		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
-		access: { teamDomain: "cportsche1.cloudflareaccess.com", aud: "09de5142e7a6247d4dba8782ed8ed5cd0451e1a065e8cde05f07e2934ff0919c" },
+		// R22: Access on /admin. Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
+		access: accessFromEnv(),
 		// appmarket.org is onboarded in Email Service (Compute > Email Service > Email Sending).
 		emailFrom: "notifications@appmarket.org",
 		emailRemote: true,
@@ -56,9 +60,8 @@ export const ENVIRONMENTS = {
 		releasesBucket: "appmarket-releases-prod",
 		// D6 build workspace snapshots between Workflow steps.
 		buildsBucket: "appmarket-builds-prod",
-		// R22: Cloudflare Access team domain and the /admin application's AUD tag (both public).
-		// Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
-		access: { teamDomain: "cportsche1.cloudflareaccess.com", aud: "89058f739ae9e219a89f42fd868b501fb80d6a62a8b4dff41aff407fdb771d8b" },
+		// R22: Access on /admin. Until set, the deployed API refuses /api/admin (see docs/deploy-runbook.md).
+		access: accessFromEnv(),
 		// #230: same sender as staging; the appmarket.org domain is onboarded to Email Service.
 		emailFrom: "notifications@appmarket.org",
 		emailRemote: true,
