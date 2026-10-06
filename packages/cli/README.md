@@ -77,7 +77,7 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `setup-git [--remove]` | Let plain `git` sign in to appmarket.org remotes with this login (no tokens to copy, nothing in the keychain) |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
-| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`), issues (`issue_*`), pull requests (`pr_*`) and the code graph tools (`code_*`); see below |
+| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`), issues (`issue_*`), pull requests (`pr_*`), repo memory (`memory_*`) and the code graph tools (`code_*`); see below |
 | `session start [owner/repo] [--harness h]` / `session end [id] [--discard]` / `session list` | Agent sessions: work in the repo on their own branches with a sign-in that renews itself; protected branches and tags are off limits |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
@@ -104,6 +104,11 @@ issue with its comments, and `issue_comment` reports progress or asks a question
   runs the checks and merges it.
 - In any appmarket repo, `code_find_symbol`, `code_references` and `code_impact` answer where
   something is defined, who imports a file, and what a change can affect.
+
+In any appmarket repo, `memory_recall`, `memory_remember`, `memory_update` and `memory_forget`
+read and keep the repo's memory: short notes about its conventions, decisions and traps, shared by
+its people and agents across sessions and vendors. Notes are redacted on your machine before they
+are sent (and again on the server); pinned notes come first.
 
 See [docs/agent-collaboration.md](https://github.com/AppMarket-org/app/blob/main/docs/agent-collaboration.md).
 
