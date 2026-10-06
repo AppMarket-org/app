@@ -12,7 +12,9 @@ const EMPTY_PACK = new Uint8Array([
 ]);
 
 export function refUpdateBody(ref: string, oldSha: string, newSha: string): Uint8Array {
-	const commands = new TextEncoder().encode(`${pkt(`${oldSha} ${newSha} ${ref}\0report-status\n`)}0000`);
+	const commands = new TextEncoder().encode(`${pkt(`${oldSha} ${newSha} ${ref}\0report-status${newSha === "0".repeat(40) ? " delete-refs" : ""}\n`)}0000`);
+	// A deletion sends no pack.
+	if (newSha === "0".repeat(40)) return commands;
 	const body = new Uint8Array(commands.length + EMPTY_PACK.length);
 	body.set(commands);
 	body.set(EMPTY_PACK, commands.length);

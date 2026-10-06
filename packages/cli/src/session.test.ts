@@ -16,4 +16,14 @@ describe("agent session credential helper (#29)", () => {
 		expect(sessionFor("https://example.artifacts.dev/ns/source.git", sessions)).toBeNull();
 		expect(sessionFor("https://evil.example/ns/fork-1.git", sessions)).toBeNull();
 	});
+
+	it("tells an in-repo session's remote (agent-<id>@) from the person's own remote of the same repo (#309)", () => {
+		const remote = "https://appmarket.org/dev/app.git";
+		const agent = s("abc", "https://agent-abc@appmarket.org/dev/app.git");
+		expect(credentialUrl("protocol=https\nhost=appmarket.org\nusername=agent-abc\npath=dev/app.git\n")).toBe("https://agent-abc@appmarket.org/dev/app.git");
+		expect(sessionFor(credentialUrl("protocol=https\nhost=appmarket.org\nusername=agent-abc\npath=dev/app.git\n")!, [agent])?.id).toBe("abc");
+		// The person's own push to the same repo does not get the session's sign-in.
+		expect(sessionFor(credentialUrl("protocol=https\nhost=appmarket.org\npath=dev/app.git\n")!, [agent])).toBeNull();
+		expect(sessionFor(remote, [agent])).toBeNull();
+	});
 });
