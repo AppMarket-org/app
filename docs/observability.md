@@ -33,18 +33,22 @@ including error messages and stacks. Tests: `src/observability/*.test.ts`.
 
 Never pass a token, secret value or email address to `logEvent` or `console.*`. Use ids.
 
-## Dashboards (after the first deploy)
+## Dashboards and alerts
 
-In Observability → Dashboards, create **appmarket** with these panels. Each one is a query on
-`$workers.scriptName = appmarket-api[-staging]`.
+Observability → Dashboards has **appmarket (staging)** and **appmarket (production)**, each with two
+charts on the Workers Invocations dataset filtered to `appmarket-api-staging` / `appmarket-api`:
 
-- **Repos created / tokens minted / downloads / deploys:** count, filtered on `event` (one series
-  per event above), grouped by time.
-- **Deploy success rate:** `deploy.succeeded` vs `deploy.failed`.
-- **API errors:** count of `$metadata.level = error`, grouped by `event` and `path`.
-- **Latency:** P50/P95 wall time of invocations, grouped by `$workers.event.request.path`.
+- **API requests by status:** Requests – Total, grouped by status.
+- **API errors:** Errors – Total.
 
-Turn on notifications for new Issues (Observability → Issues) so errors reach the owner.
+Dashboards read analytics datasets, not Workers Logs fields, so per-event counts (repos created,
+tokens minted, downloads, deploys) live in Observability → Logs: query `$workers.scriptName`, group
+by `event`.
+
+Alerts: the notification policy **Workers errors (appmarket)** (type *Workers Observability
+Real-Time Issue*) emails the owner about new errors. It has no filter, so it also covers the other
+Workers on the account. Cloudflare custom alerts, which could narrow it to `appmarket-api`, are
+refused for this account for now (error 17203).
 
 ## Retention
 
