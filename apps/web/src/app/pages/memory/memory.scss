@@ -92,3 +92,22 @@ mat-icon.off {
 .tags {
   width: 100%;
 }
+
+.suggested {
+  margin: 0 0 1.5rem;
+
+  h2 {
+    font: var(--mat-sys-title-medium);
+    margin: 0 0 0.25rem;
+  }
+
+  .count {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.from {
+  --mat-button-text-horizontal-padding: 0.25rem;
+  --mat-button-text-container-height: 1.25rem;
+  min-width: 0;
+}

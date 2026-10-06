@@ -5,6 +5,7 @@ import { type Context, Hono } from "hono";
 import type { z } from "zod";
 import { commitExists, pushedCommits } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
+import { suggestFromCheckpoint } from "../memory/store.ts";
 import { logEvent } from "../observability/log.ts";
 import { canView, isOwner } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
@@ -109,7 +110,11 @@ export const checkpointRoutes = new Hono<Ctx>()
 			serverRedactions: redacted.count,
 		});
 		if (result.status === 409) return c.json({ error: "conflict", message: "A different checkpoint exists for this commit; retry with ?force=1 to replace it.", checkpoint: result.checkpoint }, 409);
-		if (result.status === 201) logEvent("checkpoint.created", { repo: repo.fullName, harness: record.harness, state: result.checkpoint.state, redactions: record.redactions });
+		if (result.status === 201) {
+			logEvent("checkpoint.created", { repo: repo.fullName, harness: record.harness, state: result.checkpoint.state, redactions: record.redactions });
+			// #197: notes this session suggests for the repo's memory (people accept or dismiss them).
+			c.executionCtx.waitUntil(suggestFromCheckpoint(repo.id, record.commit, record).catch((e: unknown) => logEvent("memory.suggest_failed", { repo: repo.fullName, error: String(e) }, "warn")));
+		}
 		return c.json(result.checkpoint, result.status);
 	})
 	.get("/:owner/:slug/checkpoints", async (c) => {

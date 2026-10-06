@@ -18,6 +18,8 @@ export interface MemoryNote {
 	pinned: boolean;
 	/** #198: shown with the app on its page (when the repo is public) and copied to forks. */
 	public: boolean;
+	/** #197: the commit whose checkpoint suggested it. */
+	checkpointSha: string | null;
 	createdBy: string;
 	source: MemorySource;
 	sessionId: string | null;
@@ -82,4 +84,14 @@ export function parseMemoryInput(input: MemoryInput, partial: boolean): { error:
 	}
 	if (partial && out.text === undefined && out.tags === undefined && out.pinned === undefined && out.public === undefined) return { error: "Nothing to change." };
 	return out;
+}
+
+/** #197: a note a checkpoint suggests; nothing is saved until a person accepts it. */
+export interface MemorySuggestion {
+	id: string;
+	commit: string;
+	kind: "gotcha" | "command" | "convention";
+	text: string;
+	tags: string[];
+	createdAt: string;
 }

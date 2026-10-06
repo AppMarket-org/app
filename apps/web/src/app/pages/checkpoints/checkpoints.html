@@ -101,6 +101,12 @@
               </mat-expansion-panel-header>
 
               <app-checkpoint-details [checkpoint]="c" />
+              @if (suggestions()[c.commit]?.length) {
+                <section class="memory-suggestions" aria-label="Suggested for the repo's memory">
+                  <h3>Suggested for the repo's memory</h3>
+                  <app-memory-suggestions [path]="path()" [items]="suggestions()[c.commit]!" [showCommit]="false" (decided)="loadSuggestions()" />
+                </section>
+              }
 
               <mat-action-row>
                 <button mat-button type="button" [matMenuTriggerFor]="visMenu"><mat-icon>{{ visibilities[c.visibility].icon }}</mat-icon>{{ visibilities[c.visibility].label }}</button>

@@ -15,9 +15,11 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointAccess, type CheckpointSummary, type CheckpointVisibility, type Repo } from '@appmarket/shared';
+import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointAccess, type CheckpointSummary, type CheckpointVisibility, type MemorySuggestion, type Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { CheckpointsApi } from '../../api/checkpoints';
+import { MemoryApi } from '../../api/memory';
+import { MemorySuggestions } from '../../components/memory-suggestions/memory-suggestions';
 import { Developer } from '../../api/developer';
 import { ConfirmDialog, type ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog';
 import { NoteDialog, type NoteDialogData } from '../../components/note-dialog/note-dialog';
@@ -36,6 +38,7 @@ const PAGE = 50;
     RepositoryHeader,
     DatePipe,
     CheckpointDetails,
+    MemorySuggestions,
     MatButtonModule,
     MatButtonToggleModule,
     MatCardModule,
@@ -71,6 +74,9 @@ export class CheckpointsPage {
 
   protected readonly repo = signal<Repo | null>(null);
   protected readonly items = signal<Checkpoint[]>([]);
+  /** #197: memory suggestions waiting for a decision, by commit. */
+  protected readonly suggestions = signal<Record<string, MemorySuggestion[]>>({});
+  private readonly memory = inject(MemoryApi);
   protected readonly next = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
@@ -109,6 +115,7 @@ export class CheckpointsPage {
       this.access.set((await firstValueFrom(this.api.accessLog(this.path())).catch(() => ({ items: [] }))).items);
       this.items.set(page.items);
       this.next.set(page.next);
+      void this.loadSuggestions();
       this.counts.set(page.summary ?? null);
       this.loadError.set(false);
     } catch {
@@ -116,6 +123,13 @@ export class CheckpointsPage {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected async loadSuggestions(): Promise<void> {
+    const r = await firstValueFrom(this.memory.suggestions(this.path())).catch(() => ({ items: [] as MemorySuggestion[] }));
+    const byCommit: Record<string, MemorySuggestion[]> = {};
+    for (const s of r.items) (byCommit[s.commit] ??= []).push(s);
+    this.suggestions.set(byCommit);
   }
 
   /** Reloads what is shown (up to 100 checkpoints). */
