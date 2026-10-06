@@ -34,9 +34,10 @@ describe('CowbellButton', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    el.querySelector('button')!.click();
+    el.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
     fixture.detectChanges();
     expect(el.textContent).toContain('Cowbelled');
+    expect(el.querySelector('mat-icon.ringing')).not.toBeNull();
     const ring = http.expectOne('/api/repos/dev/app/cowbell');
     expect(ring.request.method).toBe('PUT');
     ring.flush({ cowbelled: true, count: 4 });
@@ -44,6 +45,14 @@ describe('CowbellButton', () => {
     fixture.detectChanges();
     expect(el.querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
     expect(el.querySelector('.count')!.textContent).toBe('4');
+    el.querySelector('mat-icon')!.dispatchEvent(new Event('animationend'));
+    fixture.detectChanges();
+    expect(el.querySelector('mat-icon.ringing')).toBeNull();
+    el.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    fixture.detectChanges();
+    expect(el.querySelector('mat-icon.ringing')).toBeNull();
+    http.expectOne('/api/repos/dev/app/cowbell').flush({ cowbelled: false, count: 3 });
+    await fixture.whenStable();
   });
 
   it('reverts if ringing fails', async () => {
