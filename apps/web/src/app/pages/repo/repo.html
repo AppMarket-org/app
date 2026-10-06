@@ -15,7 +15,7 @@
     <header>
       <div class="title">
         <h2 class="app-name">{{ d.repo.name }}</h2>
-        @if (d.repo.state === 'published') {
+        @if (d.repo.state !== 'removed') {
           <app-cowbell-button
             [path]="d.repo.fullName"
             [name]="d.repo.name"

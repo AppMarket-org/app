@@ -8,7 +8,7 @@
     }
   </div>
   <div class="actions">
-    @if (repo()?.state === 'published') {
+    @if (repo() && repo()!.state !== 'removed') {
       <app-cowbell-button [path]="path()" [name]="repo()!.name" [initialCount]="repo()!.cowbells" />
     } @else {
       <mat-chip-set aria-label="Repository cowbells"><mat-chip class="cowbell-count"><mat-icon svgIcon="cowbell" aria-hidden="true" />{{ repo()?.cowbells ?? '—' }} cowbells</mat-chip></mat-chip-set>
