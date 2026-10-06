@@ -113,7 +113,7 @@ h3 {
 }
 @media (max-width: 37.5rem) {
   .repo-row {
-    padding: 1.25rem;
+    padding: var(--app-panel-padding);
   }
   .repo-top {
     flex-wrap: wrap;
