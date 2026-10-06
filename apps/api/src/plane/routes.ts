@@ -65,25 +65,12 @@ export const planeRoutes = new Hono<Ctx>()
 		const title = text(body.title, 200);
 		if (!title) return c.json({ error: "title_required" }, 400);
 		if ((await p.stub.state()).tasks.filter((t) => t.status === "open" || t.status === "claimed").length >= 200) return c.json({ error: "too_many_tasks" }, 429);
-		// #296: a task is an issue (type Task, assigned to Agents), numbered with the repo's issues.
-		const id = crypto.randomUUID();
-		const description = text(body.description, 4000);
-		const number = await nextNumber(env.DB, p.repo.id);
-		await env.DB.prepare("INSERT INTO issues (id, repo_id, number, title, body, type, priority, for_agents, author_id) VALUES (?, ?, ?, ?, ?, 'task', 'none', 1, ?)")
-			.bind(id, p.repo.id, number, redactSecrets(title).text, redactSecrets(description).text, c.get("session")!.user.id)
-			.run();
-		return reply(c, await p.stub.createTask({ id, title, description, capabilities: cleanTags(body.capabilities), issue: { number, type: "task", priority: "none" } }));
+		return reply(c, await createTaskIssue(p.repo.id, c.get("session")!.user.id, { title, description: text(body.description, 4000), capabilities: cleanTags(body.capabilities) }));
 	})
 	.delete("/:owner/:slug/plane/tasks/:id", async (c) => {
 		const p = await plane(c);
 		if (!p || c.get("session")!.deviceScopes) return c.json({ error: "not_found" }, 404);
-		// #296: cancelling the task closes its issue as not planned.
-		await env.DB.prepare(
-			"UPDATE issues SET state = 'closed', reason = 'not_planned', closed_by = ?, closed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND repo_id = ? AND state = 'open'",
-		)
-			.bind(c.get("session")!.user.id, c.req.param("id"), p.repo.id)
-			.run();
-		return reply(c, await p.stub.deleteTask(c.req.param("id")));
+		return reply(c, await cancelTaskIssue(p.repo.id, c.get("session")!.user.id, c.req.param("id")));
 	})
 	// Agent Card: the agent session joins the board with its name and capabilities.
 	.post("/:owner/:slug/plane/agents", async (c) => {
@@ -187,11 +174,11 @@ export const a2aRoutes = new Hono<Ctx>()
 				canWrite: true,
 				state: () => stub.state(),
 				create: async (input) => {
-					const result = await stub.createTask({ id: crypto.randomUUID(), title: input.title, description: input.description, capabilities: cleanTags(input.capabilities) });
+					const result = await createTaskIssue(repo.id, session.user.id, { title: input.title, description: input.description, capabilities: cleanTags(input.capabilities) });
 					if (!result.ok) throw new Error(result.error);
 					return result.value;
 				},
-				remove: async (id) => void (await stub.deleteTask(id)),
+				remove: async (id) => void (await cancelTaskIssue(repo.id, session.user.id, id)),
 			},
 			repo.fullName,
 		);
@@ -227,6 +214,26 @@ async function openTaskPull(repo: Repo, task: PlaneTask, forkId: string, branch:
 	const pull = await insertPull({ repoId: repo.id, title: task.title, body, authorId, sourceRepoId: forkId, sourceBranch: branch, targetBranch: base?.name ?? targets.defaultBranch, headSha: head.sha, taskId: task.id });
 	await tellBoard(repo.id, task.id, { id: pull.id, status: "review", sha: head.sha, error: null, pull: pull.number });
 	logEvent("plane.pull_opened", { repo: repo.fullName, number: pull.number, task: task.id });
+}
+
+/** #296: a task is an issue (type Task, assigned to Agents), numbered with the repo's issues and pull requests. */
+async function createTaskIssue(repoId: string, userId: string, input: { title: string; description: string; capabilities: string[] }): Promise<PlaneResult> {
+	const id = crypto.randomUUID();
+	const number = await nextNumber(env.DB, repoId);
+	await env.DB.prepare("INSERT INTO issues (id, repo_id, number, title, body, type, priority, for_agents, author_id) VALUES (?, ?, ?, ?, ?, 'task', 'none', 1, ?)")
+		.bind(id, repoId, number, redactSecrets(input.title).text, redactSecrets(input.description).text, userId)
+		.run();
+	return stubFor(repoId).createTask({ id, ...input, issue: { number, type: "task", priority: "none" } });
+}
+
+/** #296: cancelling a task (board, A2A) closes its issue as not planned. */
+async function cancelTaskIssue(repoId: string, userId: string, taskId: string): Promise<PlaneResult> {
+	await env.DB.prepare(
+		"UPDATE issues SET state = 'closed', reason = 'not_planned', closed_by = ?, closed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND repo_id = ? AND state = 'open'",
+	)
+		.bind(userId, taskId, repoId)
+		.run();
+	return stubFor(repoId).deleteTask(taskId);
 }
 
 /** The agent session ended or was discarded: it leaves the board (its claims reopen). */

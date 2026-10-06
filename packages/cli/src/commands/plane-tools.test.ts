@@ -61,6 +61,21 @@ describe("plane MCP tools (#237)", () => {
 		expect(out.agents[0].name).toBe("Claude Code (you)");
 	});
 
+	it("shows each task's issue, open tasks most urgent first (#297)", () => {
+		const withIssues = {
+			...board,
+			tasks: [
+				{ id: "a", title: "Low", description: "", capabilities: [], status: "open", claimedBy: null, branch: null, issue: { number: 4, type: "task", priority: "low" } },
+				{ id: "b", title: "Old task", description: "", capabilities: [], status: "open", claimedBy: null, branch: null, issue: null },
+				{ id: "c", title: "Crash", description: "", capabilities: [], status: "open", claimedBy: null, branch: null, issue: { number: 7, type: "bug", priority: "urgent" } },
+			],
+		};
+		const out = JSON.parse(describeBoard(withIssues as never, SESSION));
+		expect(out.open.map((t: { id: string }) => t.id)).toEqual(["c", "a", "b"]);
+		expect(out.open[0]).toEqual({ id: "c", issue: 7, type: "bug", priority: "urgent", title: "Crash", needs: [] });
+		expect(out.open[2]).toEqual({ id: "b", title: "Old task", needs: [] });
+	});
+
 	it("sends the session as the agent, and the current branch when finishing", async () => {
 		const root = repo();
 		const f = fake();
