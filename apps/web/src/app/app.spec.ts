@@ -15,6 +15,7 @@ describe('App', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.brand')?.getAttribute('aria-label')).toBe('appmarket.org home');
+    expect(el.querySelector('.toolbar-search')).toBeNull();
 
     TestBed.inject(Seo).setHeading([{ label: 'dev' }, { label: 'Hello' }]);
     fixture.detectChanges();
