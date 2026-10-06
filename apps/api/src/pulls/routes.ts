@@ -7,6 +7,7 @@ import { logEvent } from "../observability/log.ts";
 import { normalizePath } from "../plane/model.ts";
 import { startMerge } from "../plane/merge.ts";
 import { tellBoard } from "../plane/merge-workflow.ts";
+import { checkPull, pullChecks } from "./checks.ts";
 import { changedFiles, diffRange, fileDiff } from "./diff.ts";
 import { notifyPull, participants, repoOwners } from "./notify.ts";
 import { insertPull, pullSettings, savePullSettings } from "./store.ts";
@@ -68,7 +69,7 @@ function blocked(state: PullState, review: { decision: string | null }, requireA
 
 async function toPull(row: PullRow, repo: Repo, session: AppSession | null): Promise<PullRequest> {
 	const editor = canEdit(repo, session);
-	const [review, requireApproval] = await Promise.all([reviewsOf(row.id), requiresApproval(repo.id)]);
+	const [review, requireApproval, checks] = await Promise.all([reviewsOf(row.id), requiresApproval(repo.id), pullChecks(row.source_repo_id, row.head_sha)]);
 	return {
 		number: row.number,
 		title: row.title,
@@ -82,6 +83,7 @@ async function toPull(row: PullRow, repo: Repo, session: AppSession | null): Pro
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 		closedAt: row.closed_at,
+		checks,
 		merge: await latestMerge(row.id),
 		review,
 		requireApproval,
@@ -111,6 +113,7 @@ async function refreshHead(row: PullRow): Promise<PullRow> {
 	const head = (await listBranches(source.git_repo).catch(() => null))?.branches.find((b) => b.name === row.source_branch)?.sha ?? null;
 	if (head && head !== row.head_sha) {
 		await env.DB.prepare("UPDATE pull_requests SET head_sha = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(head, row.id).run();
+		await checkPull(row.source_repo_id, row.source_branch, head);
 		return { ...row, head_sha: head };
 	}
 	return row;
@@ -192,6 +195,7 @@ export const pullRoutes = new Hono<Ctx>()
 		const { id } = await insertPull({ repoId: repo.id, title: input.title!, body: input.body ?? "", authorId: session.user.id, sourceRepoId: source.id, sourceBranch: head.name, targetBranch: base.name, headSha: head.sha });
 		const row = (await env.DB.prepare(`${SELECT} WHERE p.id = ?`).bind(id).first<PullRow>())!;
 		logEvent("pull.opened", { repo: repo.fullName, number: row.number, fork: source.id !== repo.id });
+		await checkPull(source.id, head.name, head.sha);
 		c.executionCtx.waitUntil(
 			repoOwners(repo.owner.id)
 				.then((owners) => notifyPull({ repo: repo.fullName, number: row.number, title: row.title, actorId: session.user.id, actor: session.user.name, what: "opened a pull request", excerpt: row.body, userIds: owners }))

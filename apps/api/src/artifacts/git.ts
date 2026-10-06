@@ -1,5 +1,6 @@
 import { languageOf } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
+import { refUpdateBody, refUpdateResult } from "../git/ref-update.ts";
 import { parseBranches, parseRefs } from "../previews/refs.ts";
 
 /** Repo name for a repo: readable slug plus a short id, within Artifacts' 63-character limit. */
@@ -157,6 +158,29 @@ export async function readReadme(gitRepo: string, commit: string): Promise<strin
 		if (file) return file.size > README_MAX_BYTES ? null : file.text();
 	}
 	return null;
+}
+
+/**
+ * Moves a branch to a commit the repo already has, only if it still points at `oldSha` (a
+ * compare-and-swap; no container needed). "stale" means the branch moved; "error" means the
+ * result is unknown (the caller re-reads the branch).
+ */
+export async function updateRef(gitRepo: string, branch: string, oldSha: string, newSha: string): Promise<"ok" | "stale" | "error"> {
+	const ref = `refs/heads/${branch}`;
+	const token = await mintGitToken(gitRepo, "write", 120);
+	try {
+		const response = await fetch(`${token.remote}/git-receive-pack`, {
+			method: "POST",
+			headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/x-git-receive-pack-request", Accept: "application/x-git-receive-pack-result" },
+			body: refUpdateBody(ref, oldSha, newSha),
+		});
+		if (!response.ok) return "error";
+		return refUpdateResult(await response.text(), ref);
+	} catch {
+		return "error";
+	} finally {
+		await revokeGitToken(gitRepo, token.id).catch(() => false);
+	}
 }
 
 /** PRD R16: the repo's Git remote (no credentials) for the owner's dashboard. */

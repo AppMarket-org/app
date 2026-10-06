@@ -11,6 +11,14 @@ export interface PullMerge {
 	conflicts?: string[];
 }
 
+/** The checks on the pull request's head commit (run when it is opened and each time the branch moves). */
+export interface PullChecks {
+	status: "queued" | "running" | "passed" | "failed" | "error";
+	sha: string;
+	/** Names of the checks that failed. */
+	failed: string[];
+}
+
 export interface PullRequest {
 	number: number;
 	title: string;
@@ -25,6 +33,8 @@ export interface PullRequest {
 	createdAt: string;
 	updatedAt: string;
 	closedAt: string | null;
+	/** Checks on headSha, or null before any ran. */
+	checks: PullChecks | null;
 	/** The latest merge attempt (rebase, checks, conformance, fast-forward). */
 	merge: PullMerge | null;
 	/** #258: the decision from the repo's owners and members' latest reviews. */

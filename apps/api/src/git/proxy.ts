@@ -7,6 +7,7 @@ import type { AppSession } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { entitled } from "../payments/routes.ts";
 import { canEdit, canView } from "../repos/access.ts";
+import { checkPull } from "../pulls/checks.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { OwnerStore } from "../owners/store.ts";
 import { processPush } from "../contributions/scan.ts";
@@ -92,13 +93,19 @@ async function pullLinks(repo: Repo, branches: string[]): Promise<string[]> {
 	const upstreamId = links?.session_of ?? links?.forked_from ?? null;
 	const target = upstreamId ? await new RepoStore(env.DB).findById(upstreamId) : repo;
 	if (!target || target.state === "removed") return [];
-	const { defaultBranch } = upstreamId ? { defaultBranch: "" } : await listBranches(repo.gitRepo!);
+	const { defaultBranch, branches: heads } = await listBranches(repo.gitRepo!);
 	const lines: string[] = [];
 	for (const branch of branches.slice(0, 3)) {
 		if (!upstreamId && branch === defaultBranch) continue;
-		const open = await env.DB.prepare("SELECT number FROM pull_requests WHERE source_repo_id = ? AND source_branch = ? AND state = 'open' ORDER BY number DESC LIMIT 1")
+		const open = await env.DB.prepare("SELECT id, number, head_sha FROM pull_requests WHERE source_repo_id = ? AND source_branch = ? AND state = 'open' ORDER BY number DESC LIMIT 1")
 			.bind(repo.id, branch)
-			.first<{ number: number }>();
+			.first<{ id: string; number: number; head_sha: string | null }>();
+		// The pull request's branch moved: record the new head and check it, ready for merging.
+		const head = heads.find((b) => b.name === branch)?.sha;
+		if (open && head && head !== open.head_sha) {
+			await env.DB.prepare("UPDATE pull_requests SET head_sha = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(head, open.id).run();
+			await checkPull(repo.id, branch, head);
+		}
 		const base = `${env.PUBLIC_ORIGIN}/${target.fullName}/pulls`;
 		if (lines.length) lines.push("");
 		if (open) lines.push(`View pull request #${open.number} for '${branch}':`, `  ${base}/${open.number}`);

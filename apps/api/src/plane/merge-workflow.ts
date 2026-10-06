@@ -4,8 +4,9 @@ import type { Runtime } from "@appmarket/shared";
 import { blockingFailures } from "@appmarket/template-contract";
 import { env } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
-import { mintGitToken, revokeGitToken } from "../artifacts/git.ts";
+import { listBranches, mintGitToken, revokeGitToken, updateRef } from "../artifacts/git.ts";
 import { startChecks } from "../checks/start.ts";
+import { processPush } from "../contributions/scan.ts";
 import { CheckStore } from "../checks/store.ts";
 import { evaluateCommit } from "../conformance/evaluate.ts";
 import { logEvent } from "../observability/log.ts";
@@ -59,6 +60,82 @@ export class MergeWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBindi
 		const fail = (name: string, error: string, details?: unknown) =>
 			set(name, { status: "failed", error, details: details ? JSON.stringify(details) : null }, { status: "failed", sha: null, error });
 		try {
+			// Fast path: the branch already contains the base, so the rebase would change nothing.
+			const fast = await step.do("plan", () => upToDate(repo.gitRepo, fork.gitRepo, merge.base_branch!, merge.branch).catch(() => null));
+			const { base, head } = fast ?? (await rebase());
+			if (!head || !base) return;
+			const checkedRef = fast ? `refs/heads/${merge.branch}` : `refs/heads/appmarket/merge/${mergeId}`;
+			await set("status: checking", { status: "checking", base_sha: base, head_sha: head }, { status: "checking", sha: head, error: null });
+
+			// Checks already run (or running) on this commit, e.g. since the pull request was opened, are reused.
+			const runId = await step.do("start checks", () => startChecks(fork, head, "push", checkedRef));
+			if (!runId) return void (await fail("failed: checks", "The checks could not start."));
+			await step.do("record checks run", () => updateMerge(mergeId, { checks_run_id: runId }));
+			let checks = await step.do("checks 0", () => checkRun(fork.id, head));
+			for (let i = 1; i <= CHECK_POLLS && !isDone(checks?.status); i++) {
+				await step.sleep(`wait ${i}`, i <= 6 ? "5 seconds" : "20 seconds");
+				checks = await step.do(`checks ${i}`, () => checkRun(fork.id, head));
+			}
+			if (checks?.status !== "passed") {
+				const failed = checks?.failed.length ? checks.failed.join(", ") : checks?.status === "error" ? "install" : "timed out";
+				return void (await fail("failed: checks result", `Checks did not pass: ${failed}.`, { checks: checks?.failed ?? [] }));
+			}
+
+			// Conformance: only rules this change breaks block it; rules the base already fails do not.
+			const introduced = await step.do("conformance", async () => {
+				const [after, before] = await Promise.all([
+					evaluateCommit({ id: repo.id, gitRepo: fork.gitRepo, runtime: repo.runtime }, head),
+					evaluateCommit({ id: repo.id, gitRepo: repo.gitRepo, runtime: repo.runtime }, base),
+				]);
+				const already = new Set(blockingFailures(before).map((r) => r.id));
+				return blockingFailures(after)
+					.filter((r) => !already.has(r.id))
+					.map((r) => r.id);
+			});
+			if (introduced.length) return void (await fail("failed: conformance", `The change breaks conformance rules: ${introduced.join(", ")}.`, { conformance: introduced }));
+
+			await set("status: merging", { status: "merging" }, { status: "merging", sha: head, error: null });
+			// Same repo: the commit is already there, so the Worker moves the branch itself (compare-and-swap).
+			// "unknown" (no clear answer) falls back to the container, which checks the base again.
+			const moved = fast && fork.id === repo.id ? await step.do("fast-forward", () => fastForward(repo.gitRepo, merge.base_branch!, base, head)) : "unknown";
+			if (moved === "base_moved") return void (await fail("failed: base moved", `${merge.base_branch} changed while the checks ran. Merge again.`));
+			const pushed =
+				moved === "merged"
+					? { status: "merged", notes: false }
+					: parseMarkers(
+							await withTokens(
+								[
+									[repo.gitRepo, "write"],
+									[fork.gitRepo, "read"],
+								],
+								async ([main, forked]) =>
+									stdout(
+										(
+											await ci.runner({
+												name: "push",
+												command: pushScript,
+												env: { MAIN_REMOTE: main!.remote, MAIN_TOKEN: main!.token, FORK_REMOTE: forked!.remote, FORK_TOKEN: forked!.token, BASE: merge.base_branch!, FORK_REF: checkedRef, HEAD_SHA: head, BASE_SHA: base },
+												config: { timeout: 15 * 60_000, retries: { limit: 1, delay: 10_000 } },
+											})
+										).logs,
+									),
+							),
+						);
+			if (pushed.status === "base_moved") return void (await fail("failed: base moved", `${merge.base_branch} changed while the checks ran. Merge again.`));
+			if (pushed.status === "changed") return void (await fail("failed: branch moved", `${merge.branch} changed while the checks ran. Merge again.`));
+			if (pushed.status !== "merged") return void (await fail("failed: push", "The checked commit could not be pushed."));
+			await set("status: merged", { status: "merged" }, { status: "merged", sha: head, error: null });
+			await step.do("log", async () => logEvent("plane.merged", { merge: mergeId, commit: head.slice(0, 12), notes: pushed.notes, fast: !!fast, worker: moved === "merged" }));
+			// The new base is a push like any other: auto-deploy and contributions follow now, not at the next cron.
+			await step.do("process push", () => processPush(repo.id).catch(() => undefined));
+		} catch (error) {
+			await fail("failed: error", `The merge stopped: ${error instanceof Error ? error.message.split("\n").slice(-3).join(" ") : String(error)}`.slice(0, 500));
+			logEvent("plane.merge_failed", { merge: mergeId }, "error");
+			throw error;
+		}
+
+		/** The full path: rebase onto the base in a container, pushed to the fork as appmarket/merge/<id>. */
+		async function rebase(): Promise<{ base: string | null; head: string | null }> {
 			await set("status: rebasing", { status: "rebasing" }, { status: "rebasing", sha: null, error: null });
 			const rebased = parseMarkers(
 				await withTokens(
@@ -82,76 +159,55 @@ export class MergeWorkflow extends CIWorkflow<CloudflareArtifacts, Env & CiBindi
 			if (rebased.status === "conflict") {
 				const error = `The branch conflicts with ${merge.base_branch}${rebased.conflicts.length ? ` in ${rebased.conflicts.slice(0, 5).join(", ")}` : ""}. Rebase it onto ${merge.base_branch}, push it${merge.session_id ? " to the session fork" : ""}, then merge again.`;
 				await set("status: conflict", { status: "conflict", error, details: JSON.stringify({ conflicts: rebased.conflicts }) }, { status: "conflict", sha: null, error, conflicts: rebased.conflicts });
-				return;
+				return { base: null, head: null };
 			}
-			if (rebased.status === "no_branch") return void (await fail("failed: no branch", merge.session_id ? `${merge.branch} is not in the session's fork. Push it to the appmarket-session remote first.` : `${merge.branch} no longer exists.`));
-			if (rebased.status === "nothing") return void (await fail("failed: nothing", `${merge.branch} has no commits beyond ${merge.base_branch}.`));
-			if (rebased.status !== "rebased" || !rebased.head || !rebased.base) return void (await fail("failed: rebase", "The rebase did not finish."));
-			const head = rebased.head;
-			const base = rebased.base;
+			if (rebased.status === "no_branch") {
+				await fail("failed: no branch", merge.session_id ? `${merge.branch} is not in the session's fork. Push it to the appmarket-session remote first.` : `${merge.branch} no longer exists.`);
+				return { base: null, head: null };
+			}
+			if (rebased.status === "nothing") {
+				await fail("failed: nothing", `${merge.branch} has no commits beyond ${merge.base_branch}.`);
+				return { base: null, head: null };
+			}
+			if (rebased.status !== "rebased" || !rebased.head || !rebased.base) {
+				await fail("failed: rebase", "The rebase did not finish.");
+				return { base: null, head: null };
+			}
 
 			await step.do("copy checkpoints", () => copyCheckpoints(repo.id, rebased.map));
-			await set("status: checking", { status: "checking", base_sha: base, head_sha: head }, { status: "checking", sha: head, error: null });
-
-			const runId = await step.do("start checks", () => startChecks(fork, head, "push", `refs/heads/appmarket/merge/${mergeId}`));
-			if (!runId) return void (await fail("failed: checks", "The checks could not start."));
-			await step.do("record checks run", () => updateMerge(mergeId, { checks_run_id: runId }));
-			let checks = await step.do("checks 0", () => checkRun(fork.id, head));
-			for (let i = 1; i <= CHECK_POLLS && !isDone(checks?.status); i++) {
-				await step.sleep(`wait ${i}`, "20 seconds");
-				checks = await step.do(`checks ${i}`, () => checkRun(fork.id, head));
-			}
-			if (checks?.status !== "passed") {
-				const failed = checks?.failed.length ? checks.failed.join(", ") : checks?.status === "error" ? "install" : "timed out";
-				return void (await fail("failed: checks result", `Checks did not pass: ${failed}.`, { checks: checks?.failed ?? [] }));
-			}
-
-			// Conformance: only rules this change breaks block it; rules the base already fails do not.
-			const introduced = await step.do("conformance", async () => {
-				const [after, before] = await Promise.all([
-					evaluateCommit({ id: repo.id, gitRepo: fork.gitRepo, runtime: repo.runtime }, head),
-					evaluateCommit({ id: repo.id, gitRepo: repo.gitRepo, runtime: repo.runtime }, base),
-				]);
-				const already = new Set(blockingFailures(before).map((r) => r.id));
-				return blockingFailures(after)
-					.filter((r) => !already.has(r.id))
-					.map((r) => r.id);
-			});
-			if (introduced.length) return void (await fail("failed: conformance", `The change breaks conformance rules: ${introduced.join(", ")}.`, { conformance: introduced }));
-
-			await set("status: merging", { status: "merging" }, { status: "merging", sha: head, error: null });
-			const pushed = parseMarkers(
-				await withTokens(
-					[
-						[repo.gitRepo, "write"],
-						[fork.gitRepo, "read"],
-					],
-					async ([main, forked]) =>
-						stdout(
-							(
-								await ci.runner({
-									name: "push",
-									command: pushScript,
-									env: { MAIN_REMOTE: main!.remote, MAIN_TOKEN: main!.token, FORK_REMOTE: forked!.remote, FORK_TOKEN: forked!.token, BASE: merge.base_branch!, MERGE_ID: mergeId, HEAD_SHA: head, BASE_SHA: base },
-									config: { timeout: 15 * 60_000, retries: { limit: 1, delay: 10_000 } },
-								})
-							).logs,
-						),
-				),
-			);
-			if (pushed.status === "base_moved") return void (await fail("failed: base moved", `${merge.base_branch} changed while the checks ran. Merge again.`));
-			if (pushed.status !== "merged") return void (await fail("failed: push", "The checked commit could not be pushed."));
-			await set("status: merged", { status: "merged" }, { status: "merged", sha: head, error: null });
-			await step.do("log", async () => logEvent("plane.merged", { merge: mergeId, commit: head.slice(0, 12), notes: pushed.notes }));
-		} catch (error) {
-			await fail("failed: error", `The merge stopped: ${error instanceof Error ? error.message.split("\n").slice(-3).join(" ") : String(error)}`.slice(0, 500));
-			logEvent("plane.merge_failed", { merge: mergeId }, "error");
-			throw error;
+			return { base: rebased.base, head: rebased.head };
 		}
 	}
 }
 
 const isDone = (s: string | undefined) => s === "passed" || s === "failed" || s === "error";
+
+/**
+ * The fast path's test: the base branch's head is already in the branch's history (looked up in
+ * the branch's last 500 commits), so a rebase would change nothing. Null means "take the full path".
+ */
+export async function upToDate(repoGit: string, forkGit: string, baseBranch: string, branch: string): Promise<{ base: string; head: string } | null> {
+	const [into, from] = await Promise.all([listBranches(repoGit), forkGit === repoGit ? null : listBranches(forkGit)]);
+	const base = into.branches.find((b) => b.name === baseBranch)?.sha;
+	const head = (from ?? into).branches.find((b) => b.name === branch)?.sha;
+	if (!base || !head || base === head) return null;
+	using git = await env.ARTIFACTS.get(forkGit);
+	const log = await git.log({ ref: head, limit: 500 }).catch(() => []);
+	return log.some((c) => c.hash === base) ? { base, head } : null;
+}
+
+/**
+ * Moves the base branch from `base` to `head` in the same repo. Safe to repeat (Workflows replay
+ * steps): when the answer is not "ok", the branch is read back, and one already at `head` counts as merged.
+ */
+async function fastForward(gitRepo: string, branch: string, base: string, head: string): Promise<"merged" | "base_moved" | "unknown"> {
+	const result = await updateRef(gitRepo, branch, base, head);
+	if (result === "ok") return "merged";
+	const now = (await listBranches(gitRepo).catch(() => null))?.branches.find((b) => b.name === branch)?.sha;
+	if (now === head) return "merged";
+	if (now && now !== base) return "base_moved";
+	return result === "stale" ? "base_moved" : "unknown";
+}
 
 async function checkRun(forkId: string, commit: string): Promise<{ status: string; failed: string[] } | null> {
 	const run = await new CheckStore(env.DB).latestFor(forkId, commit);

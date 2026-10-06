@@ -6,8 +6,8 @@
  *
  * rebase: the agent's branch (in the session fork) rebased onto the repo's base branch, pushed back
  *   to the fork as appmarket/merge/<id>; checkpoint notes follow the rebased commits.
- * push:   fast-forwards the base branch to exactly that commit (refused if the base moved), and
- *   merges the notes.
+ * push:   fast-forwards the base branch to exactly that commit (FORK_REF: the rebased branch, or the
+ *   branch itself when no rebase was needed; refused if the base moved), and merges the notes.
  * Each prints MARKER lines; parseMarkers reads them.
  */
 export const MARKER = "APPMARKET_MERGE_";
@@ -50,10 +50,10 @@ export const rebaseScript = [
 	`echo "${MARKER}STATUS=rebased"`,
 ].join("\n");
 
-/** Env: MAIN_REMOTE, MAIN_TOKEN (write), FORK_REMOTE, FORK_TOKEN (read), BASE, MERGE_ID, HEAD_SHA, BASE_SHA. */
+/** Env: MAIN_REMOTE, MAIN_TOKEN (write), FORK_REMOTE, FORK_TOKEN (read), BASE, FORK_REF, HEAD_SHA, BASE_SHA. */
 export const pushScript = [
 	...prelude,
-	fetchWith("FORK_TOKEN", "FORK_REMOTE", "+refs/heads/appmarket/merge/$MERGE_ID:refs/heads/checked"),
+	fetchWith("FORK_TOKEN", "FORK_REMOTE", "+$FORK_REF:refs/heads/checked"),
 	`if [ "$(git rev-parse refs/heads/checked)" != "$HEAD_SHA" ]; then echo "${MARKER}STATUS=changed"; exit 0; fi`,
 	fetchWith("MAIN_TOKEN", "MAIN_REMOTE", "+refs/heads/$BASE:refs/remotes/main/base"),
 	`if [ "$(git rev-parse refs/remotes/main/base)" != "$BASE_SHA" ]; then echo "${MARKER}STATUS=base_moved"; exit 0; fi`,
