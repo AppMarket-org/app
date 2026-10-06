@@ -122,6 +122,8 @@ async function agentPush(c: Context, repo: Repo, route: GitRoute, token: string,
 	const problems = refusals(parsed.commands, { protectedBranches: [defaultBranch, ...settings.protectedBranches].filter(Boolean), created: new Set(created.results.map((r) => r.branch)) });
 	if (problems.length) {
 		logEvent("git.agent_push_refused", { repo: repo.fullName, session: agent.id, refs: problems.map((p) => p.ref) });
+		// Read the rest of the upload (the pack) first: Git waits to finish sending before it reads the answer.
+		for (let r = await reader.read(); !r.done; r = await reader.read());
 		return new Response(refusedPush(parsed, problems), { status: 200, headers: { "Content-Type": "application/x-git-receive-pack-result", "Cache-Control": "no-cache" } });
 	}
 	// Forward the bytes read so far, then the rest of the request.

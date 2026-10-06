@@ -27,7 +27,7 @@ export interface StoredSession {
 }
 
 interface SessionToken {
-	session: { id: string; repo: string; fork: string };
+	session: { id: string; repo: string; fork: string; inRepo?: boolean };
 	remote: string;
 	token: string;
 	expiresAt: string;
@@ -64,7 +64,9 @@ export function credentialUrl(input: string): string | null {
 			.map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]),
 	);
 	if (!fields.protocol || !fields.host) return null;
-	return `${fields.protocol}://${fields.host}/${(fields.path ?? "").replace(/^\/+/, "")}`;
+	// #309: a session's remote names the session as the user (agent-<id>@host), so it gets the session's sign-in.
+	const user = fields.username ? `${fields.username}@` : "";
+	return `${fields.protocol}://${user}${fields.host}/${(fields.path ?? "").replace(/^\/+/, "")}`;
 }
 
 const normal = (url: string) => url.replace(/\/+$/, "").replace(/\.git$/, "");
@@ -110,13 +112,22 @@ export async function sessionStart(api: string, explicit: string | undefined, ha
 		git(["config", "--add", `credential.${started.remote}.helper`, "!appmarket git-credential"]);
 		git(["config", `credential.${started.remote}.useHttpPath`, "true"]);
 		git(["config", "appmarket.session", started.session.id]);
-		console.log(`Agent session ${started.session.id} started in the fork ${started.session.fork}.
+		console.log(
+			started.session.inRepo
+				? `Agent session ${started.session.id} started in ${repo}.
+The agent works on its own branches and pushes them to the ${SESSION_REMOTE} remote:
+  git push ${SESSION_REMOTE} HEAD:refs/heads/<branch>
+Any branch except protected ones (the default branch, and those in Settings > Pull requests); no tags.
+Open a pull request for the branch (appmarket pr create, or the pr_open MCP tool); merging stays with you.
+The session's sign-in works until ${started.expiresAt} and renews itself while the session is active.
+Tasks on the repo's Agents board (issues assigned to Agents) can be claimed with the MCP tools of
+\`appmarket mcp\` (plane_board, plane_claim, plane_lease, plane_finish). Run \`appmarket session end\` when done.`
+				: `Agent session ${started.session.id} started in the fork ${started.session.fork}.
 Push the agent's work there; your repo ${repo} stays untouched:
   git push ${SESSION_REMOTE} HEAD:refs/heads/<branch>
 The write token works until ${started.expiresAt} and renews itself while the session is active.
-Tasks posted on the repo's Agents board can be claimed with the MCP tools of \`appmarket mcp\`
-(plane_board, plane_join, plane_claim, plane_lease, plane_finish).
-When you are happy with the work, merge it into ${repo} yourself; then run \`appmarket session end\`.`);
+When you are happy with the work, merge it into ${repo} yourself; then run \`appmarket session end\`.`,
+		);
 		return 0;
 	} catch (error) {
 		console.error(`Could not start a session: ${explain(error)}`);
@@ -148,7 +159,7 @@ export async function gitCredential(action: string | undefined, input: string, a
 			return 0;
 		}
 	}
-	process.stdout.write(`username=appmarket\npassword=${session.token}\n`);
+	process.stdout.write(`username=${session.remote.match(/^https?:\/\/([^@/]+)@/)?.[1] ?? "appmarket"}\npassword=${session.token}\n`);
 	return 0;
 }
 
@@ -178,7 +189,16 @@ export async function sessionEnd(api: string, id: string | undefined, discard: b
 		return 1;
 	}
 	forget(root, s);
-	console.log(discard ? `Session ${s.id} discarded; its fork ${s.fork} is deleted.` : `Session ${s.id} ended; its token is revoked. The fork ${s.fork} stays for review.`);
+	const inRepo = s.fork === s.repo;
+	console.log(
+		discard
+			? inRepo
+				? `Session ${s.id} discarded; its sign-in is revoked and the branches it created are deleted.`
+				: `Session ${s.id} discarded; its fork ${s.fork} is deleted.`
+			: inRepo
+				? `Session ${s.id} ended; its sign-in is revoked. Its branches stay in ${s.repo} for review.`
+				: `Session ${s.id} ended; its token is revoked. The fork ${s.fork} stays for review.`,
+	);
 	return 0;
 }
 

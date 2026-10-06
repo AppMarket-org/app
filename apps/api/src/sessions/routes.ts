@@ -1,8 +1,7 @@
 import { AGENT_HARNESSES, type AgentSession, type AgentSessionToken, MAX_ACTIVE_SESSIONS, SESSION_TOKEN_TTL } from "@appmarket/shared";
-import { repoInputSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
-import { deleteGitRepo, forkGitRepo, gitRepoNameFor, mintGitToken, revokeAllGitTokens } from "../artifacts/git.ts";
+import { deleteGitRepo, listBranches, mintGitToken, revokeAllGitTokens, updateRef } from "../artifacts/git.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { publicRemote } from "../git/remote.ts";
 import { logEvent } from "../observability/log.ts";
@@ -37,6 +36,7 @@ const toSession = (r: SessionRow): AgentSession => ({
 	id: r.id,
 	repo: r.repo,
 	fork: r.fork,
+	inRepo: r.fork_repo_id === r.repo_id,
 	harness: r.harness,
 	status: r.status,
 	startedBy: r.started_by,
@@ -57,10 +57,41 @@ async function manageable(c: Context<Ctx>): Promise<SessionRow | null> {
 	return repo && canEdit(repo, session) ? row : null;
 }
 
+/** The session's remote: the repo's own URL, with the session in the user name so Git asks for its sign-in. */
+const sessionRemote = (row: SessionRow) => publicRemote(row.fork).replace("://", `://agent-${row.id}@`);
+
 async function issueToken(row: SessionRow, gitRepo: string): Promise<AgentSessionToken> {
+	if (row.fork_repo_id === row.repo_id) return issueSignIn(row);
+	// Sessions started before #309 keep their fork and its Artifacts write token until they end.
 	const minted = await mintGitToken(gitRepo, "write", SESSION_TOKEN_TTL);
 	await env.DB.prepare("UPDATE agent_sessions SET token_expires_at = ? WHERE id = ?").bind(minted.expiresAt, row.id).run();
 	return { session: toSession({ ...row, token_expires_at: minted.expiresAt }), remote: publicRemote(row.fork), token: minted.token, expiresAt: minted.expiresAt };
+}
+
+/**
+ * #309: the session's own appmarket.org sign-in (git only, this repo, 8 hours), never an Artifacts
+ * token, so every push goes through the Git endpoint and its branch rules (#308). A renewal
+ * replaces it.
+ */
+async function issueSignIn(row: SessionRow): Promise<AgentSessionToken> {
+	const token = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, "0")).join("");
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + SESSION_TOKEN_TTL * 1000).toISOString();
+	const authId = crypto.randomUUID();
+	await env.DB.batch([
+		env.DB.prepare('DELETE FROM "session" WHERE id = (SELECT auth_session_id FROM agent_sessions WHERE id = ?)').bind(row.id),
+		env.DB.prepare(
+			`INSERT INTO "session" (id, expiresAt, token, createdAt, updatedAt, userId, userAgent, clientId, scopes, deviceName) VALUES (?, ?, ?, ?, ?, ?, 'appmarket agent session', 'appmarket-agent', 'repos:read git:write', ?)`,
+		).bind(authId, expiresAt, token, now.toISOString(), now.toISOString(), row.user_id, `${row.harness} session ${row.id.slice(0, 8)}`),
+		env.DB.prepare("UPDATE agent_sessions SET auth_session_id = ?, token_expires_at = ? WHERE id = ?").bind(authId, expiresAt, row.id),
+	]);
+	return { session: toSession({ ...row, token_expires_at: expiresAt }), remote: sessionRemote(row), token, expiresAt };
+}
+
+/** Ends a session's access: its sign-in (in-repo) or its fork's tokens (older sessions). */
+async function revokeAccess(row: SessionRow): Promise<void> {
+	await env.DB.prepare('DELETE FROM "session" WHERE id = (SELECT auth_session_id FROM agent_sessions WHERE id = ?)').bind(row.id).run();
+	if (row.fork_repo_id !== row.repo_id && row.fork_git_repo) await revokeAllGitTokens(row.fork_git_repo).catch(() => undefined);
 }
 
 /** #29 (R9): start and list a repo's agent sessions. Mounted under /api/repos. */
@@ -88,25 +119,15 @@ export const repoSessionRoutes = new Hono<Ctx>()
 			return c.json({ error: "rate_limited", retryAfter: limit.retryAfter }, 429);
 		}
 
+		// #309: the session works in the repo itself, on its own branches.
 		const id = crypto.randomUUID();
-		const ids = await store.reserve(source.owner.id, `${source.name} session ${id.slice(0, 8)}`);
-		const gitRepo = gitRepoNameFor(ids.slug, ids.id);
-		await forkGitRepo(source.gitRepo, gitRepo);
-		try {
-			const input = repoInputSchema.parse({ name: `${source.name} session ${id.slice(0, 8)}`.slice(0, 80), summary: source.summary, description: "", category: source.category, runtime: source.runtime, platforms: source.platforms, license: source.license });
-			const fork = await store.insert(ids, source.owner.id, session.user.id, input, gitRepo);
-			await store.setSessionOf(fork.id, source.id);
-			await env.DB.prepare("INSERT INTO agent_sessions (id, repo_id, fork_repo_id, user_id, harness, token_expires_at) VALUES (?, ?, ?, ?, ?, ?)")
-				.bind(id, source.id, fork.id, session.user.id, harness, new Date().toISOString())
-				.run();
-		} catch (error) {
-			await deleteGitRepo(gitRepo).catch(() => undefined);
-			throw error;
-		}
+		await env.DB.prepare("INSERT INTO agent_sessions (id, repo_id, fork_repo_id, user_id, harness, token_expires_at) VALUES (?, ?, ?, ?, ?, ?)")
+			.bind(id, source.id, source.id, session.user.id, harness, new Date().toISOString())
+			.run();
 		const row = (await findSession(id))!;
-		logEvent("agent_session.started", { session: id, repo: source.fullName, fork: row.fork, harness, user: session.user.id });
+		logEvent("agent_session.started", { session: id, repo: source.fullName, harness, user: session.user.id });
 		c.header("Cache-Control", "no-store");
-		return c.json(await issueToken(row, gitRepo), 201);
+		return c.json(await issueSignIn(row), 201);
 	});
 
 /** #29: renew, end or discard one session. Mounted under /api/sessions. */
@@ -125,7 +146,7 @@ export const agentSessionRoutes = new Hono<Ctx>()
 	.post("/:id/end", async (c) => {
 		const row = await manageable(c);
 		if (!row) return c.json({ error: "not_found" }, 404);
-		if (row.status === "active" && row.fork_git_repo) await revokeAllGitTokens(row.fork_git_repo);
+		if (row.status === "active") await revokeAccess(row);
 		await env.DB.prepare("UPDATE agent_sessions SET status = 'ended', ended_at = COALESCE(ended_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = ? AND status = 'active'").bind(row.id).run();
 		// #236: the agent leaves the collaboration board; tasks it claimed but did not finish reopen.
 		await leavePlane(row.repo_id, row.id).catch(() => undefined);
@@ -135,16 +156,33 @@ export const agentSessionRoutes = new Hono<Ctx>()
 	.delete("/:id", async (c) => {
 		const row = await manageable(c);
 		if (!row) return c.json({ error: "not_found" }, 404);
-		// Discarding removes the fork: its tokens are revoked and its Git repository deleted.
-		if (row.fork_git_repo) {
-			await revokeAllGitTokens(row.fork_git_repo).catch(() => undefined);
-			await deleteGitRepo(row.fork_git_repo).catch(() => undefined);
+		await revokeAccess(row);
+		if (row.fork_repo_id === row.repo_id) {
+			// #309: discarding deletes the branches the session created in the repo.
+			await discardBranches(row);
+			await env.DB.prepare("UPDATE agent_sessions SET status = 'discarded', ended_at = COALESCE(ended_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = ?").bind(row.id).run();
+		} else {
+			// Older sessions: discarding removes the fork and its Git repository.
+			if (row.fork_git_repo) await deleteGitRepo(row.fork_git_repo).catch(() => undefined);
+			await env.DB.batch([
+				env.DB.prepare("UPDATE repos SET state = 'removed', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.fork_repo_id),
+				env.DB.prepare("UPDATE agent_sessions SET status = 'discarded', ended_at = COALESCE(ended_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = ?").bind(row.id),
+			]);
 		}
-		await env.DB.batch([
-			env.DB.prepare("UPDATE repos SET state = 'removed', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.fork_repo_id),
-			env.DB.prepare("UPDATE agent_sessions SET status = 'discarded', ended_at = COALESCE(ended_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = ?").bind(row.id),
-		]);
 		await leavePlane(row.repo_id, row.id).catch(() => undefined);
 		logEvent("agent_session.discarded", { session: row.id });
 		return c.json({ ok: true });
 	});
+
+/** #309: deletes the branches a session created (never protected ones: it could not create those). */
+async function discardBranches(row: SessionRow): Promise<void> {
+	if (!row.fork_git_repo) return;
+	const { results } = await env.DB.prepare("SELECT branch FROM agent_session_branches WHERE session_id = ?").bind(row.id).all<{ branch: string }>();
+	if (!results.length) return;
+	const heads = new Map((await listBranches(row.fork_git_repo)).branches.map((b) => [b.name, b.sha]));
+	for (const { branch } of results) {
+		const sha = heads.get(branch);
+		if (sha) await updateRef(row.fork_git_repo, branch, sha, "0".repeat(40)).catch(() => "error");
+	}
+	await env.DB.prepare("DELETE FROM agent_session_branches WHERE session_id = ?").bind(row.id).run();
+}
