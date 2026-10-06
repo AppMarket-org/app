@@ -104,7 +104,8 @@ export function toA2ATask(task: PlaneTask, agents: PlaneAgent[], contextId: stri
 		status: { state: v1 ? STATE_1_0[s] : s, message: msg("agent", `${task.id}-status`, override === "canceled" ? "Canceled." : message), timestamp: task.updatedAt },
 		...(artifacts.length ? { artifacts } : {}),
 		history: [msg("user", `${task.id}-request`, task.description ? `${task.title}\n\n${task.description}` : task.title)],
-		metadata: { capabilities: task.capabilities },
+		// #297: the issue the task is (contextId is the repo's owner/name).
+		metadata: { capabilities: task.capabilities, ...(task.issue ? { issue: { ...task.issue, path: `/${contextId}/issues/${task.issue.number}` } } : {}) },
 	};
 }
 

@@ -72,10 +72,12 @@ arguments are scanned and secrets replaced with `[redacted:<kind>]`:
 | `login [--no-browser] [--device-name n] [--no-keychain]` | Sign in with a device code |
 | `logout` | Revoke this device's token and forget it |
 | `pr create [--title] [--body] [--base]` / `pr list [--state]` / `pr view [n]` / `pr merge [n]` | Pull requests for this branch: from a fork or agent session to the original repo, otherwise to the default branch |
+| `issue create --title t [--type bug\|feature\|task] [--priority p] [--assign agents\|<handle>] [--body b]` | Open an issue; assigned to `agents`, it is a task on the Agents board |
+| `issue list [--state] [--type] [--assign]` / `issue view <n>` / `issue comment <n> --body b` / `issue close <n> [--not-planned]` / `issue reopen <n>` | Issues of this repo (of the original repo from a fork or agent session) |
 | `setup-git [--remove]` | Let plain `git` sign in to appmarket.org remotes with this login (no tokens to copy, nothing in the keychain) |
 | `whoami` | Account, device, scopes, expiry |
 | `init [owner/repo] [--agents-md]` | Turn on checkpoints in this Git repo |
-| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`) and the code graph tools (`code_*`); see below |
+| `mcp` | MCP server (stdio): `record_context` for agents without hooks, the task board tools (`plane_*`), issues (`issue_*`), pull requests (`pr_*`) and the code graph tools (`code_*`); see below |
 | `session start [owner/repo] [--harness h]` / `session end [id] [--discard]` / `session list` | Agent sessions: work in a fork of the repo with a short-lived write token that renews itself |
 | `disable` / `enable` | Pause or resume capture here (the hook stays and does nothing) |
 | `record` | Add events: JSON lines on stdin, or `--prompt`, `--tool --args`; `--for <sha>` adds a prompt to an existing checkpoint |
@@ -92,7 +94,9 @@ on appmarket.org: `plane_board`, `plane_join`, `plane_claim`, `plane_lease`, `pl
 `plane_finish`.
 
 In any appmarket repo, `pr_open`, `pr_status`, `pr_comments` and `pr_reply` let an agent open a pull request
-for its branch, follow its review and merge state, and answer reviewers.
+for its branch, follow its review and merge state, and answer reviewers. Board tasks are issues:
+`plane_board` shows each one's number, type and priority (most urgent first), `issue_view` reads an
+issue with its comments, and `issue_comment` reports progress or asks a question.
 
 - Agents claim tasks the owner posted and lease the files they will change. A lease returns a
   heads-up when a file imports, or is imported by, one another agent holds.

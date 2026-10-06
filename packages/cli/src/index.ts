@@ -15,6 +15,7 @@ import { pushNotes } from "./commands/notes.ts";
 import { doctor, status, updateNotice } from "./commands/doctor.ts";
 import { gitCredential, sessionEnd, sessionList, sessionStart } from "./commands/session.ts";
 import { setupGit } from "./commands/setup-git.ts";
+import { issue } from "./commands/issue.ts";
 import { pr } from "./commands/pr.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
@@ -38,6 +39,8 @@ Usage: appmarket <command> [options]
   session list [<owner>/<repo>]                                  Agent sessions of this repo
   pr create [--title t] [--body b] [--base branch]                 Open a pull request for this branch (to the repo it was forked from, for forks)
   pr list [--state open|merged|closed|all] | view [n] | merge [n]  Pull requests of this repo; view and merge default to this branch's
+  issue create --title t [--type bug|feature|task] [--priority p] [--assign agents|<handle>] [--body b]   Open an issue
+  issue list [--state open|closed|all] [--type t] [--assign a] | view <n> | comment <n> --body b | close <n> [--not-planned] | reopen <n>
   setup-git [--remove]                                           Let plain git sign in to appmarket.org remotes with this login (no tokens to copy)
   git-credential get                                             Git credential helper (set up by setup-git and session start)
   status                                                         Queue, last upload, checkpoints waiting for a push
@@ -72,6 +75,10 @@ async function main(argv: string[]): Promise<number> {
 			body: { type: "string" },
 			base: { type: "string" },
 			state: { type: "string" },
+			type: { type: "string" },
+			priority: { type: "string" },
+			assign: { type: "string" },
+			"not-planned": { type: "boolean" },
 			"agents-md": { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
@@ -143,6 +150,16 @@ async function main(argv: string[]): Promise<number> {
 			return gitCredential(rest[0], await readStdin(), api);
 		case "pr":
 			return pr(rest[0], rest.slice(1), { title: values.title as string | undefined, body: values.body as string | undefined, base: values.base as string | undefined, state: values.state as string | undefined });
+		case "issue":
+			return issue(rest[0], rest.slice(1), {
+				title: values.title as string | undefined,
+				body: values.body as string | undefined,
+				type: values.type as string | undefined,
+				priority: values.priority as string | undefined,
+				assign: values.assign as string | undefined,
+				state: values.state as string | undefined,
+				notPlanned: !!values["not-planned"],
+			});
 		case "setup-git":
 			return setupGit(api, !!values.remove);
 		case "status":

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { A2A_ERRORS, agentCard, type Board, type BoardOps, dispatch, taskFromMessage, taskState } from "./a2a";
+import { A2A_ERRORS, agentCard, type Board, type BoardOps, dispatch, taskFromMessage, taskState, toA2ATask } from "./a2a";
 import type { PlaneTask } from "./model";
 
 const task = (o: Partial<PlaneTask> = {}): PlaneTask => ({ id: "t1", title: "Add /health", description: "Return ok", capabilities: ["typescript"], status: "open", claimedBy: null, branch: null, note: null, issue: null, merge: null, createdAt: "2026-10-05T10:00:00Z", updatedAt: "2026-10-05T10:00:00Z", ...o });
@@ -55,6 +55,12 @@ describe("A2A on the board (#239)", () => {
 		expect(ops.removed).toEqual(["t1"]);
 		expect(await dispatch(rpc("CancelTask", { id: "t2" }), ops, "c")).toMatchObject({ error: { code: A2A_ERRORS.taskNotCancelable } });
 		expect(await dispatch(rpc("GetTask", { id: "nope" }), ops, "c")).toMatchObject({ error: { code: A2A_ERRORS.taskNotFound } });
+	});
+
+	it("carries the task's issue in its metadata (#297)", () => {
+		const t = toA2ATask(task({ issue: { number: 7, type: "bug", priority: "high" } }), agents, "dev/app", "1.0");
+		expect(t.metadata).toEqual({ capabilities: ["typescript"], issue: { number: 7, type: "bug", priority: "high", path: "/dev/app/issues/7" } });
+		expect(toA2ATask(task(), agents, "dev/app", "1.0").metadata).toEqual({ capabilities: ["typescript"] });
 	});
 
 	it("refuses what it does not do", async () => {

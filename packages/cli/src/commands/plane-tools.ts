@@ -16,7 +16,7 @@ const list = (description: string) => ({ type: "array", items: { type: "string" 
 export const PLANE_TOOLS = [
 	{
 		name: "plane_board",
-		description: "Show this repo's task board on appmarket.org: open tasks (with the capabilities they need), tasks in progress, the agents taking part and the files they have leased. Read it before claiming a task or editing files another agent may hold.",
+		description: "Show this repo's task board on appmarket.org: open tasks, most urgent first (each is an issue: its number, type and priority, and the capabilities it needs), tasks in progress, the agents taking part and the files they have leased. Read it before claiming a task or editing files another agent may hold; read a task's issue and comments with issue_view.",
 		inputSchema: obj({}),
 	},
 	{
@@ -52,7 +52,7 @@ type Result = { content: { type: "text"; text: string }[]; isError?: boolean };
 const text = (t: string, isError = false): Result => ({ content: [{ type: "text", text: t }], ...(isError ? { isError: true } : {}) });
 
 interface Board {
-	tasks: { id: string; title: string; description: string; capabilities: string[]; status: string; claimedBy: string | null; branch: string | null }[];
+	tasks: { id: string; title: string; description: string; capabilities: string[]; status: string; claimedBy: string | null; branch: string | null; issue?: { number: number; type: string; priority: string } | null }[];
 	agents: { id: string; name: string; vendor: string; capabilities: string[] }[];
 	leases: { agentId: string; taskId: string | null; path: string; expiresAt: number }[];
 	/** #240: soft conflicts through imports, on lease. */
@@ -65,13 +65,21 @@ export interface PlaneDeps {
 }
 const defaults: PlaneDeps = { call: apiCall, token: async (api) => (await loadCredentials(api))?.token ?? null };
 
-/** The board as an agent reads it: its own entries marked, names instead of ids. */
+const RANK: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+
+/** The board as an agent reads it: its own entries marked, names instead of ids, open tasks most urgent first. */
 export function describeBoard(board: Board, me: string): string {
 	const name = (id: string | null) => (id === me ? "you" : (board.agents.find((a) => a.id === id)?.name ?? "an agent that left"));
+	// #297: each task is an issue; issue_view reads it with its comments.
+	const issue = (t: Board["tasks"][number]) => (t.issue ? { issue: t.issue.number, type: t.issue.type, priority: t.issue.priority === "none" ? undefined : t.issue.priority } : {});
+	const rank = (t: Board["tasks"][number]) => RANK[t.issue?.priority ?? "none"] ?? 4;
 	const out = {
 		you: board.agents.some((a) => a.id === me) ? "joined" : "not joined yet (call plane_join)",
-		open: board.tasks.filter((t) => t.status === "open").map((t) => ({ id: t.id, title: t.title, description: t.description || undefined, needs: t.capabilities })),
-		inProgress: board.tasks.filter((t) => t.status === "claimed").map((t) => ({ id: t.id, title: t.title, by: name(t.claimedBy) })),
+		open: board.tasks
+			.filter((t) => t.status === "open")
+			.sort((a, b) => rank(a) - rank(b))
+			.map((t) => ({ id: t.id, ...issue(t), title: t.title, description: t.description || undefined, needs: t.capabilities })),
+		inProgress: board.tasks.filter((t) => t.status === "claimed").map((t) => ({ id: t.id, ...issue(t), title: t.title, by: name(t.claimedBy) })),
 		finished: board.tasks.filter((t) => t.status === "done" || t.status === "failed").slice(0, 10).map((t) => ({ id: t.id, title: t.title, status: t.status, by: name(t.claimedBy), branch: t.branch })),
 		agents: board.agents.map((a) => ({ name: a.id === me ? `${a.name} (you)` : a.name, vendor: a.vendor, capabilities: a.capabilities })),
 		leases: board.leases.map((l) => ({ path: l.path, by: name(l.agentId), until: new Date(l.expiresAt).toISOString() })),
