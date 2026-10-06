@@ -1,11 +1,21 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "appmarket",
-  "version": "0.1.0",
-  "description": "Checkpoints for appmarket.org: the prompt, model, effort and tools behind every commit Claude Code makes. Needs the appmarket CLI (npx appmarket login).",
-  "author": { "name": "appmarket.org", "url": "https://appmarket.org" },
+  "version": "0.2.0",
+  "description": "appmarket.org for Claude Code: checkpoints (the prompt, model, effort and tools behind every commit), the repo's memory at session start, and MCP tools for memory, issues, pull requests and the Agents board. Needs the appmarket CLI (npx appmarket login).",
+  "author": {
+    "name": "appmarket.org",
+    "url": "https://appmarket.org"
+  },
   "homepage": "https://appmarket.org",
   "repository": "https://github.com/AppMarket-org/claude-plugin",
   "license": "MIT",
-  "keywords": ["appmarket", "checkpoints", "provenance", "git"]
+  "keywords": [
+    "appmarket",
+    "checkpoints",
+    "provenance",
+    "git",
+    "memory",
+    "mcp"
+  ]
 }

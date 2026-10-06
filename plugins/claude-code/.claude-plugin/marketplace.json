@@ -6,7 +6,7 @@
     {
       "name": "appmarket",
       "source": "./plugin",
-      "description": "Checkpoints: record the prompt, model, effort and tools behind every commit Claude Code makes, for your appmarket.org repos."
+      "description": "Checkpoints, repo memory and MCP tools (memory, issues, pull requests, the Agents board) for your appmarket.org repos."
     }
   ]
 }

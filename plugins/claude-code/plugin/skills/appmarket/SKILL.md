@@ -1,6 +1,6 @@
 ---
 name: appmarket
-description: Use when the user asks about appmarket.org checkpoints, the appmarket CLI, recording or publishing the prompts behind commits, build history, or setting up a repo on appmarket.org ("set up checkpoints", "why is my prompt not on appmarket", "make this checkpoint public", "appmarket login").
+description: Use when the user asks about appmarket.org checkpoints, repo memory, the appmarket CLI, recording or publishing the prompts behind commits, build history, or setting up a repo on appmarket.org ("set up checkpoints", "why is my prompt not on appmarket", "make this checkpoint public", "appmarket login").
 ---
 
 # appmarket.org checkpoints
@@ -32,6 +32,20 @@ installed, the hooks do nothing and commits work as usual.
   publish individual checkpoints or sessions in the dashboard
   (appmarket.org/dashboard/repos/<owner>/<repo>/checkpoints); published ones appear on the app's
   build history.
+
+## Repo memory
+
+Each session in an appmarket repo starts with the repo's **memory** in context: short notes its
+people and agents keep about conventions, decisions and traps (pinned ones first). The plugin also
+registers the `appmarket mcp` server, whose tools include:
+
+- `memory_recall` (search notes), `memory_remember` (add one: one fact, no secrets),
+  `memory_update`, `memory_forget`;
+- `issue_view`, `issue_comment`, `pr_open`, `pr_status`, `pr_comments`, `pr_reply`;
+- the Agents board (`plane_*`) in an agent session (`appmarket session start`).
+
+Add to memory what the next session should know; check it before guessing how things are done.
+The user manages notes in the dashboard or with `appmarket memory list|add|remove|export`.
 
 ## Helping the user
 
