@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth-guard';
+import { repoGuard } from './auth/repo-guard';
 import { homeGuard } from './auth/home-guard';
 import { categoryResolver, latestResolver, searchResolver } from './pages/catalog-resolvers';
 import { historyResolver } from './pages/history/history-resolver';
@@ -41,10 +42,10 @@ export const routes: Routes = [
   { path: 'admin', canActivate: [authGuard('admin')], loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin) },
   // Code browser (read-only; Shiki loads in the browser).
   // #259: pull requests.
-  { path: ':owner/:slug/pulls/new', canActivate: [authGuard()], loadComponent: () => import('./pages/pulls/new-pull/new-pull').then((m) => m.NewPullPage) },
-  { path: ':owner/:slug/pulls/:number', loadComponent: () => import('./pages/pulls/pull/pull').then((m) => m.PullPage) },
-  { path: ':owner/:slug/pulls', loadComponent: () => import('./pages/pulls/pull-list/pull-list').then((m) => m.PullListPage) },
-  { path: ':owner/:slug/code', loadComponent: () => import('./pages/code/code').then((m) => m.CodePage) },
+  { path: ':owner/:slug/pulls/new', canActivate: [authGuard(), repoGuard], loadComponent: () => import('./pages/pulls/new-pull/new-pull').then((m) => m.NewPullPage) },
+  { path: ':owner/:slug/pulls/:number', canActivate: [repoGuard], loadComponent: () => import('./pages/pulls/pull/pull').then((m) => m.PullPage) },
+  { path: ':owner/:slug/pulls', canActivate: [repoGuard], loadComponent: () => import('./pages/pulls/pull-list/pull-list').then((m) => m.PullListPage) },
+  { path: ':owner/:slug/code', canActivate: [repoGuard], loadComponent: () => import('./pages/code/code').then((m) => m.CodePage) },
   { path: ':owner/:slug/history', resolve: { history: historyResolver }, loadComponent: () => import('./pages/history/history').then((m) => m.HistoryPage) },
   { path: ':owner/:slug', resolve: { details: repoResolver }, loadComponent: () => import('./pages/repo/repo').then((m) => m.RepoPage) },
   { path: ':owner', resolve: { page: ownerResolver }, loadComponent: () => import('./pages/owner/owner').then((m) => m.OwnerPage) },
