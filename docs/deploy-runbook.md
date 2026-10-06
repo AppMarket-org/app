@@ -29,10 +29,14 @@ Artifacts namespaces (`staging`, `prod`) are created on first use by the binding
 
 Zero Trust → Access → Applications → Self-hosted, for `staging.appmarket.org` (or `appmarket.org`)
 with paths `/admin` and `/api/admin`. Policy: allow the owner's email (and other admins). Then set
-in `apps/api/environments.ts` → `access`:
+two variables on the GitHub environment (not in the repo, which is public):
 
-- `teamDomain`: `<team>.cloudflareaccess.com`
-- `aud`: the application's **Application Audience (AUD) Tag**
+```sh
+gh variable set ACCESS_TEAM_DOMAIN --env <env> --body <team>.cloudflareaccess.com
+gh variable set ACCESS_AUD --env <env> --body <the application's Application Audience (AUD) Tag>
+```
+
+A deploy from your own machine needs the same two values in its environment.
 
 Until both are set, the deployed API refuses `/api/admin/*` (503), and the deploy preflight fails.
 The API also verifies Access's JWT on those routes (`src/auth/access.ts`).

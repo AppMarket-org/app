@@ -10,11 +10,11 @@ if (mode !== "staging" && mode !== "production") {
 const env = ENVIRONMENTS[resolveEnvironment(mode)];
 const missing = [
 	!env.database.id && "database.id (create the D1 database, then set its ID)",
-	!env.access.teamDomain && "access.teamDomain (Cloudflare Access team domain)",
-	!env.access.aud && "access.aud (AUD tag of the /admin Access application)",
+	!env.access.teamDomain && "ACCESS_TEAM_DOMAIN (Cloudflare Access team domain, a GitHub environment variable)",
+	!env.access.aud && "ACCESS_AUD (AUD tag of the /admin Access application, a GitHub environment variable)",
 ].filter(Boolean);
 if (missing.length) {
-	console.error(`apps/api/environments.ts is not ready for ${mode}:\n- ${missing.join("\n- ")}\nSee docs/deploy-runbook.md.`);
+	console.error(`${mode} is not ready to deploy:\n- ${missing.join("\n- ")}\nSee docs/deploy-runbook.md.`);
 	process.exit(1);
 }
 console.log(env.database.id);
