@@ -18,8 +18,8 @@
     [attr.aria-pressed]="cowbelled()"
     [attr.aria-label]="(cowbelled() ? 'Remove your cowbell from ' : 'Cowbell ') + name() + ', ' + count() + ' cowbells'"
     [disabled]="busy() || auth.user() === undefined"
-    (click)="toggle()"
+    (click)="toggle($event)"
   >
-    <mat-icon svgIcon="cowbell" aria-hidden="true" />{{ cowbelled() ? 'Cowbelled' : 'Cowbell' }}<span class="count">{{ count() }}</span>
+    <mat-icon svgIcon="cowbell" aria-hidden="true" [class.ringing]="ringing()" (animationend)="ringing.set(false)" />{{ cowbelled() ? 'Cowbelled' : 'Cowbell' }}<span class="count">{{ count() }}</span>
   </button>
 }

@@ -62,12 +62,14 @@
   @if (!auth.user()) {
     <a mat-button class="wide product-link" href="/#workflow">How it works</a>
   }
+  @if (auth.user()) {
   <form class="toolbar-search wide" role="search" (submit)="search($event, query.value); query.value = ''">
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-icon matPrefix aria-hidden="true">search</mat-icon>
       <input #query matInput type="search" name="q" placeholder="Search apps" aria-label="Search apps" maxlength="100" autocomplete="off" />
     </mat-form-field>
   </form>
+  }
   <a mat-button class="wide" routerLink="/search">{{ workspace() ? 'Apps' : 'Explore apps' }}</a>
   <a mat-icon-button class="narrow" routerLink="/search" aria-label="Search" matTooltip="Search"
     ><mat-icon>search</mat-icon></a

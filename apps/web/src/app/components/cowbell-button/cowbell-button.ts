@@ -33,6 +33,7 @@ export class CowbellButton {
   protected readonly count = signal(0);
   protected readonly cowbelled = signal(false);
   protected readonly busy = signal(false);
+  protected readonly ringing = signal(false);
 
   constructor() {
     effect(() => {
@@ -57,9 +58,10 @@ export class CowbellButton {
     }
   }
 
-  protected async toggle(): Promise<void> {
+  protected async toggle(event: MouseEvent): Promise<void> {
     if (this.busy()) return;
     const on = !this.cowbelled();
+    this.ringing.set(on && event.detail > 0);
     this.busy.set(true);
     // Optimistic: flip now, settle on the server's answer.
     this.cowbelled.set(on);
@@ -69,6 +71,7 @@ export class CowbellButton {
       this.cowbelled.set(status.cowbelled);
       this.count.set(status.count);
     } catch {
+      this.ringing.set(false);
       this.cowbelled.set(!on);
       this.count.update((n) => Math.max(0, n + (on ? -1 : 1)));
     } finally {
