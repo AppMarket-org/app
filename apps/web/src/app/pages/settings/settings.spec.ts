@@ -19,7 +19,7 @@ function setup() {
       me, profile: () => of({ owner, profile: { memberSince: '2026-10-01' }, privacy: { privateContributions: false, hideActivity: false, hideLocation: false } }),
       sessions: () => of([]), updateProfile,
     } },
-    { provide: HttpClient, useValue: { get: () => of({ impacts: true, pulls: true, sending: true }) } },
+    { provide: HttpClient, useValue: { get: () => of({ impacts: true, pulls: true, issues: true, sending: true }) } },
   ] });
   return { me, updateProfile };
 }

@@ -46,17 +46,27 @@ export async function boardWork(repoId: string, issueIds: string[]): Promise<Map
 	return out;
 }
 
-/** Closes open issues as completed (merged work), by id or by number in a repo. */
-export async function closeIssues(repoId: string, which: { ids?: string[]; numbers?: number[] }): Promise<number> {
+/** Closes open issues as completed (merged work), by id or by number in a repo; returns the ones it closed. */
+export async function closeIssues(repoId: string, which: { ids?: string[]; numbers?: number[] }): Promise<{ id: string; number: number; title: string }[]> {
 	const ids = which.ids ?? [];
 	const numbers = (which.numbers ?? []).slice(0, 20);
-	if (!ids.length && !numbers.length) return 0;
+	if (!ids.length && !numbers.length) return [];
 	const where = [ids.length ? `id IN (${ids.map(() => "?").join(",")})` : null, numbers.length ? `number IN (${numbers.map(() => "?").join(",")})` : null].filter(Boolean).join(" OR ");
-	const result = await env.DB.prepare(
+	const { results } = await env.DB.prepare(
 		`UPDATE issues SET state = 'closed', reason = 'completed', closed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-		 WHERE repo_id = ? AND state = 'open' AND (${where})`,
+		 WHERE repo_id = ? AND state = 'open' AND (${where}) RETURNING id, number, title`,
 	)
 		.bind(repoId, ...ids, ...numbers)
-		.run();
-	return result.meta.changes ?? 0;
+		.all<{ id: string; number: number; title: string }>();
+	return results;
+}
+
+/** #298: everyone an issue concerns: its author, its assignee and its commenters. */
+export async function issueParticipants(issueId: string): Promise<string[]> {
+	const { results } = await env.DB.prepare(
+		"SELECT author_id AS id FROM issues WHERE id = ? UNION SELECT assignee_id FROM issues WHERE id = ? AND assignee_id IS NOT NULL UNION SELECT author_id FROM issue_comments WHERE issue_id = ? AND deleted_at IS NULL",
+	)
+		.bind(issueId, issueId, issueId)
+		.all<{ id: string }>();
+	return results.map((r) => r.id);
 }

@@ -9,7 +9,8 @@ import { startChecks } from "../checks/start.ts";
 import { processPush } from "../contributions/scan.ts";
 import { CheckStore } from "../checks/store.ts";
 import { evaluateCommit } from "../conformance/evaluate.ts";
-import { closeIssues } from "../issues/board.ts";
+import { closeIssues, issueParticipants } from "../issues/board.ts";
+import { notifyIssue } from "../pulls/notify.ts";
 import { closingNumbers } from "../issues/closing.ts";
 import { logEvent } from "../observability/log.ts";
 import type { RepoPlane } from "./coordinator.ts";
@@ -244,8 +245,15 @@ export async function reportMerge(merge: Pick<MergeRow, "repo_id" | "task_id" | 
 		const pull = merge.pull_id ? await env.DB.prepare("SELECT title, body, task_id FROM pull_requests WHERE id = ?").bind(merge.pull_id).first<{ title: string; body: string; task_id: string | null }>() : null;
 		const ids = [merge.task_id, pull?.task_id].filter((x): x is string => !!x);
 		const numbers = pull ? closingNumbers(`${pull.title}\n${pull.body}`) : [];
-		const closed = await closeIssues(merge.repo_id, { ids, numbers }).catch(() => 0);
-		if (closed) logEvent("issue.closed_by_merge", { repo: merge.repo_id, closed });
+		const closed = await closeIssues(merge.repo_id, { ids, numbers }).catch(() => []);
+		if (closed.length) {
+			logEvent("issue.closed_by_merge", { repo: merge.repo_id, closed: closed.length });
+			const repo = await env.DB.prepare("SELECT o.handle || '/' || r.slug AS name FROM repos r JOIN owners o ON o.id = r.owner_id WHERE r.id = ?").bind(merge.repo_id).first<{ name: string }>();
+			for (const issue of closed) {
+				const userIds = await issueParticipants(issue.id).catch(() => []);
+				await notifyIssue({ repo: repo?.name ?? "", number: issue.number, title: issue.title, actorId: "", actor: "appmarket.org", what: "closed this issue: the work for it was merged", userIds }).catch(() => undefined);
+			}
+		}
 	}
 }
 

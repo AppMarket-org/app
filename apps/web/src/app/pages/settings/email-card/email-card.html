@@ -18,6 +18,10 @@
         Pull requests
         <span class="hint">New pull requests on your repos, and comments and reviews on pull requests you take part in.</span>
       </mat-slide-toggle>
+      <mat-slide-toggle [checked]="p.issues" (change)="set('issues', $event.checked)">
+        Issues
+        <span class="hint">Issues assigned to you, and comments on, closing and reopening of issues you opened, are assigned or commented on.</span>
+      </mat-slide-toggle>
       @if (!p.sending) {
         <p class="hint">appmarket.org does not send email yet; your choice applies once it does.</p>
       }
