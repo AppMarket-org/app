@@ -16,6 +16,7 @@ import { doctor, status, updateNotice } from "./commands/doctor.ts";
 import { gitCredential, sessionEnd, sessionList, sessionStart } from "./commands/session.ts";
 import { setupGit } from "./commands/setup-git.ts";
 import { issue } from "./commands/issue.ts";
+import { memory } from "./commands/memory.ts";
 import { pr } from "./commands/pr.ts";
 
 const HELP = `appmarket ${VERSION}: checkpoints for agent commits on appmarket.org
@@ -41,6 +42,7 @@ Usage: appmarket <command> [options]
   pr list [--state open|merged|closed|all] | view [n] | merge [n]  Pull requests of this repo; view and merge default to this branch's
   issue create --title t [--type bug|feature|task] [--priority p] [--assign agents|<handle>] [--body b]   Open an issue
   issue list [--state open|closed|all] [--type t] [--assign a] | view <n> | comment <n> --body b | close <n> [--not-planned] | reopen <n>
+  memory list [query] [--tag t] | add <text> [--tags a,b] [--pin] | remove <id> | export   The repo's memory (export: into AGENTS.md)
   setup-git [--remove]                                           Let plain git sign in to appmarket.org remotes with this login (no tokens to copy)
   git-credential get                                             Git credential helper (set up by setup-git and session start)
   status                                                         Queue, last upload, checkpoints waiting for a push
@@ -79,6 +81,9 @@ async function main(argv: string[]): Promise<number> {
 			priority: { type: "string" },
 			assign: { type: "string" },
 			"not-planned": { type: "boolean" },
+			tag: { type: "string" },
+			tags: { type: "string" },
+			pin: { type: "boolean" },
 			"agents-md": { type: "boolean" },
 			commit: { type: "string" },
 			prompt: { type: "string" },
@@ -126,7 +131,7 @@ async function main(argv: string[]): Promise<number> {
 		case "checkpoint":
 			return checkpoint({ hook: !!values.hook, commit: values.commit as string | undefined, force: !!values.force });
 		case "hook":
-			return hook(rest[0] ?? "", await readStdin(), { plugin: !!values.plugin });
+			return await hook(rest[0] ?? "", await readStdin(), { plugin: !!values.plugin });
 		case "mcp":
 			return mcp();
 		case "push-notes":
@@ -160,6 +165,8 @@ async function main(argv: string[]): Promise<number> {
 				state: values.state as string | undefined,
 				notPlanned: !!values["not-planned"],
 			});
+		case "memory":
+			return memory(rest[0], rest.slice(1), { tag: values.tag as string | undefined, tags: values.tags as string | undefined, pin: !!values.pin });
 		case "setup-git":
 			return setupGit(api, !!values.remove);
 		case "status":
