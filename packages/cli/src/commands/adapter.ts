@@ -1,6 +1,7 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { editOpencodeConfig, OPENCODE_PLUGIN, opencodeDir, opencodePluginPath } from "../adapters/opencode.ts";
 
 export type HookHarness = "claude-code" | "codex";
 
@@ -41,12 +42,13 @@ export function editHooks(settings: Settings, install: boolean, harness: HookHar
 	return Object.keys(hooks).length ? { ...rest, hooks } : rest;
 }
 
-/** `appmarket adapter install|uninstall claude-code|codex` */
+/** `appmarket adapter install|uninstall claude-code|codex|opencode` */
 export function adapter(action: string | undefined, harness: string | undefined): number {
-	if ((harness !== "claude-code" && harness !== "codex") || (action !== "install" && action !== "uninstall")) {
-		console.error("Usage: appmarket adapter install|uninstall claude-code|codex");
+	if ((harness !== "claude-code" && harness !== "codex" && harness !== "opencode") || (action !== "install" && action !== "uninstall")) {
+		console.error("Usage: appmarket adapter install|uninstall claude-code|codex|opencode");
 		return 1;
 	}
+	if (harness === "opencode") return opencodeAdapter(action === "install");
 	const path = settingsPath(harness);
 	let settings: Settings = {};
 	if (existsSync(path)) {
@@ -67,5 +69,43 @@ export function adapter(action: string | undefined, harness: string | undefined)
 		// Codex runs user hooks only after you review them once (it remembers each hook's hash).
 		if (harness === "codex") console.log("Open Codex and run /hooks to review and trust the three appmarket hooks; until then Codex does not run them.");
 	}
+	return 0;
+}
+
+/**
+ * #119: OpenCode has no hooks file; the adapter is a plugin in ~/.config/opencode/plugins plus the
+ * `appmarket mcp` server in opencode.json (memory, issues and record_context for the agent).
+ */
+function opencodeAdapter(install: boolean): number {
+	const plugin = opencodePluginPath();
+	const json = join(opencodeDir(), "opencode.json");
+	const jsonc = join(opencodeDir(), "opencode.jsonc");
+	// A commented config cannot be edited safely; say what to add instead.
+	const manual = !existsSync(json) && existsSync(jsonc);
+	let config: Record<string, unknown> = {};
+	if (!manual && existsSync(json)) {
+		try {
+			config = JSON.parse(readFileSync(json, "utf8")) as Record<string, unknown>;
+		} catch {
+			console.error(`${json} is not valid JSON; fix it first.`);
+			return 1;
+		}
+	}
+	if (install) {
+		mkdirSync(dirname(plugin), { recursive: true });
+		writeFileSync(plugin, OPENCODE_PLUGIN);
+	} else rmSync(plugin, { force: true });
+	if (!manual && (install || existsSync(json))) {
+		if (existsSync(json)) copyFileSync(json, `${json}.appmarket-backup`);
+		writeFileSync(json, JSON.stringify(editOpencodeConfig(config, install), null, 2) + "\n");
+	}
+	if (!install) {
+		console.log(`OpenCode adapter removed (${plugin}${manual ? "" : `, and the appmarket MCP server in ${json}`}).`);
+		if (manual) console.log(`Remove the "appmarket" entry under "mcp" in ${jsonc} yourself.`);
+		return 0;
+	}
+	console.log(`OpenCode adapter installed: plugin ${plugin}${manual ? "" : `, MCP server in ${json}`}.`);
+	if (manual) console.log(`Add the MCP server to ${jsonc} yourself: "mcp": { "appmarket": { "type": "local", "command": ["appmarket", "mcp"], "enabled": true } }`);
+	console.log("New OpenCode sessions in repos where you ran `appmarket init` now record prompts, tools, model, effort and usage.");
 	return 0;
 }
