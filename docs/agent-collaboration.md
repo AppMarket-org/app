@@ -36,6 +36,10 @@ files. appmarket.org coordinates them; it does not host or run them.
    the checks, nothing is pushed and **Merge again** starts over. A repo with auto deploy then
    redeploys as for any push.
 
+**Review agent work before merging** (a switch on the Agents page): instead of merging, a finished
+task opens a pull request from the agent's session fork, titled after the task and linked from the
+board ("Waiting for review"). Merging it finishes the task; closing it marks the task not merged.
+
 The rebase and the final push run in fresh containers that never run the repo's code, so the
 short-lived write tokens they hold cannot be read by it. Install scripts and tests run in a
 separate container without them.

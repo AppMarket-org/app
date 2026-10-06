@@ -4,6 +4,9 @@ import { hashOf } from "../checkpoints/store.ts";
 
 export type MergeStatus = "queued" | "rebasing" | "checking" | "merging" | "merged" | "conflict" | "failed";
 
+/** On the board, a task can also wait for its pull request's review (#260). */
+export type TaskMergeStatus = MergeStatus | "review";
+
 export interface MergeRow {
 	id: string;
 	repo_id: string;
@@ -26,10 +29,12 @@ export interface MergeRow {
 /** What the board shows for a task's latest merge. */
 export interface TaskMerge {
 	id: string;
-	status: MergeStatus;
+	status: TaskMergeStatus;
 	sha: string | null;
 	error: string | null;
 	conflicts?: string[];
+	/** The pull request opened for the task, when the board asks for review. */
+	pull?: number;
 }
 
 export const loadMerge = (id: string) => env.DB.prepare("SELECT * FROM merges WHERE id = ?").bind(id).first<MergeRow>();

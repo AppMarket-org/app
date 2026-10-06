@@ -31,6 +31,7 @@ describe("A2A on the board (#239)", () => {
 		expect(taskState(task({ status: "done", claimedBy: "a1", merge: { id: "m", status: "checking", sha: null, error: null } }), agents).state).toBe("working");
 		expect(taskState(task({ status: "done", claimedBy: "a1", merge: { id: "m", status: "merged", sha: "a".repeat(40), error: null } }), agents).state).toBe("completed");
 		expect(taskState(task({ status: "done", claimedBy: "a1", merge: { id: "m", status: "conflict", sha: null, error: "conflicts in a.ts" } }), agents)).toMatchObject({ state: "failed", message: expect.stringContaining("conflicts in a.ts") });
+		expect(taskState(task({ status: "done", claimedBy: "a1", merge: { id: "p", status: "review", sha: null, error: null, pull: 7 } }), agents)).toEqual({ state: "working", message: "Done by Claude Code; waiting for review in pull request #7." });
 	});
 
 	it("SendMessage (1.0) posts a task from the text and returns it wrapped", async () => {

@@ -1,3 +1,4 @@
+import type { Repo } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AuthVariables } from "../auth/middleware.ts";
@@ -6,8 +7,12 @@ import { logEvent } from "../observability/log.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { agentCard, dispatch } from "./a2a.ts";
 import { sessionFork, startMerge } from "./merge.ts";
+import { tellBoard } from "./merge-workflow.ts";
+import { insertPull, pullSettings } from "../pulls/store.ts";
+import { listBranches } from "../artifacts/git.ts";
+import { pickBranch } from "../repos/pick-branch.ts";
 import type { PlaneResult, RepoPlane } from "./coordinator.ts";
-import { cleanTags, type LeaseHint, leaseHints, normalizePath, type PlaneLease } from "./model.ts";
+import { cleanTags, type LeaseHint, leaseHints, normalizePath, type PlaneLease, type PlaneTask } from "./model.ts";
 import { expandPaths, indexInfo, neighbours } from "../codegraph/store.ts";
 
 type Ctx = { Variables: AuthVariables };
@@ -96,7 +101,14 @@ export const planeRoutes = new Hono<Ctx>()
 		// #238: a finished task with a branch is merged (rebase, checks, conformance, fast-forward).
 		if (result.ok && status === "done" && branch) {
 			const fork = await sessionFork(s.id);
-			if (fork) await startMerge({ repo: p.repo, sourceRepoId: fork, branch, taskId: c.req.param("id"), sessionId: s.id }).catch((error: unknown) => logEvent("plane.merge_start_failed", { repo: p.repo.fullName, error: String(error) }, "error"));
+			const task = result.value.tasks.find((t) => t.id === c.req.param("id"));
+			if (fork && task) {
+				// #260: with review on, the work waits in a pull request for the owner; otherwise it merges.
+				const next = (await pullSettings(p.repo.id)).reviewAgentWork
+					? openTaskPull(p.repo, task, fork, branch, c.get("session")!.user.id, text(body.note, 2000))
+					: startMerge({ repo: p.repo, sourceRepoId: fork, branch, taskId: task.id, sessionId: s.id });
+				await next.catch((error: unknown) => logEvent("plane.merge_start_failed", { repo: p.repo.fullName, error: String(error) }, "error"));
+			}
 			return c.json(await p.stub.state());
 		}
 		return reply(c, result);
@@ -185,6 +197,22 @@ async function hintsFor(repoId: string, paths: string[], leases: PlaneLease[], a
 	if (!(await indexInfo(repoId))) return [];
 	const files = (await expandPaths(repoId, paths)).slice(0, 200);
 	return files.length ? leaseHints(await neighbours(repoId, files), leases, agentId, Date.now()) : [];
+}
+
+/** #260: a pull request for a finished task, from the agent session's fork, linked to the task. */
+async function openTaskPull(repo: Repo, task: PlaneTask, forkId: string, branch: string, authorId: string, note: string): Promise<void> {
+	const fork = await env.DB.prepare("SELECT git_repo FROM repos WHERE id = ?").bind(forkId).first<{ git_repo: string | null }>();
+	const head = fork?.git_repo ? (await listBranches(fork.git_repo)).branches.find((b) => b.name === branch) : undefined;
+	if (!head) {
+		await tellBoard(repo.id, task.id, { id: task.id, status: "failed", sha: null, error: `${branch} is not in the session's fork. Push it to the appmarket-session remote first.` });
+		return;
+	}
+	const targets = await listBranches(repo.gitRepo!);
+	const base = pickBranch(targets.defaultBranch, targets.branches);
+	const body = [note, task.description, "Opened by the Agents board for this task; merging it completes the task."].filter(Boolean).join("\n\n");
+	const pull = await insertPull({ repoId: repo.id, title: task.title, body, authorId, sourceRepoId: forkId, sourceBranch: branch, targetBranch: base?.name ?? targets.defaultBranch, headSha: head.sha, taskId: task.id });
+	await tellBoard(repo.id, task.id, { id: pull.id, status: "review", sha: head.sha, error: null, pull: pull.number });
+	logEvent("plane.pull_opened", { repo: repo.fullName, number: pull.number, task: task.id });
 }
 
 /** The agent session ended or was discarded: it leaves the board (its claims reopen). */
