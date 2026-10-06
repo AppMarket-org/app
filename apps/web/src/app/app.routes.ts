@@ -25,6 +25,7 @@ export const routes: Routes = [
   { path: 'settings/:section', canActivate: [authGuard(), settingsSectionGuard], loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
   { path: 'dashboard/new', canActivate: [authGuard()], loadComponent: () => import('./pages/new-repo/new-repo').then((m) => m.NewRepo) },
   { path: 'dashboard/repos/:owner/:slug/agents', canActivate: [authGuard()], loadComponent: () => import('./pages/agents/agents').then((m) => m.AgentsPage) },
+  { path: 'dashboard/repos/:owner/:slug/memory', canActivate: [authGuard()], loadComponent: () => import('./pages/memory/memory').then((m) => m.MemoryPage) },
   { path: 'dashboard/repos/:owner/:slug/checkpoints', canActivate: [authGuard()], loadComponent: () => import('./pages/checkpoints/checkpoints').then((m) => m.CheckpointsPage) },
   { path: 'dashboard/repos/:owner/:slug', canActivate: [authGuard()], loadComponent: () => import('./pages/manage-repo/manage-repo').then((m) => m.ManageRepo) },
   // Older links without an owner (before #102).

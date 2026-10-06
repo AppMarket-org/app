@@ -3,9 +3,9 @@ import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
-import { canEdit } from "../repos/access.ts";
+import { canEdit, canView } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { type Actor, createNote, deleteNote, getNote, listNotes, noteHistory, updateNote } from "./store.ts";
+import { type Actor, createNote, deleteNote, getNote, listNotes, noteHistory, publicNotes, updateNote } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -31,6 +31,12 @@ const notFound = (c: Context<Ctx>) => c.json({ error: "not_found" }, 404);
  * Device tokens need memory:read / memory:write (see auth/scopes.ts).
  */
 export const memoryRoutes = new Hono<Ctx>()
+	// #198: the notes published with an app, for its public page.
+	.get("/:owner/:slug/public-memory", async (c) => {
+		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
+		if (!repo || repo.state !== "published" || !canView(repo, c.get("session"))) return notFound(c);
+		return c.json({ notes: (await publicNotes(repo.id)).map(({ id, text, tags, pinned, updatedAt }) => ({ id, text, tags, pinned, updatedAt })) });
+	})
 	.get("/:owner/:slug/memory", async (c) => {
 		const repo = await repoFor(c);
 		if (!repo) return notFound(c);
@@ -48,7 +54,7 @@ export const memoryRoutes = new Hono<Ctx>()
 		const input = parseMemoryInput(await body(c), false);
 		if ("error" in input) return c.json({ error: "invalid", message: input.error }, 400);
 		const actor: Actor = { userId: c.get("session")!.user.id, source: input.source, sessionId: input.sessionId };
-		const result = await createNote(repo.id, { text: input.text!, tags: input.tags!, pinned: input.pinned ?? false }, actor);
+		const result = await createNote(repo.id, { text: input.text!, tags: input.tags!, pinned: input.pinned ?? false, public: input.public ?? false }, actor);
 		if ("error" in result) return c.json({ error: "limit", message: `A repo keeps at most ${MEMORY_LIMITS.notesPerRepo} notes; delete some first.` }, 409);
 		logEvent("memory.created", { repo: repo.fullName, source: input.source, redactions: result.note.redactions });
 		return c.json(result.note, 201);

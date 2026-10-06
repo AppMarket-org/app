@@ -15,6 +15,7 @@
       <input matInput formControlName="name" maxlength="80" />
       <mat-error>Give it a name (up to 80 characters).</mat-error>
     </mat-form-field>
+    <mat-checkbox formControlName="copyMemory">Copy the app's memory (notes for agents its author published with it)</mat-checkbox>
   </form>
   @if (busy()) {
     <mat-progress-bar mode="indeterminate" aria-label="Creating your copy" />

@@ -1,0 +1,131 @@
+<app-repository-header [owner]="owner()" [slug]="slug()" />
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="memory" />
+<header class="head">
+  <div>
+    <h1>Memory</h1>
+    <p class="lead">
+      Notes this repo's people and agents keep: conventions, decisions, traps. Every agent session starts with them (pinned first), and agents add their own with
+      <code>memory_remember</code>. {{ total() }} of {{ limit() }} notes.
+    </p>
+  </div>
+</header>
+
+<mat-card appearance="outlined" class="add">
+  <mat-card-content>
+    <form (submit)="$event.preventDefault(); add()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="text">
+        <mat-label>New note</mat-label>
+        <textarea
+          matInput
+          rows="2"
+          maxlength="1000"
+          name="text"
+          placeholder="Run the tests with pnpm test; they need the local D1 (pnpm db:migrate)."
+          [value]="draft().text"
+          (input)="draft.set({ ...draft(), text: $any($event.target).value })"
+        ></textarea>
+      </mat-form-field>
+      <div class="row">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tags">
+          <mat-label>Tags</mat-label>
+          <input matInput name="tags" placeholder="testing, deploy" [value]="draft().tags" (input)="draft.set({ ...draft(), tags: $any($event.target).value })" />
+        </mat-form-field>
+        <mat-slide-toggle [checked]="draft().pinned" (change)="draft.set({ ...draft(), pinned: $event.checked })">Pinned</mat-slide-toggle>
+        <mat-slide-toggle [checked]="draft().public" (change)="draft.set({ ...draft(), public: $event.checked })" matTooltip="Shown on the app's page when it is public, and copied to forks">Public with the app</mat-slide-toggle>
+        <button mat-flat-button type="submit" [disabled]="busy() || !draft().text.trim()"><mat-icon>add</mat-icon>Add note</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+<div class="filters">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
+    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+    <input matInput placeholder="Search notes" aria-label="Search notes" [value]="query()" (input)="query.set($any($event.target).value)" (keydown.enter)="load()" />
+  </mat-form-field>
+  @if (allTags().length || tag()) {
+    <mat-chip-listbox aria-label="Filter by tag" [value]="tag()">
+      @for (t of allTags(); track t) {
+        <mat-chip-option [value]="t" (click)="filterTag(t)">#{{ t }}</mat-chip-option>
+      }
+    </mat-chip-listbox>
+  }
+</div>
+
+@switch (notes()) {
+  @case (undefined) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading" />
+  }
+  @case (null) {
+    <p class="empty">Memory is not available for this repo.</p>
+  }
+  @default {
+    <div class="notes">
+      @for (n of notes()!; track n.id) {
+        <mat-card appearance="outlined" class="note" [class.pinned]="n.pinned">
+          <mat-card-content>
+            @if (editing()?.id === n.id) {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="text">
+                <mat-label>Note</mat-label>
+                <textarea matInput rows="3" maxlength="1000" [value]="editing()!.text" (input)="editing.set({ ...editing()!, text: $any($event.target).value })"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tags">
+                <mat-label>Tags</mat-label>
+                <input matInput [value]="editing()!.tags" (input)="editing.set({ ...editing()!, tags: $any($event.target).value })" />
+              </mat-form-field>
+            } @else {
+              <p class="body">{{ n.text }}</p>
+              @if (n.tags.length) {
+                <mat-chip-set aria-label="Tags">
+                  @for (t of n.tags; track t) {
+                    <mat-chip>#{{ t }}</mat-chip>
+                  }
+                </mat-chip-set>
+              }
+            }
+            <p class="meta">
+              @if (n.pinned) {
+                <mat-icon aria-hidden="true" class="flag">push_pin</mat-icon>Pinned ·
+              }
+              @if (n.public) {
+                <mat-icon aria-hidden="true" class="flag">public</mat-icon>Public with the app ·
+              }
+              {{ n.createdBy }} via {{ sources[n.source] ?? n.source }} · {{ n.updatedAt | date: 'medium' }}
+              @if (n.redactions) {
+                · {{ n.redactions }} secret{{ n.redactions === 1 ? '' : 's' }} redacted
+              }
+            </p>
+            @if (history()[n.id]; as changes) {
+              <mat-list class="history" aria-label="History" dense>
+                @for (h of changes; track h.version) {
+                  <mat-list-item lines="2">
+                    <span matListItemTitle>v{{ h.version }} {{ h.action }} by {{ h.changedBy }} via {{ sources[h.source] ?? h.source }}, {{ h.changedAt | date: 'short' }}</span>
+                    <span matListItemLine>{{ h.text }}</span>
+                  </mat-list-item>
+                }
+              </mat-list>
+            }
+          </mat-card-content>
+          <mat-card-actions align="end">
+            @if (editing()?.id === n.id) {
+              <button mat-button type="button" (click)="editing.set(null)">Cancel</button>
+              <button mat-flat-button type="button" (click)="save(n)" [disabled]="busy()">Save</button>
+            } @else {
+              <button mat-icon-button type="button" (click)="change(n, { pinned: !n.pinned })" [disabled]="busy()" [attr.aria-label]="n.pinned ? 'Unpin' : 'Pin'" [matTooltip]="n.pinned ? 'Unpin' : 'Pin (agents read it first)'">
+                <mat-icon [class.off]="!n.pinned">push_pin</mat-icon>
+              </button>
+              <button mat-icon-button type="button" (click)="change(n, { public: !n.public })" [disabled]="busy()" [attr.aria-label]="n.public ? 'Make private' : 'Publish with the app'" [matTooltip]="n.public ? 'Make private' : 'Publish with the app'">
+                <mat-icon>{{ n.public ? 'public' : 'public_off' }}</mat-icon>
+              </button>
+              <button mat-button type="button" (click)="toggleHistory(n)">{{ history()[n.id] ? 'Hide history' : 'History' }}</button>
+              <button mat-button type="button" (click)="edit(n)">Edit</button>
+              <button mat-button type="button" (click)="remove(n)" [disabled]="busy()">Delete</button>
+            }
+          </mat-card-actions>
+        </mat-card>
+      } @empty {
+        <p class="empty">{{ query() || tag() ? 'No notes match.' : 'No notes yet. Add the first one above, or let an agent add one with memory_remember.' }}</p>
+      }
+    </div>
+  }
+}

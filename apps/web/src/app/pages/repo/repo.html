@@ -196,6 +196,18 @@
           </section>
           <mat-divider />
         }
+        @if (memoryNotes().length) {
+          <section aria-labelledby="memory-heading">
+            <h2 id="memory-heading">Notes for agents</h2>
+            <p class="history">From the author, for agents working on a copy of this app. Copies start with them.</p>
+            <mat-list dense aria-labelledby="memory-heading">
+              @for (n of memoryNotes(); track n.id) {
+                <mat-list-item lines="3"><mat-icon matListItemIcon aria-hidden="true">psychology</mat-icon><span matListItemLine class="memory-note">{{ n.text }}</span></mat-list-item>
+              }
+            </mat-list>
+          </section>
+          <mat-divider />
+        }
         <section aria-labelledby="versions-heading">
           <h2 id="versions-heading">Versions</h2>
           <mat-list>

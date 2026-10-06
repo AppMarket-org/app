@@ -25,4 +25,8 @@ describe("memory input (#194)", () => {
 		expect(cleanMemoryTags(Array.from({ length: 11 }, (_, i) => `t${i}`))).toBeNull();
 		expect(cleanMemoryTags("x")).toBeNull();
 	});
+	it("takes public as true or false (#198)", () => {
+		expect(parseMemoryInput({ public: true }, true)).toMatchObject({ public: true });
+		expect(parseMemoryInput({ public: "yes" }, true)).toHaveProperty("error");
+	});
 });

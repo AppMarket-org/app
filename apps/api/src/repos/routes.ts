@@ -29,6 +29,7 @@ import { CONTRACT_FILES, buildRepoMap, checkPwa, checkTemplate, pwaManifestCandi
 import { storeLanguages } from "./languages.ts";
 import { CheckStore } from "../checks/store.ts";
 import { startChecks } from "../checks/start.ts";
+import { copyNotes } from "../memory/store.ts";
 import { startUpstreamSync } from "../sync/start.ts";
 import { type RepoCheckSummary, RepoStore } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
@@ -143,7 +144,7 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!source || source.state !== "published" || !source.gitRepo) return c.json({ error: "not_found" }, 404);
 		// Paid apps need an entitlement first (R17, #42).
 		if (!(await entitled(source, c.get("session")))) return c.json({ error: "paid", message: "Buy this app to use it as a template." }, 402);
-		const body = ((await c.req.json().catch(() => ({}))) as { owner?: unknown; name?: unknown }) ?? {};
+		const body = ((await c.req.json().catch(() => ({}))) as { owner?: unknown; name?: unknown; copyMemory?: unknown }) ?? {};
 		const session = c.get("session")!;
 		const user = session.user;
 		const owners = new OwnerStore(env.DB);
@@ -165,6 +166,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			await store.setForkedFrom(created.id, source);
 			// #67: the fork starts with its source's graph edges.
 			await copyGraph(source.id, created.id);
+			// #198: and, if asked, its memory (all notes for the source's own people, public ones otherwise).
+			if (body.copyMemory === true) await copyNotes(source.id, created.id, canEdit(source, session), user.id).catch((e: unknown) => logEvent("memory.copy_failed", { repo: created.fullName, error: String(e) }, "warn"));
 			if (source.runtimeDetected) await saveRuntime(created.id, source.runtime);
 			logEvent("repo.forked", { repo: created.fullName, from: source.fullName, tag: source.publishedTag, user: user.id });
 			return c.json(await store.findById(created.id), 201);

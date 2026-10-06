@@ -54,6 +54,7 @@ export class RepositoryNav {
       ...(this.managed() ? [
         { id: 'agents', label: 'Agents', icon: 'smart_toy', link: [...root, 'agents'], query: {} },
         { id: 'checkpoints', label: 'Checkpoints', icon: 'history_edu', link: [...root, 'checkpoints'], query: {} },
+        { id: 'memory', label: 'Memory', icon: 'psychology', link: [...root, 'memory'], query: {} },
         { id: 'deployments', label: 'Deployments', icon: 'cloud_upload', link: root, query: { tab: 'deployments' } },
         { id: 'marketplace', label: 'Marketplace', icon: 'storefront', link: root, query: { tab: 'marketplace' } },
         { id: 'settings', label: 'Settings', icon: 'settings', link: root, query: { tab: 'settings' } },
