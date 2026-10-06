@@ -1,6 +1,6 @@
 :host {
   display: block;
-  padding: 0;
+  padding: 0.5rem 1.5rem 3rem;
 }
 
 .head {
@@ -170,3 +170,6 @@
 .revision-bar a { margin-left: auto; }
 .file-path { font-size: 0.8125rem; overflow-wrap: anywhere; }
 @media (max-width: 48rem) { .readme .markdown-preview { padding: 1rem; } .revision-bar { flex-wrap: wrap; } .revision-bar a { margin-left: 0; } }
+
+:host.embedded { padding: 0; }
+@media (max-width: 37.5rem) { :host:not(.embedded) { padding-inline: 1rem; } }

@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
-import { listBranches, readDirectory, readPath, resolveRef, sourceFiles } from "../artifacts/git.ts";
+import { listBranches, listRefs, readDirectory, readPath, resolveRef, sourceFiles } from "../artifacts/git.ts";
 import type { AuthVariables } from "../auth/middleware.ts";
 import { canEdit, canView } from "./access.ts";
 import { pickBranch } from "./pick-branch.ts";
@@ -75,8 +75,12 @@ export const codeRoutes = new Hono<Ctx>()
 		return c.json({ path, size: blob.size, tooLarge: false, binary, text: binary ? null : new TextDecoder().decode(bytes) });
 	})
 	.get("/:owner/:slug/code/branches", async (c) => {
-		const t = await target(c);
-		if (!t?.editor) return c.json({ error: "not_found" }, 404);
-		const { defaultBranch, branches } = await listBranches(t.repo.gitRepo!);
-		return c.json({ defaultBranch, branches: branches.map((b) => b.name).sort((a, b) => (a === defaultBranch ? -1 : b === defaultBranch ? 1 : a.localeCompare(b))) });
+		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
+		if (!repo?.gitRepo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const { defaultBranch, refs } = await listRefs(repo.gitRepo);
+		const names = Object.keys(refs);
+		const branches = names.filter((ref) => ref.startsWith("refs/heads/")).map((ref) => ref.slice(11));
+		const tags = names.filter((ref) => ref.startsWith("refs/tags/")).map((ref) => ref.slice(10)).sort((a, b) => a.localeCompare(b));
+		c.header("Cache-Control", "private, no-store");
+		return c.json({ defaultBranch, branches: branches.sort((a, b) => (a === defaultBranch ? -1 : b === defaultBranch ? 1 : a.localeCompare(b))), tags });
 	});

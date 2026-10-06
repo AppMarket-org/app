@@ -1,3 +1,4 @@
+import { RepositoryHeader } from '../../components/repository-header/repository-header';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { HttpClient } from '@angular/common/http';
@@ -40,6 +41,7 @@ interface CodeFile {
  */
 @Component({
   selector: 'app-code',
+  host: { '[class.embedded]': 'embedded()' },
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -49,6 +51,7 @@ interface CodeFile {
     MatButtonToggleModule,
     Markdown,
     RepositoryNav,
+    RepositoryHeader,
     NgTemplateOutlet,
   ],
   templateUrl: './code.html',
@@ -81,6 +84,7 @@ export class CodePage {
   protected readonly html = signal<SafeHtml | null>(null);
   protected readonly loading = signal(false);
   protected readonly branches = signal<string[]>([]);
+  protected readonly tags = signal<string[] | null>(null);
 
   constructor() {
     const seo = inject(Seo);
@@ -231,6 +235,7 @@ export class CodePage {
     const generation = ++this.generation;
     this.loadedRef = ref;
     this.switching.set(true);
+    this.tags.set(null);
     this.files.set([]);
     this.indexed = false;
     this.indexing.set(false);
@@ -256,9 +261,12 @@ export class CodePage {
     }
     if (tree?.editor) {
       const b = await firstValueFrom(
-        this.http.get<{ branches: string[] }>(`${this.base}/branches`),
-      ).catch(() => ({ branches: [] }));
-      if (generation === this.generation) this.branches.set(b.branches);
+        this.http.get<{ branches: string[]; tags?: string[] }>(`${this.base}/branches`),
+      ).catch(() => null);
+      if (generation === this.generation) {
+        this.branches.set(b?.branches ?? []);
+        this.tags.set(b?.tags ?? null);
+      }
     } else this.branches.set([]);
     if (this.dir()) await this.reveal(`${this.dir()}/`, generation);
     if (generation === this.generation) this.switching.set(false);

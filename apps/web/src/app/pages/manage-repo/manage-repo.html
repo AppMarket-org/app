@@ -1,26 +1,6 @@
+<app-repository-header [owner]="owner()" [slug]="slug()" [metadata]="repo()" [remote]="remote()" />
+<app-repository-nav [owner]="owner()" [slug]="slug()" [active]="tab()" />
 @if (repo(); as l) {
-  <header class="repo-head">
-    <div class="repo-identity">
-      <mat-icon aria-hidden="true">folder_open</mat-icon>
-      <a mat-button class="owner-link" [routerLink]="['/', owner()]">{{ owner() }}</a><span class="slash">/</span>
-      <h1>{{ slug() }}</h1>
-      <mat-chip-set aria-label="Status"><mat-chip [class]="l.state">{{ states[l.state].label }}</mat-chip></mat-chip-set>
-    </div>
-    <div class="repo-actions">
-      @if (l.state === 'published') {
-        <a mat-stroked-button [routerLink]="'/' + l.fullName"><mat-icon>storefront</mat-icon>App page</a>
-      }
-      @if (l.state !== 'removed') {
-        <a mat-stroked-button [routerLink]="[]" [queryParams]="{tab: 'deployments'}"><mat-icon>cloud_upload</mat-icon>Deploy</a>
-        <button mat-flat-button [matMenuTriggerFor]="codeMenu"><mat-icon>code</mat-icon>Code<mat-icon>expand_more</mat-icon></button>
-        <mat-menu #codeMenu="matMenu">
-          <button mat-menu-item [disabled]="!remote()" (click)="copy(remote()!, 'Clone URL')"><mat-icon>content_copy</mat-icon>Copy clone URL</button>
-          <a mat-menu-item [routerLink]="[]" [queryParams]="{tab: 'settings'}"><mat-icon>key</mat-icon>Set up Git access</a>
-        </mat-menu>
-      }
-    </div>
-  </header>
-  <app-repository-nav [owner]="owner()" [slug]="slug()" [active]="tab()" />
   @if (busy()) { <mat-progress-bar mode="indeterminate" aria-label="Working" /> }
   <div class="repo-origins">
     @if (l.sessionOf) {

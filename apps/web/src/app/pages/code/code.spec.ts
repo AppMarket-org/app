@@ -46,9 +46,14 @@ async function setup(file?: string) {
   const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   http.expectOne(base + '/tree').flush(root);
   await tick();
-  http.expectOne(base + '/branches').flush({ branches: ['main', 'feature'] });
+  http.expectOne(base + '/branches').flush({ branches: ['main', 'feature'], tags: ['v1'] });
   http.expectOne((req) => req.url === base + '/blob' && req.params.get('path') === 'README.md').flush({ path: 'README.md', size: 10, text: '# App README', binary: false, tooLarge: false });
   await tick();
+  await tick();
+  fixture.detectChanges();
+  await tick();
+  http.expectOne('/api/repos/dev/app').flush({name:'App', state:'draft', cowbells:0});
+  http.expectOne('/api/repos/dev/app/git').flush({remote:'https://example.org/dev/app.git'});
   await tick();
   fixture.detectChanges();
   return { fixture, http, query, navigate, el: fixture.nativeElement as HTMLElement };
@@ -124,7 +129,7 @@ it('keeps the selected file when switching branches and pins its read to the new
     .expectOne((req) => req.url === base + '/tree' && req.params.get('ref') === 'feature')
     .flush({ ...root, ref: 'feature', commit });
   await tick();
-  http.expectOne(base + '/branches').flush({ branches: ['main', 'feature'] });
+  http.expectOne(base + '/branches').flush({ branches: ['main', 'feature'], tags: ['v1'] });
   await tick();
   await tick();
   const reads = http.match((req) => req.url === base + '/blob');
@@ -143,5 +148,18 @@ it('shows the root files and rendered README as the repository landing view', as
   expect(el.querySelector('[aria-label="Files on this branch"]')).not.toBeNull();
   expect(el.querySelector('[aria-label="Repository README"]')?.textContent).toContain('App README');
   expect(el.querySelector('.layout')).toBeNull();
+  http.verify();
+});
+
+it('shows real branch and tag counts and opens a qualified tag ref', async () => {
+  const {fixture, el, navigate, http} = await setup();
+  const counts = el.querySelector('.ref-counts')!;
+  expect(counts.textContent).toContain('2 branches');
+  expect(counts.textContent).toContain('1 tag');
+  (counts.querySelectorAll('button')[1] as HTMLButtonElement).click();
+  fixture.detectChanges();
+  await fixture.whenStable();
+  (document.querySelector('[role="menuitem"]') as HTMLButtonElement).click();
+  expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({queryParams:{ref:'refs/tags/v1', file:null}}));
   http.verify();
 });

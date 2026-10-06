@@ -1,3 +1,4 @@
+import { RepositoryHeader } from '../../components/repository-header/repository-header';
 import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DatePipe, DOCUMENT } from '@angular/common';
@@ -32,6 +33,7 @@ const PAGE = 50;
   selector: 'app-checkpoints',
   imports: [
     RepositoryNav,
+    RepositoryHeader,
     DatePipe,
     CheckpointDetails,
     MatButtonModule,

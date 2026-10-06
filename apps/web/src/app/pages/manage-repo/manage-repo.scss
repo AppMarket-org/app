@@ -5,11 +5,6 @@
   display: block;
   padding: 0.5rem 0 3rem;
 }
- .repo-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; }
-.repo-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; min-width: 0; font-size: 1.125rem; }
-.repo-identity > mat-icon, .slash { color: var(--app-muted); }
-.repo-identity h1 { font: 600 1.125rem/1.5 var(--app-font-body); letter-spacing: 0; margin: 0; overflow-wrap: anywhere; }
-.repo-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .code-overview { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 2rem; max-width: 90rem; margin: 0 auto; }
 .file-open { display: block; max-width: none; }
 .file-open .about { display: none; }
@@ -149,6 +144,3 @@ pre {
 }
 
 @media (max-width: 64rem) { .code-overview { grid-template-columns: minmax(0, 1fr); } .about { border-top: 0.0625rem solid var(--app-border); padding-top: 1.5rem; } }
-@media (max-width: 48rem) { .repo-head { flex-direction: column; align-items: flex-start; } .repo-identity { font-size: 1rem; } .repo-identity h1 { font-size: 1rem; } .repo-actions { width: 100%; justify-content: flex-end; } }
-
-.owner-link { --mat-button-text-horizontal-padding: 0; min-width: 0; font: inherit; }
