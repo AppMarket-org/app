@@ -27,11 +27,16 @@ export class Auth {
   /** #102: the user's handle and organizations, once loaded. */
   readonly owner = signal<Owner | null>(null);
   readonly orgs = signal<OrgMembership[]>([]);
+  private loading: Promise<CurrentUser | null> | undefined;
 
   /** Loads the session once; signed-in pages are client-rendered, so the server never needs it. */
-  async load(): Promise<CurrentUser | null> {
-    if (!this.isBrowser) return null;
-    if (this.current() !== undefined) return this.current()!;
+  load(): Promise<CurrentUser | null> {
+    if (!this.isBrowser) return Promise.resolve(null);
+    if (this.current() !== undefined) return Promise.resolve(this.current()!);
+    return this.loading ??= this.loadSession().finally(() => { this.loading = undefined; });
+  }
+
+  private async loadSession(): Promise<CurrentUser | null> {
     try {
       // get-session answers 200 with null when signed out (no 401 noise in the console).
       const session = await firstValueFrom(this.http.get<{ user: CurrentUser } | null>('/api/auth/get-session'));
