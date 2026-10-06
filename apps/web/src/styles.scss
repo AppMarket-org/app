@@ -3,6 +3,7 @@
 @use 'repo-workspace';
 
 html {
+  scrollbar-gutter: stable;
   scroll-behavior: smooth;
   scroll-padding-top: 6rem;
 }

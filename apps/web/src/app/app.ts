@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, REQUEST, TransferState, computed, inject, makeStateKey, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -6,14 +8,17 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, NavigationError, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { Auth } from './auth/auth';
 import { Seo } from './seo/seo';
 
 import { Avatar } from './components/avatar/avatar';
 import { RepoPicker } from './components/repo-picker/repo-picker';
+
+const SESSION_HINT = makeStateKey<boolean>('session-pending');
 
 @Component({
   selector: 'app-root',
@@ -28,6 +33,7 @@ import { RepoPicker } from './components/repo-picker/repo-picker';
     MatIconModule,
     MatInputModule,
     MatMenuModule,
+    MatProgressSpinnerModule,
     MatTooltipModule,
   ],
   templateUrl: './app.html',
@@ -41,8 +47,23 @@ export class App {
     () => !!this.auth.user() && this.seo.heading().length > 0,
   );
   private readonly router = inject(Router);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly routeReady = signal(this.router.navigated);
+  private readonly request = inject(REQUEST, { optional: true });
+  private readonly transfer = inject(TransferState);
+  // A cookie is only a display hint; the session endpoint still decides authentication.
+  private readonly sessionHint = this.transfer.get(SESSION_HINT,
+    /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(this.request?.headers.get('cookie') ?? ''));
+  protected readonly initializing = computed(() => this.browser
+    ? this.auth.user() === undefined || !this.routeReady()
+    : this.sessionHint);
 
   constructor() {
+    if (!this.browser) this.transfer.set(SESSION_HINT, this.sessionHint);
+    else this.transfer.remove(SESSION_HINT);
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationEnd || event instanceof NavigationError) this.routeReady.set(true);
+    });
     void this.auth.load();
   }
 

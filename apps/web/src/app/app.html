@@ -1,3 +1,11 @@
+@if (initializing()) {
+  <div class="startup" role="status" aria-live="polite" aria-label="Loading your workspace">
+    <img src="/brand/logo.png" width="48" height="48" alt="" />
+    <mat-spinner diameter="24" aria-hidden="true" />
+    <span>Loading your workspace…</span>
+  </div>
+}
+<div class="app-shell" [hidden]="initializing()">
 <a mat-button class="skip-link" href="#main-content">Skip to content</a>
 <mat-toolbar [class.workspace]="workspace()">
   @if (seo.heading().length === 0) {
@@ -129,3 +137,4 @@
     </nav>
   </footer>
 }
+</div>
