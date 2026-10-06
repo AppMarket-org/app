@@ -10,6 +10,19 @@ cd my-app && appmarket init              # post-commit hook + repo config
 git commit ...                           # every commit gets a checkpoint
 ```
 
+### Without Node
+
+Each release on [GitHub](https://github.com/AppMarket-org/app/releases) also has standalone binaries
+for macOS (arm64, x64) and Linux (x64, arm64); no Windows binary yet (use npm there). They are not
+code-signed. Check one before running it:
+
+```sh
+gh attestation verify appmarket-darwin-arm64 --repo AppMarket-org/app   # built by this repo's release workflow
+shasum -a 256 -c SHA256SUMS --ignore-missing                            # or compare the checksum
+chmod +x appmarket-darwin-arm64 && xattr -d com.apple.quarantine appmarket-darwin-arm64   # macOS only
+mv appmarket-darwin-arm64 /usr/local/bin/appmarket
+```
+
 ## Claude Code
 
 `appmarket adapter install claude-code` adds hooks to `~/.claude/settings.json` (a backup is kept
