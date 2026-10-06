@@ -87,7 +87,7 @@
           <div class="about-facts"><span>Runtime</span><p>{{ l.runtimeDetected ? runtimeName(l.runtime) : 'Detected after your first push' }}</p>
             <span>License</span><p>{{ l.license || 'No license specified' }}</p>
           </div>
-          <a mat-button [routerLink]="['/', owner(), slug(), 'history']"><mat-icon>history</mat-icon>Build history</a>
+          <a mat-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"><mat-icon>history</mat-icon>Commit checkpoints</a>
           <a mat-button [routerLink]="[]" [queryParams]="{tab:'marketplace'}"><mat-icon>storefront</mat-icon>{{ l.publishedTag ? 'Version ' + l.publishedTag : 'Prepare app listing' }}</a>
           <div class="visibility-note"><mat-icon aria-hidden="true">{{ l.state === 'published' ? 'public' : 'lock' }}</mat-icon><p>{{ states[l.state].help }}</p></div>
         </aside>
