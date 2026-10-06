@@ -1,3 +1,4 @@
+import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { DatePipe, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, inject, input, signal, type OnInit } from '@angular/core';
@@ -78,6 +79,7 @@ export interface PlaneState {
 @Component({
   selector: 'app-agents',
   imports: [
+    RepositoryNav,
     DatePipe,
     MatButtonModule,
     MatCardModule,

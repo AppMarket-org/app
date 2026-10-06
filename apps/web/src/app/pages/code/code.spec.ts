@@ -47,6 +47,7 @@ async function setup(file?: string) {
   http.expectOne(base + '/tree').flush(root);
   await tick();
   http.expectOne(base + '/branches').flush({ branches: ['main', 'feature'] });
+  http.expectOne((req) => req.url === base + '/blob' && req.params.get('path') === 'README.md').flush({ path: 'README.md', size: 10, text: '# App README', binary: false, tooLarge: false });
   await tick();
   await tick();
   fixture.detectChanges();
@@ -126,14 +127,21 @@ it('keeps the selected file when switching branches and pins its read to the new
   http.expectOne(base + '/branches').flush({ branches: ['main', 'feature'] });
   await tick();
   await tick();
-  http
-    .expectOne(
-      (req) =>
-        req.url === base + '/blob' &&
-        req.params.get('ref') === commit &&
-        req.params.get('path') === 'README.md',
-    )
-    .flush({ path: 'README.md', size: 0, text: null, binary: false, tooLarge: false });
+  const reads = http.match((req) => req.url === base + '/blob');
+  expect(reads).toHaveLength(2);
+  for (const read of reads) {
+    expect(read.request.params.get('ref')).toBe(commit);
+    expect(read.request.params.get('path')).toBe('README.md');
+    read.flush({ path: 'README.md', size: 0, text: null, binary: false, tooLarge: false });
+  }
   await tick();
+  http.verify();
+});
+
+it('shows the root files and rendered README as the repository landing view', async () => {
+  const { el, http } = await setup();
+  expect(el.querySelector('[aria-label="Files on this branch"]')).not.toBeNull();
+  expect(el.querySelector('[aria-label="Repository README"]')?.textContent).toContain('App README');
+  expect(el.querySelector('.layout')).toBeNull();
   http.verify();
 });

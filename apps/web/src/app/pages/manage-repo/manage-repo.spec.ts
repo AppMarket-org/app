@@ -1,15 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import type { Repo, RepoState } from '@appmarket/shared';
 import { ManageRepo } from './manage-repo';
 
 const repo = (state: RepoState): Repo =>
   ({ id: '1', slug: 'app', name: 'App', summary: 'Summary', state, runtime: 'workers-js', platforms: ['workers'], owner: { id: 'o', handle: 'dev', kind: 'user', name: 'Owner' }, fullName: 'dev/app' }) as Repo;
 
-async function setup(state: RepoState) {
-  TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+async function setup(state: RepoState, tab = 'marketplace') {
+  const query = new BehaviorSubject(convertToParamMap({tab}));
+  TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: ActivatedRoute, useValue: { snapshot: {paramMap: convertToParamMap({owner:'dev', slug:'app'})}, queryParamMap: query } }] });
   const fixture = TestBed.createComponent(ManageRepo);
   fixture.componentRef.setInput('owner', 'dev');
   fixture.componentRef.setInput('slug', 'app');
@@ -24,7 +26,7 @@ async function setup(state: RepoState) {
     fixture.detectChanges();
   };
   await flushLoad(state);
-  return { fixture, http, flushLoad, el: fixture.nativeElement as HTMLElement };
+  return { fixture, http, query, flushLoad, el: fixture.nativeElement as HTMLElement };
 }
 
 function submit(el: HTMLElement, fixture: { detectChanges(): void }, tag: string) {
@@ -39,11 +41,15 @@ describe('ManageRepo', () => {
   it('offers submit and remove for a draft, withdraw for a submitted repo', async () => {
     const draft = await setup('draft');
     expect(draft.el.querySelector('textarea[formcontrolname="releaseNotes"]')).not.toBeNull();
+    draft.query.next(convertToParamMap({tab:'settings'}));
+    draft.fixture.detectChanges();
     expect(draft.el.textContent).toContain('Delete repo');
     expect(draft.el.textContent).not.toContain('Withdraw');
     TestBed.resetTestingModule();
     const submitted = await setup('submitted');
     expect(submitted.el.querySelector('textarea[formcontrolname="releaseNotes"]')).toBeNull();
+    submitted.query.next(convertToParamMap({tab:'settings'}));
+    submitted.fixture.detectChanges();
     expect(submitted.el.textContent).toContain('Withdraw from review');
   });
 
@@ -73,4 +79,33 @@ describe('ManageRepo', () => {
     expect(el.textContent).toContain('In review');
     expect(el.querySelector('mat-error')).toBeNull();
   });
+});
+
+it('opens Code by default without mounting marketplace or access forms', async () => {
+  const { el, http, fixture } = await setup('draft', 'code');
+  http.expectOne('/api/repos/dev/app/code/tree').flush({ref:'main', commit:null, path:'', editor:true, empty:true, entries:[]});
+  await fixture.whenStable();
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  http.expectOne('/api/repos/dev/app/code/branches').flush({branches:['main']});
+  await fixture.whenStable();
+  fixture.detectChanges();
+  expect(el.querySelector('[aria-label="Repository code"]')).not.toBeNull();
+  expect(el.querySelector('[aria-selected="true"]')?.textContent).toContain('Code');
+  expect(el.querySelector('textarea[formcontrolname="releaseNotes"]')).toBeNull();
+  expect(el.textContent).not.toContain('Delete repo');
+});
+
+it('keeps an unfinished marketplace submission when visiting deployment settings', async () => {
+  const { el, query, fixture } = await setup('draft');
+  const input = el.querySelector<HTMLInputElement>('input[formcontrolname="tag"]')!;
+  input.value = 'v2.0.0';
+  input.dispatchEvent(new Event('input'));
+  query.next(convertToParamMap({tab:'deployments'}));
+  fixture.detectChanges();
+  expect(el.querySelector('#deployment')?.hasAttribute('hidden')).toBe(false);
+  expect(el.querySelector('#marketplace')?.hasAttribute('hidden')).toBe(true);
+  query.next(convertToParamMap({tab:'marketplace'}));
+  fixture.detectChanges();
+  expect(el.querySelector('input[formcontrolname="tag"]')).toBe(input);
+  expect(input.value).toBe('v2.0.0');
 });

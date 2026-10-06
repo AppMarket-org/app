@@ -1,3 +1,4 @@
+import { RepositoryNav } from '../../components/repository-nav/repository-nav';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DatePipe, DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
@@ -13,7 +14,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
 import { CHECKPOINT_VISIBILITIES, type Checkpoint, type CheckpointAccess, type CheckpointSummary, type CheckpointVisibility, type Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { CheckpointsApi } from '../../api/checkpoints';
@@ -31,8 +31,8 @@ const PAGE = 50;
 @Component({
   selector: 'app-checkpoints',
   imports: [
+    RepositoryNav,
     DatePipe,
-    RouterLink,
     CheckpointDetails,
     MatButtonModule,
     MatButtonToggleModule,

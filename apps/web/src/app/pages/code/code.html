@@ -1,18 +1,15 @@
-<header class="head">
-  <a mat-button [routerLink]="'/' + full"><mat-icon>arrow_back</mat-icon>Overview</a>
-  <a mat-button [routerLink]="'/' + full + '/history'"
-    ><mat-icon>history_edu</mat-icon>Build history</a
-  >
-  <button
-    mat-button
-    class="toggle-files"
-    type="button"
-    (click)="showFiles.set(!showFiles())"
-    [attr.aria-expanded]="showFiles()"
-  >
-    <mat-icon>view_sidebar</mat-icon>{{ showFiles() ? 'Hide files' : 'Show files' }}
-  </button>
-</header>
+@if (!embedded() && tree()) {
+  <app-repository-nav [owner]="owner" [slug]="slug" [managed]="!!tree()?.editor" active="code" />
+}
+@if (file()) {
+  <header class="head">
+    <button mat-button (click)="closeFile()"><mat-icon>arrow_back</mat-icon>{{ slug }}</button>
+    <span class="file-path">{{ file() }}</span>
+    <button mat-button class="toggle-files" type="button" (click)="showFiles.set(!showFiles())" [attr.aria-expanded]="showFiles()">
+      <mat-icon>view_sidebar</mat-icon>{{ showFiles() ? 'Hide files' : 'Show files' }}
+    </button>
+  </header>
+}
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" aria-label="Loading code" />
 }
@@ -22,24 +19,29 @@
     <p class="empty">This code is not available.</p>
   }
   @default {
+    @if (!file()) {
+      <section class="source-tree" aria-label="Files on this branch">
+        <ng-container *ngTemplateOutlet="explorer; context: { overview: true }" />
+        <div class="revision-bar"><mat-icon aria-hidden="true">commit</mat-icon><span>{{ tree()!.ref }}</span><code>{{ tree()!.commit?.slice(0, 7) }}</code>
+          <a mat-button [routerLink]="'/' + full + '/history'"><mat-icon>history</mat-icon>Build history</a>
+        </div>
+        @if (tree()!.empty) { <div class="placeholder"><mat-icon>folder_open</mat-icon><h2>This repository is empty</h2><p>Use Code → Set up Git access to push your first commit.</p></div> }
+      </section>
+      @if (readmeLoading()) { <mat-progress-bar mode="indeterminate" aria-label="Loading README" /> }
+      @if (readme(); as readmeFile) {
+        <section class="readme" aria-label="Repository README">
+          <div class="viewer-head"><mat-icon aria-hidden="true">menu_book</mat-icon><span class="name">{{ readmeFile.path }}</span>
+            <button mat-icon-button (click)="openFile(readmeFile.path)" aria-label="Open README file"><mat-icon>open_in_full</mat-icon></button>
+          </div>
+          @if (readmeFile.text != null) { <div class="markdown-preview"><app-markdown [source]="readmeFile.text" /></div> }
+          @else { <p class="empty">README is too large or cannot be previewed.</p> }
+        </section>
+      }
+    } @else {
     <div class="layout" [class.collapsed]="!showFiles()">
       @if (showFiles()) {
         <aside class="files">
-          <app-code-explorer
-            [busy]="switching()"
-            [nodes]="nodes()"
-            [selected]="file()"
-            [ref]="ref() || tree()!.ref"
-            [branches]="branches()"
-            [files]="files()"
-            [indexing]="indexing()"
-            [indexError]="indexError()"
-            [complete]="complete()"
-            (toggle)="toggle($event)"
-            (selectFile)="openFile($event)"
-            (selectBranch)="chooseRef($event)"
-            (search)="searchFiles()"
-          />
+          <ng-container *ngTemplateOutlet="explorer; context: { overview: false }" />
         </aside>
       }
       <section class="viewer" aria-label="File contents">
@@ -106,5 +108,26 @@
         }
       </section>
     </div>
+    }
+
   }
 }
+
+<ng-template #explorer let-overview="overview">
+          <app-code-explorer
+            [overview]="overview"
+            [busy]="switching()"
+            [nodes]="nodes()"
+            [selected]="file()"
+            [ref]="ref() || tree()!.ref"
+            [branches]="branches()"
+            [files]="files()"
+            [indexing]="indexing()"
+            [indexError]="indexError()"
+            [complete]="complete()"
+            (toggle)="toggle($event)"
+            (selectFile)="openFile($event)"
+            (selectBranch)="chooseRef($event)"
+            (search)="searchFiles()"
+          />
+</ng-template>

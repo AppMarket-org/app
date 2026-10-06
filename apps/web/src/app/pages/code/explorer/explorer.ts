@@ -34,6 +34,7 @@ export interface FileNode {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CodeExplorer {
+  readonly overview = input(false);
   readonly busy = input(false);
   readonly nodes = input<FileNode[]>([]);
   readonly selected = input<string | null>(null);

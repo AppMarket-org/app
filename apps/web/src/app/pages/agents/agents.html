@@ -1,5 +1,5 @@
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="agents" />
 <header class="head">
-  <a mat-button [routerLink]="['/dashboard/repos', owner(), slug()]"><mat-icon>arrow_back</mat-icon>{{ path() }}</a>
   <div class="title">
     <h1>Agents</h1>
     <span class="live" [class.on]="live()" [matTooltip]="live() ? 'Updates appear as they happen' : 'Reconnecting…'">

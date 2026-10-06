@@ -5,65 +5,37 @@
   display: block;
   padding: 0.5rem 0 3rem;
 }
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-.head h1 {
-  font: 600 clamp(1.8rem, 4vw, 2.75rem)/1.2 var(--app-font-display);
-  letter-spacing: -0.055em;
-  margin: 0.5rem 0 1rem;
-  overflow-wrap: anywhere;
-}
-.eyebrow {
-  font: 500 0.6875rem/1.5 var(--app-font-mono);
-  color: var(--mat-sys-on-surface-variant);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 1.5rem 0 0;
-}
-.head-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-.status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.875rem;
-}
-.workspace-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem 0;
-  border-block: 0.0625rem solid var(--mat-sys-outline-variant);
-  margin-bottom: 1.5rem;
-}
+ .repo-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; }
+.repo-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; min-width: 0; font-size: 1.125rem; }
+.repo-identity > mat-icon, .slash { color: var(--app-muted); }
+.repo-identity h1 { font: 600 1.125rem/1.5 var(--app-font-body); letter-spacing: 0; margin: 0; overflow-wrap: anywhere; }
+.repo-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.code-overview { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 2rem; max-width: 90rem; margin: 0 auto; }
+.code-overview > * { min-width: 0; }
+.about h2 { font: 600 1rem/1.5 var(--app-font-body); margin: 0 0 0.75rem; }
+.about p { font-size: 0.875rem; line-height: 1.7; margin: 0 0 1rem; overflow-wrap: anywhere; }
+.about-facts { padding-block: 1rem; border-block: 0.0625rem solid var(--app-border); font-size: 0.8125rem; }
+.about-facts > span { color: var(--app-muted); margin-bottom: 0.25rem; }
+.about-facts p { margin: 0 0 1rem; }
+.about-facts p:last-child { margin-bottom: 0; }
+.about a { display: flex; justify-content: flex-start; }
+.visibility-note { display: flex; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 0.0625rem solid var(--app-border); color: var(--app-muted); }
+.visibility-note mat-icon { flex-shrink: 0; width: 1rem; height: 1rem; font-size: 1rem; margin-top: 0.25rem; }
+.visibility-note p { font-size: 0.75rem; }
+[hidden] { display: none !important; }
 .repo-origins {
   display: grid;
   gap: 0.75rem;
 }
 .workspace-section {
-  margin-top: 3rem;
+  margin: 1.5rem auto 0;
+  max-width: 78rem;
 }
 .section-heading {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
-}
-.section-number {
-  font: 500 0.75rem/1.5 var(--app-font-mono);
-  color: var(--mat-sys-primary);
-  margin-top: 0.4rem;
 }
 .section-heading h2 {
   font: 600 1.625rem/1.25 var(--app-font-display);
@@ -170,13 +142,6 @@ pre {
 .lifecycle-card {
   border-color: color-mix(in srgb, var(--mat-sys-error) 25%, var(--mat-sys-outline-variant));
 }
-@media (max-width: 60rem) {
-  .head {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-}
 @media (max-width: 48rem) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
@@ -184,22 +149,9 @@ pre {
   .workspace-section {
     margin-top: 2.5rem;
   }
-  .workspace-nav {
-    gap: 0;
-  }
-  .head-actions {
-    flex-shrink: 1;
-  }
 }
 
-.push-card {
-  --mat-sys-surface: #22271f;
-  --mat-sys-on-surface: #f4f3e8;
-  --mat-sys-on-surface-variant: #c0c5b6;
-  --mat-sys-surface-container: #30362a;
-  --mat-sys-outline-variant: #48503e;
-  --mat-icon-button-icon-color: #dce5c5;
-  --mat-button-filled-container-color: #dce5c5;
-  --mat-button-filled-label-text-color: #22271f;
-  color: var(--mat-sys-on-surface);
-}
+@media (max-width: 64rem) { .code-overview { grid-template-columns: minmax(0, 1fr); } .about { border-top: 0.0625rem solid var(--app-border); padding-top: 1.5rem; } }
+@media (max-width: 48rem) { .repo-head { flex-direction: column; align-items: flex-start; } .repo-identity { font-size: 1rem; } .repo-identity h1 { font-size: 1rem; } .repo-actions { width: 100%; justify-content: flex-end; } }
+
+.owner-link { --mat-button-text-horizontal-padding: 0; min-width: 0; font: inherit; }

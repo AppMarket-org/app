@@ -1,5 +1,5 @@
-<div class="tools">
-  <h2><mat-icon aria-hidden="true">account_tree</mat-icon>Files</h2>
+<div class="tools" [class.overview]="overview()">
+  @if (!overview()) { <h2><mat-icon aria-hidden="true">account_tree</mat-icon>Files</h2> }
   @if (branches().length) {
     <mat-form-field appearance="outline" subscriptSizing="dynamic">
       <mat-label>Branch</mat-label>
@@ -40,7 +40,7 @@
     </mat-autocomplete>
   </mat-form-field>
 </div>
-<nav class="tree" aria-label="Repository files">
+<nav class="tree" [class.overview-tree]="overview()" aria-label="Repository files">
   <ng-container *ngTemplateOutlet="branch; context: { $implicit: nodes(), level: 0 }" />
 </nav>
 <ng-template #branch let-items let-level="level">

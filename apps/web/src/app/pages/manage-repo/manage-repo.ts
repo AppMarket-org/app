@@ -1,7 +1,8 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, type FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -11,10 +12,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { RepositoryNav } from '../../components/repository-nav/repository-nav';
+import { CodePage } from '../code/code';
 import { RUNTIMES, SCREENSHOT_LIMITS, canTransition, type Repo, type RepoEvent, type RepoInput, type RepoState, type GitToken, type Screenshot, type TokenRecord, type TransitionRequest } from '@appmarket/shared';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { Developer } from '../../api/developer';
@@ -63,12 +67,21 @@ import { STATE_LABELS } from '../state-labels';
     WebhooksCard,
     ReleasesCard,
     RuntimeBadge,
+    RepositoryNav,
+    CodePage,
+    MatMenuModule,
   ],
   templateUrl: './manage-repo.html',
   styleUrl: './manage-repo.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ManageRepo {
+  private readonly query = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  protected readonly tab = computed(() => {
+    const tab = this.query().get('tab');
+    return tab === 'deployments' || tab === 'marketplace' || tab === 'settings' ? tab : 'code';
+  });
+  protected readonly visited = signal(new Set<string>());
   /** From the route /dashboard/repos/:owner/:slug. */
   readonly owner = input.required<string>();
   readonly slug = input.required<string>();
@@ -115,6 +128,7 @@ export class ManageRepo {
   });
 
   constructor() {
+    effect(() => { this.visited.update((tabs) => new Set([...tabs, this.tab()])); });
     this.seo.set({ title: 'Manage repo', description: 'Manage your repo.', path: '/dashboard', noindex: true, heading: [{ label: 'Dashboard', link: '/dashboard' }] });
   }
 
