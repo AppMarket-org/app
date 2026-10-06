@@ -462,8 +462,11 @@ export const pullRoutes = new Hono<Ctx>()
 		const repo = await target(c);
 		if (!repo || !canEdit(repo, c.get("session"))) return notFound(c);
 		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
-		const keys = ["requireApproval", "reviewAgentWork"] as const;
-		if (!keys.some((k) => body[k] !== undefined) || keys.some((k) => body[k] !== undefined && typeof body[k] !== "boolean")) return invalid(c, "requireApproval and reviewAgentWork are true or false.");
+		const keys = ["requireApproval", "reviewAgentWork", "upstreamSync"] as const;
+		if (!keys.some((k) => body[k] !== undefined) || keys.some((k) => body[k] !== undefined && typeof body[k] !== "boolean")) return invalid(c, "requireApproval, reviewAgentWork and upstreamSync are true or false.");
+		if (body.upstreamSync === true && !(await env.DB.prepare("SELECT forked_from FROM repos WHERE id = ?").bind(repo.id).first<{ forked_from: string | null }>())?.forked_from) {
+			return invalid(c, "Only a repo made from a template can get its updates.");
+		}
 		const next = { ...(await pullSettings(repo.id)), ...Object.fromEntries(keys.filter((k) => body[k] !== undefined).map((k) => [k, body[k] as boolean])) };
 		await savePullSettings(repo.id, next);
 		return c.json(next);

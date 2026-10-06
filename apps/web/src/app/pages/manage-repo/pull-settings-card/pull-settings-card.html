@@ -1,0 +1,29 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Pull requests</mat-card-title>
+    <mat-card-subtitle>How changes get into this repo. Changes save automatically.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content class="toggles">
+    @switch (settings()) {
+      @case (undefined) {
+        <p role="status">Loading…</p>
+      }
+      @case (null) {
+        <p role="alert">Could not load the pull request settings.</p>
+      }
+      @default {
+        @let s = settings()!;
+        <mat-slide-toggle [checked]="s.requireApproval" [disabled]="busy()" (change)="set('requireApproval', $event.checked)">
+          Require an approval before merging
+          <span class="hint">An owner or member other than the author approves first.</span>
+        </mat-slide-toggle>
+        @if (template(); as t) {
+          <mat-slide-toggle [checked]="s.upstreamSync" [disabled]="busy()" (change)="set('upstreamSync', $event.checked)">
+            Get updates from {{ t }}
+            <span class="hint">When the template publishes a new version, a pull request brings it here. Its checks run, merging runs conformance and redeploys, and conflicts with your changes are listed. Nothing merges without you.</span>
+          </mat-slide-toggle>
+        }
+      }
+    }
+  </mat-card-content>
+</mat-card>

@@ -334,6 +334,7 @@
         </mat-card>
 
 
+        <app-pull-settings-card [path]="path()" [template]="l.forkedFrom?.fullName ?? null" />
         @if (!l.sessionOf) { <app-sessions-card [path]="path()" /> }
         <mat-card appearance="outlined" class="wide">
           <mat-card-header>

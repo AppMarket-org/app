@@ -176,3 +176,4 @@ export { ChecksWorkflow } from "./checks/workflow.ts";
 export { RateLimiter } from "./rate-limiter-do.ts";
 export { RepoPlane } from "./plane/coordinator.ts";
 export { MergeWorkflow } from "./plane/merge-workflow.ts";
+export { UpstreamSyncWorkflow } from "./sync/workflow.ts";
