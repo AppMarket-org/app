@@ -260,7 +260,9 @@ export class RepoStore {
 
 	/** Repos in one state, oldest first (moderation queue, R18). */
 	async listByState(state: RepoState): Promise<Repo[]> {
-		const { results } = await this.db.prepare(`${SELECT} WHERE l.state = ? ORDER BY l.updated_at ASC`).bind(state).all<RepoRow>();
+		// The review queue includes updates to published apps (they stay public while in review).
+		const where = state === "submitted" ? "(l.state = 'submitted' OR (l.state = 'published' AND l.submitted_tag IS NOT NULL))" : "l.state = ?";
+		const { results } = await this.db.prepare(`${SELECT} WHERE ${where} ORDER BY l.updated_at ASC`).bind(...(state === "submitted" ? [] : [state])).all<RepoRow>();
 		return results.map(toRepo);
 	}
 

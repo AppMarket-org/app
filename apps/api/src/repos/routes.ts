@@ -221,6 +221,10 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!actor) {
 			return c.json({ error: "transition_not_allowed", from: repo.state, to: request.data.to }, canEdit(repo, session) ? 409 : 403);
 		}
+		// An update to a published app can be published or sent back only while it is pending.
+		if (repo.state === "published" && (request.data.to === "published" || request.data.to === "draft") && !repo.submittedTag) {
+			return c.json({ error: "no_update", message: "No update is waiting for review." }, 409);
+		}
 		// R18: an admin sending a submission back must say what to change.
 		if (request.data.to === "draft" && actor === "admin" && !request.data.note) {
 			return c.json({ error: "note_required", message: "Tell the owner what to change." }, 400);
@@ -252,7 +256,7 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			checks = { warnings: contract.warnings, manifest: contract.manifest, pwa };
 		}
 		// #27: a submitted version publishes only when the automated checks of its commit passed.
-		if (request.data.to === "published" && repo.state === "submitted" && repo.submittedCommit) {
+		if (request.data.to === "published" && repo.submittedCommit) {
 			const run = await new CheckStore(env.DB).latestFor(repo.id, repo.submittedCommit);
 			if (!run || run.status === "queued" || run.status === "running") return c.json({ error: "checks_pending", message: "The checks for this version are still running." }, 409);
 			if (run.status !== "passed") return c.json({ error: "checks_failed", message: "The checks for this version failed; send it back to the owner." }, 422);

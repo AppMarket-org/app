@@ -52,4 +52,15 @@ describe("transitionUpdate", () => {
 		expect(apply(db, "submitted", { to: "published" })).toBe(0);
 		expect(row(db)).toMatchObject({ state: "draft" });
 	});
+
+	it("submits an update to a published app while it stays public, then publishes or sends it back", () => {
+		db.prepare("UPDATE repos SET state = 'published', published_tag = 'v1', published_commit = 'c1' WHERE id = 'l1'").run();
+		expect(apply(db, "published", { to: "submitted", tag: "v2", releaseNotes: "Wins" }, "c2")).toBe(1);
+		expect(row(db)).toMatchObject({ state: "published", published_tag: "v1", submitted_tag: "v2", submitted_commit: "c2" });
+		expect(apply(db, "published", { to: "draft", note: "Fix the title" })).toBe(1);
+		expect(row(db)).toMatchObject({ state: "published", published_tag: "v1", submitted_tag: null });
+		apply(db, "published", { to: "submitted", tag: "v2", releaseNotes: "" }, "c2");
+		expect(apply(db, "published", { to: "published" })).toBe(1);
+		expect(row(db)).toMatchObject({ state: "published", published_tag: "v2", published_commit: "c2", submitted_tag: null });
+	});
 });
