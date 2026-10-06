@@ -98,7 +98,7 @@ export async function callPlaneTool(name: string, args: Record<string, unknown>,
 	if (!root || !repo) return text("This folder is not an appmarket.org repo (run `appmarket init`).", true);
 	const agent = gitOr(["config", "--get", "appmarket.session"], "", { cwd: root });
 	if (!agent) return text("The task board is for agent sessions: run `appmarket session start` in this repo first.", true);
-	const api = storedSessions().find((s) => s.id === agent)?.api ?? apiBase();
+	const api = storedSessions().find((s) => s.id === agent)?.api ?? gitOr(["config", "--get", "appmarket.api"], apiBase(), { cwd: root });
 	const token = await deps.token(api);
 	if (!token) return text("Not signed in to appmarket.org: run `appmarket login`.", true);
 	const base = `/api/repos/${repo}/plane`;

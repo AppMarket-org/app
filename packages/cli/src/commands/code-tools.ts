@@ -44,7 +44,7 @@ export async function callCodeTool(name: string, args: Record<string, unknown>, 
 	const repo = root ? gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root }) : "";
 	if (!root || !repo) return text("This folder is not an appmarket.org repo (run `appmarket init`).", true);
 	const session = gitOr(["config", "--get", "appmarket.session"], "", { cwd: root });
-	const api = (session && storedSessions().find((s) => s.id === session)?.api) || apiBase();
+	const api = (session && storedSessions().find((s) => s.id === session)?.api) || gitOr(["config", "--get", "appmarket.api"], apiBase(), { cwd: root });
 	const token = await deps.token(api);
 	if (!token) return text("Not signed in to appmarket.org: run `appmarket login`.", true);
 	const get = <T>(path: string) => deps.call<T>(api, `/api/repos/${repo}/code-graph${path}`, { token, timeoutMs: 60_000 });

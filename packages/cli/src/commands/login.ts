@@ -38,6 +38,18 @@ export async function loginWithToken(api: string, token: string, opts: { noKeych
 	return 0;
 }
 
+/** Retries a request through network errors (not API errors), a few times. */
+async function retry<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+	for (let i = 1; ; i++) {
+		try {
+			return await fn();
+		} catch (error) {
+			if (error instanceof ApiError || i >= attempts) throw error;
+			await sleep(1000 * i);
+		}
+	}
+}
+
 /** C1 (#106): OAuth device code login (RFC 8628). */
 export async function login(api: string, opts: { noBrowser?: boolean; deviceName?: string; noKeychain?: boolean }): Promise<number> {
 	const code = await call<CodeResponse>(api, "/api/auth/device/code", { body: { client_id: CLIENT_ID } });
@@ -49,19 +61,18 @@ export async function login(api: string, opts: { noBrowser?: boolean; deviceName
 	const deadline = Date.now() + code.expires_in * 1000;
 	while (Date.now() < deadline) {
 		await sleep(interval);
+		let token: { access_token: string };
 		try {
-			const token = await call<{ access_token: string }>(api, "/api/auth/device/token", {
+			token = await call<{ access_token: string }>(api, "/api/auth/device/token", {
 				body: { grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: code.device_code, client_id: CLIENT_ID },
 			});
-			const device = (opts.deviceName ?? hostname()).slice(0, 64);
-			await call(api, "/api/me/device", { method: "PUT", token: token.access_token, body: { name: device } }).catch(() => undefined);
-			const me = await call<{ owner: { handle: string } }>(api, "/api/me/owner", { token: token.access_token });
-			const where = await saveCredentials({ api, token: token.access_token, handle: me.owner.handle, device }, { noKeychain: opts.noKeychain });
-			if (where === "file") console.warn("Warning: no OS keychain available; the token is in ~/.appmarket/credentials.json (mode 0600).");
-			console.log(`Signed in as ${me.owner.handle} on ${device}.`);
-			return 0;
 		} catch (error) {
-			const reason = error instanceof ApiError ? (error.body as { error?: string } | null)?.error : undefined;
+			// A network blip while waiting must not lose the sign-in: keep asking until the code expires.
+			if (!(error instanceof ApiError)) {
+				interval = Math.min(interval + 1000, 15_000);
+				continue;
+			}
+			const reason = (error.body as { error?: string } | null)?.error;
 			if (reason === "authorization_pending") continue;
 			if (reason === "slow_down") {
 				interval += 5000;
@@ -74,6 +85,15 @@ export async function login(api: string, opts: { noBrowser?: boolean; deviceName
 			if (reason === "expired_token") break;
 			throw error;
 		}
+		// The approved token is only handed out once: keep it before anything else can fail.
+		const device = (opts.deviceName ?? hostname()).slice(0, 64);
+		const me = await retry(() => call<{ owner: { handle: string } }>(api, "/api/me/owner", { token: token.access_token })).catch(() => null);
+		const handle = me?.owner.handle ?? "(unknown)";
+		const where = await saveCredentials({ api, token: token.access_token, handle, device }, { noKeychain: opts.noKeychain });
+		await retry(() => call(api, "/api/me/device", { method: "PUT", token: token.access_token, body: { name: device } })).catch(() => undefined);
+		if (where === "file") console.warn("Warning: no OS keychain available; the token is in ~/.appmarket/credentials.json (mode 0600).");
+		console.log(`Signed in as ${handle} on ${device}.`);
+		return 0;
 	}
 	console.error("The code expired. Run `appmarket login` again.");
 	return 1;

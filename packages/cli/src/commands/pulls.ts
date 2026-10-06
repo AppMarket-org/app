@@ -50,7 +50,7 @@ export async function pullContext(cwd = process.cwd(), deps: Deps = defaults): P
 	if (!root || !repo) throw new PullError("This folder is not an appmarket.org repo (run `appmarket init`).");
 	const sessionId = gitOr(["config", "--get", "appmarket.session"], "", { cwd: root });
 	const session = sessionId ? storedSessions().find((s) => s.id === sessionId) : undefined;
-	const api = session?.api ?? apiBase();
+	const api = session?.api ?? gitOr(["config", "--get", "appmarket.api"], apiBase(), { cwd: root });
 	const token = await deps.token(api);
 	if (!token) throw new PullError("Not signed in to appmarket.org: run `appmarket login`.");
 	const call = <T>(path: string, init: { method?: string; body?: unknown } = {}) => deps.call<T>(api, path, { ...init, token, timeoutMs: 60_000 });
