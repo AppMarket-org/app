@@ -1,8 +1,8 @@
 name: Release CLI
 
 # Publishes the `appmarket` npm package when a tag cli-v<version> is pushed. Uses npm trusted
-# publishing (OIDC): no npm token is stored, and every release carries a provenance attestation
-# linking it to this workflow run. One-time setup on npmjs.com: package `appmarket` → Settings →
+# publishing (OIDC): no npm token is stored, and (once the repository is public) every release
+# carries a provenance attestation linking it to this workflow run. One-time setup on npmjs.com: package `appmarket` → Settings →
 # Trusted publisher → GitHub Actions, repository AppMarket-org/app, workflow release-cli.yml.
 
 on:
@@ -35,4 +35,5 @@ jobs:
       - run: pnpm --filter appmarket test
       # pnpm pack resolves workspace: versions in the manifest; npm publishes the tarball with provenance.
       - run: pnpm --filter appmarket exec pnpm pack --pack-destination "$RUNNER_TEMP"
-      - run: npm install -g npm@latest && npm publish "$RUNNER_TEMP"/appmarket-*.tgz --provenance --access public
+      # npm accepts provenance only from public repositories; it is added once the repo is public.
+      - run: npm install -g npm@latest && npm publish "$RUNNER_TEMP"/appmarket-*.tgz --access public ${{ github.event.repository.private == false && '--provenance' || '' }}
