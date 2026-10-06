@@ -1,7 +1,8 @@
 import { redactSecrets } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
+import { nextNumber } from "../repos/numbers.ts";
 
-/** Saves a pull request with the repo's next number (retrying when two are opened at once). */
+/** Saves a pull request with the repo's next number (shared with issues, #294). */
 export async function insertPull(p: {
 	repoId: string;
 	title: string;
@@ -14,21 +15,14 @@ export async function insertPull(p: {
 	taskId?: string;
 }): Promise<{ id: string; number: number }> {
 	const id = crypto.randomUUID();
-	for (let attempt = 0; attempt < 3; attempt++) {
-		try {
-			await env.DB.prepare(
-				`INSERT INTO pull_requests (id, repo_id, number, title, body, author_id, source_repo_id, source_branch, target_branch, head_sha, task_id)
-				 VALUES (?, ?, (SELECT COALESCE(MAX(number), 0) + 1 FROM pull_requests WHERE repo_id = ?), ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-				.bind(id, p.repoId, p.repoId, redactSecrets(p.title).text, redactSecrets(p.body).text, p.authorId, p.sourceRepoId, p.sourceBranch, p.targetBranch, p.headSha, p.taskId ?? null)
-				.run();
-			break;
-		} catch (error) {
-			if (attempt === 2 || !String(error).includes("UNIQUE")) throw error;
-		}
-	}
-	const row = await env.DB.prepare("SELECT number FROM pull_requests WHERE id = ?").bind(id).first<{ number: number }>();
-	return { id, number: row!.number };
+	const number = await nextNumber(env.DB, p.repoId);
+	await env.DB.prepare(
+		`INSERT INTO pull_requests (id, repo_id, number, title, body, author_id, source_repo_id, source_branch, target_branch, head_sha, task_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	)
+		.bind(id, p.repoId, number, redactSecrets(p.title).text, redactSecrets(p.body).text, p.authorId, p.sourceRepoId, p.sourceBranch, p.targetBranch, p.headSha, p.taskId ?? null)
+		.run();
+	return { id, number };
 }
 
 export interface PullSettings {

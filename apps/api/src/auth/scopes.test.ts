@@ -5,7 +5,7 @@ const all = ["checkpoints:write", "checkpoints:read", "repos:read"];
 
 describe("grantScopes", () => {
 	it("defaults to the client's scopes and refuses anything wider or unknown", () => {
-		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write", "git:write", "pulls:write"]);
+		expect(grantScopes("appmarket-cli", undefined)).toEqual([...all, "sessions:write", "memory:read", "memory:write", "git:write", "pulls:write", "issues:write"]);
 		expect(grantScopes("appmarket-ci", undefined)).toEqual([...all, "releases:write", "memory:read"]);
 		expect(grantScopes("appmarket-ci", "sessions:write")).toBeNull();
 		expect(grantScopes("appmarket-ci", "memory:write")).toBeNull();
@@ -34,6 +34,19 @@ describe("deviceMayCall", () => {
 		expect(deviceMayCall(["pulls:write"], "POST", "/api/repos/dev/app/pulls/3/reviews")).toBe(true);
 		expect(deviceMayCall(["pulls:write"], "PATCH", "/api/repos/dev/app/pulls/3")).toBe(true);
 		expect(deviceMayCall(["pulls:write"], "PUT", "/api/repos/dev/app/pull-settings")).toBe(false);
+	});
+
+	it("issues: read with repos:read, change with issues:write (#294)", () => {
+		const comment = "0f8fad5b-d9cb-469f-a165-70867728950e";
+		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/issues")).toBe(true);
+		expect(deviceMayCall(["repos:read"], "GET", "/api/repos/dev/app/issues/4/comments")).toBe(true);
+		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/dev/app/issues")).toBe(false);
+		expect(deviceMayCall(["pulls:write"], "POST", "/api/repos/dev/app/issues")).toBe(false);
+		expect(deviceMayCall(["issues:write"], "POST", "/api/repos/dev/app/issues")).toBe(true);
+		expect(deviceMayCall(["issues:write"], "POST", "/api/repos/dev/app/issues/4/comments")).toBe(true);
+		expect(deviceMayCall(["issues:write"], "PATCH", "/api/repos/dev/app/issues/4")).toBe(true);
+		expect(deviceMayCall(["issues:write"], "DELETE", `/api/repos/dev/app/issues/4/comments/${comment}`)).toBe(true);
+		expect(deviceMayCall(["issues:write"], "DELETE", "/api/repos/dev/app/issues/4")).toBe(false);
 	});
 
 	it("memory: reads with memory:read, writes with memory:write only (#194)", () => {

@@ -18,3 +18,4 @@ export * from "./sessions";
 export * from "./memory";
 export * from "./pulls";
 export * from "./device-scopes";
+export * from "./issues";
