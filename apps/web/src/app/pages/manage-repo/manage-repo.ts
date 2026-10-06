@@ -34,6 +34,7 @@ import { PreviewsCard } from './previews-card/previews-card';
 import { PriceCard } from './price-card/price-card';
 import { SessionsCard } from './sessions-card/sessions-card';
 import { WebhooksCard } from './webhooks-card/webhooks-card';
+import { PullSettingsCard } from './pull-settings-card/pull-settings-card';
 import { Seo } from '../../seo/seo';
 import { describeRepoError } from '../repo-errors';
 import { STATE_LABELS } from '../state-labels';
@@ -65,6 +66,7 @@ import { STATE_LABELS } from '../state-labels';
     PriceCard,
     SessionsCard,
     WebhooksCard,
+    PullSettingsCard,
     ReleasesCard,
     RuntimeBadge,
     RepositoryNav,

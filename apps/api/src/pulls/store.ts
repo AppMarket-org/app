@@ -28,17 +28,22 @@ export async function insertPull(p: {
 export interface PullSettings {
 	requireApproval: boolean;
 	reviewAgentWork: boolean;
+	/** #73: a fork gets a pull request each time its template publishes a version. */
+	upstreamSync: boolean;
 }
 
 export async function pullSettings(repoId: string): Promise<PullSettings> {
-	const row = await env.DB.prepare("SELECT require_approval, review_agent_work FROM repo_pull_settings WHERE repo_id = ?").bind(repoId).first<{ require_approval: number; review_agent_work: number }>();
-	return { requireApproval: row?.require_approval === 1, reviewAgentWork: row?.review_agent_work === 1 };
+	const row = await env.DB.prepare("SELECT require_approval, review_agent_work, upstream_sync FROM repo_pull_settings WHERE repo_id = ?")
+		.bind(repoId)
+		.first<{ require_approval: number; review_agent_work: number; upstream_sync: number }>();
+	return { requireApproval: row?.require_approval === 1, reviewAgentWork: row?.review_agent_work === 1, upstreamSync: row?.upstream_sync === 1 };
 }
 
 export async function savePullSettings(repoId: string, s: PullSettings): Promise<void> {
 	await env.DB.prepare(
-		"INSERT INTO repo_pull_settings (repo_id, require_approval, review_agent_work) VALUES (?, ?, ?) ON CONFLICT (repo_id) DO UPDATE SET require_approval = excluded.require_approval, review_agent_work = excluded.review_agent_work",
+		`INSERT INTO repo_pull_settings (repo_id, require_approval, review_agent_work, upstream_sync) VALUES (?, ?, ?, ?)
+		 ON CONFLICT (repo_id) DO UPDATE SET require_approval = excluded.require_approval, review_agent_work = excluded.review_agent_work, upstream_sync = excluded.upstream_sync`,
 	)
-		.bind(repoId, s.requireApproval ? 1 : 0, s.reviewAgentWork ? 1 : 0)
+		.bind(repoId, s.requireApproval ? 1 : 0, s.reviewAgentWork ? 1 : 0, s.upstreamSync ? 1 : 0)
 		.run();
 }

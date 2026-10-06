@@ -49,6 +49,8 @@ export default defineConfig(({ mode }) => {
 				ChecksWorkflow: exports.workflow({ name: `${workerName}-checks`, concurrency: { limit: 5 } }),
 				// #238: merges agent work from the collaboration plane.
 				MergeWorkflow: exports.workflow({ name: `${workerName}-merge`, concurrency: { limit: 5 } }),
+				// #73: template updates for opted-in forks.
+				UpstreamSyncWorkflow: exports.workflow({ name: `${workerName}-upstream-sync`, concurrency: { limit: 5 } }),
 			},
 			env: {
 				APP_ENV: bindings.text(environment),
@@ -95,6 +97,7 @@ export default defineConfig(({ mode }) => {
 				DEPLOY_WORKFLOW: bindings.workflow({ name: `${workerName}-deploy`, worker: workerName, exportName: "DeployWorkflow" }),
 				CHECKS_WORKFLOW: bindings.workflow({ name: `${workerName}-checks`, worker: workerName, exportName: "ChecksWorkflow" }),
 				MERGE_WORKFLOW: bindings.workflow({ name: `${workerName}-merge`, worker: workerName, exportName: "MergeWorkflow" }),
+				UPSTREAM_SYNC_WORKFLOW: bindings.workflow({ name: `${workerName}-upstream-sync`, worker: workerName, exportName: "UpstreamSyncWorkflow" }),
 				SANDBOX: bindings.durableObject({ worker: workerName, exportName: "CiSandbox" }),
 				RATE_LIMITER: bindings.durableObject({ worker: workerName, exportName: "RateLimiter" }),
 				PLANE: bindings.durableObject({ worker: workerName, exportName: "RepoPlane" }),

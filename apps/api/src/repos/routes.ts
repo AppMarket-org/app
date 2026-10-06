@@ -29,6 +29,7 @@ import { CONTRACT_FILES, buildRepoMap, checkPwa, checkTemplate, pwaManifestCandi
 import { storeLanguages } from "./languages.ts";
 import { CheckStore } from "../checks/store.ts";
 import { startChecks } from "../checks/start.ts";
+import { startUpstreamSync } from "../sync/start.ts";
 import { type RepoCheckSummary, RepoStore } from "./repository.ts";
 import { checkRuntime } from "./runtime-check.ts";
 import { detectAtHead, runtimeAt, saveRuntime } from "./detect.ts";
@@ -267,6 +268,8 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 			c.executionCtx.waitUntil(recordGraph(repo.id, repo.gitRepo!, repo.submittedCommit, repo.submittedChecks?.manifest ?? null).catch((e) => logEvent("graph.failed", { repo: repo.fullName, error: String(e) }, "warn")));
 			// #170: language breakdown of the published version.
 			c.executionCtx.waitUntil(storeLanguages(repo.id, repo.gitRepo, repo.submittedCommit).catch((e) => logEvent("languages.failed", { repo: repo.fullName, error: e }, "error")));
+			// #73: forks that opted in get a pull request with the new version.
+			if (repo.submittedTag) c.executionCtx.waitUntil(startUpstreamSync(repo, repo.submittedTag, repo.submittedCommit).catch((e) => logEvent("sync.start_failed", { repo: repo.fullName, error: String(e) }, "error")));
 		}
 		// PRD R19: archiving a removed repo revokes every active token; no new ones are issued (token policy).
 		if (request.data.to === "removed" && repo.gitRepo) {
