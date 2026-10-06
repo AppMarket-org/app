@@ -14,7 +14,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
-import type { PullComment, PullRequest, PullReview } from '@appmarket/shared';
+import type { PullChecks, PullComment, PullRequest, PullReview } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../../auth/auth';
 import { type FileDiff, type PullFiles, PullsApi } from '../../../api/pulls';
@@ -76,6 +76,7 @@ export class PullPage implements OnInit {
     ].sort((a, b) => a.at.localeCompare(b.at)),
   );
   protected readonly merging = computed(() => !!this.pull()?.merge && IN_FLIGHT.has(this.pull()!.merge!.status));
+  protected readonly checking = computed(() => this.pull()?.state === 'open' && ['queued', 'running'].includes(this.pull()?.checks?.status ?? ''));
 
   private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -101,9 +102,9 @@ export class PullPage implements OnInit {
     } catch {
       this.pull.set(null);
     }
-    // Follow a merge while it runs.
+    // Follow a merge, or the checks, while they run.
     if (this.timer) clearTimeout(this.timer);
-    if (this.merging()) this.timer = setTimeout(() => void this.load(), 5000);
+    if (this.merging() || this.checking()) this.timer = setTimeout(() => void this.load(), 5000);
   }
 
   private async loadConversation(): Promise<void> {
@@ -181,6 +182,13 @@ export class PullPage implements OnInit {
 
   protected reviewLabel(r: PullReview): string {
     return r.state === 'approved' ? 'approved these changes' : r.state === 'changes_requested' ? 'requested changes' : 'reviewed';
+  }
+
+  protected checksLabel(checks: PullChecks): string {
+    if (checks.status === 'passed') return 'Checks passed';
+    if (checks.status === 'failed') return checks.failed.length ? `Checks failed: ${checks.failed.join(', ')}` : 'Checks failed';
+    if (checks.status === 'error') return 'Checks could not run';
+    return checks.status === 'queued' ? 'Checks queued' : 'Checks running';
   }
 
   protected mergeLabel(status: string): string {

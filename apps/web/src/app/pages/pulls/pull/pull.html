@@ -79,6 +79,12 @@
                         : 'No reviews yet'
                 }}
               </p>
+              @if (p.state === 'open' && p.checks; as checks) {
+                <p class="status" [class.bad]="checks.status === 'failed' || checks.status === 'error'">
+                  <mat-icon aria-hidden="true">{{ checks.status === 'passed' ? 'check_circle' : checking() ? 'sync' : 'error_outline' }}</mat-icon>
+                  {{ checksLabel(checks) }} · {{ checks.sha.slice(0, 7) }}
+                </p>
+              }
               @if (p.merge; as m) {
                 <p class="status" [class.bad]="m.status === 'conflict' || m.status === 'failed'">
                   <mat-icon aria-hidden="true">{{ m.status === 'merged' ? 'merge' : merging() ? 'sync' : 'error_outline' }}</mat-icon>
@@ -94,7 +100,7 @@
               @if (p.state === 'open' && p.mergeBlocked) {
                 <p class="hint">{{ p.mergeBlocked }}</p>
               }
-              <p class="hint">Merging rebases the branch onto {{ p.target.branch }}, runs the checks and conformance, then fast-forwards {{ p.target.branch }} to the checked commit.</p>
+              <p class="hint">Merging moves {{ p.target.branch }} to exactly the checked commit. When {{ p.target.branch }} has changed since the branch was made, the branch is rebased onto it and checked again first.</p>
             </mat-card-content>
             <mat-card-actions align="end">
               @if (p.canEdit && p.state === 'open') {

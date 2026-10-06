@@ -35,7 +35,7 @@ function setup() {
 	return { root, main, fork, owner, agent };
 }
 
-const env = (s: ReturnType<typeof setup>, extra: Record<string, string>) => ({ MAIN_REMOTE: s.main, MAIN_TOKEN: "t", FORK_REMOTE: s.fork, FORK_TOKEN: "t", BASE: "main", BRANCH: "agent/feature", MERGE_ID: "m1", ...extra });
+const env = (s: ReturnType<typeof setup>, extra: Record<string, string>) => ({ MAIN_REMOTE: s.main, MAIN_TOKEN: "t", FORK_REMOTE: s.fork, FORK_TOKEN: "t", BASE: "main", BRANCH: "agent/feature", MERGE_ID: "m1", FORK_REF: "refs/heads/appmarket/merge/m1", ...extra });
 
 describe("merge scripts (#238)", () => {
 	it("rebases the agent's branch onto a moved base, carries notes, and fast-forwards the base to the checked commit", () => {
@@ -83,6 +83,26 @@ describe("merge scripts (#238)", () => {
 		expect(sh(pushScript, env(s, { HEAD_SHA: r.head!, BASE_SHA: r.base! })).status).toBe("base_moved");
 		expect(git(s.main, "rev-parse", "main")).toBe(moved);
 		expect(sh(pushScript, env(s, { HEAD_SHA: "f".repeat(40), BASE_SHA: moved })).status).toBe("changed");
+	});
+
+	it("fast path: pushes the branch itself when it already contains the base (no rebase), notes included", () => {
+		const s = setup();
+		const c1 = commit(s.agent, "b.txt", "b\n", "agent, on top of the base");
+		git(s.agent, "notes", "--ref=appmarket", "add", "-m", '{"commit":"fast"}', c1);
+		git(s.agent, "push", "-q", "origin", "agent/feature", "refs/notes/appmarket");
+		const base = git(s.main, "rev-parse", "main");
+		const p = sh(pushScript, env(s, { FORK_REF: "refs/heads/agent/feature", HEAD_SHA: c1, BASE_SHA: base }));
+		expect(p).toMatchObject({ status: "merged", notes: true });
+		expect(git(s.main, "rev-parse", "main")).toBe(c1);
+		expect(git(s.main, "notes", "--ref=appmarket", "show", c1)).toBe('{"commit":"fast"}');
+		// The branch moved after the checks: nothing is pushed.
+		const s2 = setup();
+		const d1 = commit(s2.agent, "b.txt", "b\n", "checked");
+		commit(s2.agent, "c.txt", "c\n", "pushed after the checks");
+		git(s2.agent, "push", "-q", "origin", "agent/feature");
+		const base2 = git(s2.main, "rev-parse", "main");
+		expect(sh(pushScript, env(s2, { FORK_REF: "refs/heads/agent/feature", HEAD_SHA: d1, BASE_SHA: base2 })).status).toBe("changed");
+		expect(git(s2.main, "rev-parse", "main")).toBe(base2);
 	});
 
 	it("says when there is nothing to merge or no such branch", () => {

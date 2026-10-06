@@ -19,6 +19,8 @@ export interface PullView {
 	target: { repo: string; branch: string };
 	headSha: string | null;
 	mergedSha: string | null;
+	/** Older servers do not send it. */
+	checks?: { status: string; sha: string; failed: string[] } | null;
 	merge: { status: string; sha: string | null; error: string | null; conflicts?: string[] } | null;
 	review: { decision: "approved" | "changes_requested" | null; approvals: number };
 	mergeBlocked: string | null;
@@ -120,6 +122,8 @@ export const reply = (ctx: PullContext, n: number, input: { body: string; path?:
 export function describe(p: PullView, origin: string): string {
 	const lines = [`#${p.number} ${p.title}  [${p.state}]`, `${p.source.fork ? `${p.source.repo}:` : ""}${p.source.branch} → ${p.target.repo}:${p.target.branch}`, `${origin}/${p.target.repo}/pulls/${p.number}`];
 	if (p.review.decision) lines.push(p.review.decision === "approved" ? `Approved (${p.review.approvals})` : "Changes requested");
+	// Older servers do not send checks.
+	if (p.state === "open" && p.checks) lines.push(`Checks: ${p.checks.status}${p.checks.failed.length ? ` (${p.checks.failed.join(", ")})` : ""} on ${p.checks.sha.slice(0, 12)}`);
 	if (p.merge) lines.push(`Merge: ${p.merge.status}${p.merge.sha ? ` ${p.merge.sha.slice(0, 12)}` : ""}${p.merge.error ? ` (${p.merge.error})` : ""}`);
 	if (p.state === "open") lines.push(p.mergeBlocked ? `Cannot merge yet: ${p.mergeBlocked}` : p.canMerge ? "Ready to merge." : "Waiting for the repo's owners to merge.");
 	return lines.join("\n");
