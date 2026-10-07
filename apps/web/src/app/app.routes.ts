@@ -50,6 +50,7 @@ export const routes: Routes = [
   { path: ':owner/:slug/pulls/new', canActivate: [authGuard(), repoGuard], loadComponent: () => import('./pages/pulls/new-pull/new-pull').then((m) => m.NewPullPage) },
   { path: ':owner/:slug/pulls/:number', canActivate: [repoGuard], loadComponent: () => import('./pages/pulls/pull/pull').then((m) => m.PullPage) },
   { path: ':owner/:slug/pulls', canActivate: [repoGuard], loadComponent: () => import('./pages/pulls/pull-list/pull-list').then((m) => m.PullListPage) },
+  { path: ':owner/:slug/graph', canActivate: [authGuard(), repoGuard], loadComponent: () => import('./pages/code-graph/code-graph').then((m) => m.CodeGraphPage) },
   { path: ':owner/:slug/commits', canActivate: [repoGuard], loadComponent: () => import('./pages/commits/commits').then((m) => m.CommitsPage) },
   { path: ':owner/:slug/code', canActivate: [repoGuard], loadComponent: () => import('./pages/code/code').then((m) => m.CodePage) },
   { path: ':owner/:slug/history', resolve: { history: historyResolver }, loadComponent: () => import('./pages/history/history').then((m) => m.HistoryPage) },

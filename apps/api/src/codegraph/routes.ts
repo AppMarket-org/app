@@ -4,7 +4,7 @@ import type { AuthVariables } from "../auth/middleware.ts";
 import { normalizePath } from "../plane/model.ts";
 import { canEdit } from "../repos/access.ts";
 import { RepoStore } from "../repos/repository.ts";
-import { ensureIndex, findSymbols, impactOf, references } from "./store.ts";
+import { ensureIndex, findSymbols, graphMap, impactOf, references, symbolsIn } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
 
@@ -57,4 +57,21 @@ export const codeGraphRoutes = new Hono<Ctx>()
 		if (!r) return notFound(c);
 		if (!r.index) return noIndex(c);
 		return c.json({ commit: r.index.commit, paths, affected: await impactOf(r.repo.id, paths) });
+	})
+	// The UI: the whole graph to draw (files, their symbol counts, the imports between them).
+	.get("/:owner/:slug/code-graph/map", async (c) => {
+		const r = await indexed(c);
+		if (!r) return notFound(c);
+		if (!r.index) return noIndex(c);
+		return c.json({ ...r.index, ...(await graphMap(r.repo.id)) });
+	})
+	// The UI's panel beside an open file: what it defines, imports and is imported by, and what a change to it can affect.
+	.get("/:owner/:slug/code-graph/file", async (c) => {
+		const path = normalizePath(c.req.query("path") ?? "");
+		if (!path || path.endsWith("/")) return c.json({ error: "invalid", message: "path is a file in the repo." }, 400);
+		const r = await indexed(c);
+		if (!r) return notFound(c);
+		if (!r.index) return noIndex(c);
+		const [symbols, refs, impact] = await Promise.all([symbolsIn(r.repo.id, path), references(r.repo.id, path), impactOf(r.repo.id, [path])]);
+		return c.json({ commit: r.index.commit, branch: r.index.branch, path, symbols, ...refs, impact });
 	});

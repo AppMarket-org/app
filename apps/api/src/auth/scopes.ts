@@ -50,7 +50,7 @@ const RULES: readonly Rule[] = [
 	{ scope: "issues:write", methods: ["PATCH"], path: new RegExp(`^/api/repos/${REPO}/issues/[0-9]+$`) },
 	{ scope: "issues:write", methods: ["PATCH", "DELETE"], path: new RegExp(`^/api/repos/${REPO}/issues/[0-9]+/comments/[0-9a-f-]{36}$`) },
 	// #240: the code graph, for agents (definitions, importers, impact).
-	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/code-graph(/(symbols|references|impact))?$`) },
+	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/code-graph(/(symbols|references|impact|map|file))?$`) },
 	// #239: the board over A2A (Agent Card readable like the repo; JSON-RPC like the plane routes).
 	{ scope: "repos:read", methods: ["GET"], path: new RegExp(`^/api/repos/${REPO}/(a2a|\\.well-known/agent-card\\.json)$`) },
 	{ scope: "sessions:write", methods: ["POST"], path: new RegExp(`^/api/repos/${REPO}/a2a$`) },

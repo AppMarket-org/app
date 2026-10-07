@@ -184,3 +184,23 @@ export async function neighbours(repoId: string, files: string[]): Promise<Map<s
 	}
 	return out;
 }
+
+/** The whole graph for drawing it: every indexed file with its number of symbols, and the imports between them. */
+export async function graphMap(repoId: string): Promise<{ files: { path: string; symbols: number }[]; edges: [string, string][] }> {
+	const [files, edges] = await env.DB.batch<{ path?: string; n?: number; target?: string }>([
+		env.DB.prepare("SELECT f.path, (SELECT COUNT(*) FROM code_symbols s WHERE s.repo_id = f.repo_id AND s.path = f.path) AS n FROM code_files f WHERE f.repo_id = ? ORDER BY f.path").bind(repoId),
+		env.DB.prepare("SELECT path, target FROM code_imports WHERE repo_id = ?").bind(repoId),
+	]);
+	return {
+		files: (files!.results ?? []).map((r) => ({ path: r.path!, symbols: r.n ?? 0 })),
+		edges: (edges!.results ?? []).map((r) => [r.path!, r.target!] as [string, string]),
+	};
+}
+
+/** One file's definitions, in line order. */
+export async function symbolsIn(repoId: string, path: string): Promise<SymbolHit[]> {
+	const { results } = await env.DB.prepare("SELECT path, name, kind, line, exported FROM code_symbols WHERE repo_id = ? AND path = ? ORDER BY line LIMIT 500")
+		.bind(repoId, path)
+		.all<{ path: string; name: string; kind: string; line: number; exported: number }>();
+	return results.map((r) => ({ ...r, exported: r.exported === 1 }));
+}

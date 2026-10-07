@@ -27,6 +27,42 @@
 .layout.collapsed {
   grid-template-columns: minmax(0, 1fr);
 }
+// #240: the code graph panel as a third column beside code files.
+.layout:has(.graph) {
+  grid-template-columns: 18rem minmax(0, 1fr) 17rem;
+}
+.layout.collapsed:has(.graph) {
+  grid-template-columns: minmax(0, 1fr) 17rem;
+}
+.graph {
+  display: block;
+  min-width: 0;
+  overflow: auto;
+  padding: 0.5rem;
+  border-left: 0.0625rem solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+@media (max-width: 75rem) {
+  .layout:has(.graph) {
+    grid-template-columns: 18rem minmax(0, 1fr);
+  }
+  .layout.collapsed:has(.graph) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .layout:has(.graph) {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .graph {
+    grid-column: 1 / -1;
+    max-height: 40dvh;
+    border-left: 0;
+    border-top: 0.0625rem solid var(--mat-sys-outline-variant);
+  }
+}
+// A line shown from the code graph panel.
+.viewer ::ng-deep .line.marked {
+  background: var(--mat-sys-primary-container);
+}
 @media (max-width: 48rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr);

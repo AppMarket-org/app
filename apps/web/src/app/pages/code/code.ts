@@ -18,6 +18,7 @@ import { firstValueFrom } from 'rxjs';
 import { Seo } from '../../seo/seo';
 import { languageFor } from './languages';
 import { CodeExplorer, type FileNode } from './explorer/explorer';
+import { CodeGraphPanel, GRAPHED_FILE } from '../../components/code-graph-panel/code-graph-panel';
 
 interface CodeTree {
   ref: string;
@@ -48,6 +49,7 @@ interface CodeFile {
     MatProgressBarModule,
     RouterLink,
     CodeExplorer,
+    CodeGraphPanel,
     MatButtonToggleModule,
     Markdown,
     RepositoryNav,
@@ -78,6 +80,11 @@ export class CodePage {
   protected readonly markdown = computed(() => /\.(md|markdown)$/i.test(this.file() ?? ''));
   protected readonly file = computed(() => this.query().get('file'));
   protected readonly ref = computed(() => this.query().get('ref'));
+  private shownKey = '';
+  /** A line to show (from the code graph panel): scrolled to and marked. */
+  protected readonly line = computed(() => Number(this.query().get('line')) || null);
+  /** #240: the code graph panel beside code files the graph indexes (owners and members). */
+  protected readonly graphPanel = computed(() => !!this.tree()?.editor && !!this.file() && GRAPHED_FILE.test(this.file()!) && !this.markdown());
 
   protected readonly tree = signal<CodeTree | null | undefined>(undefined);
   protected readonly blob = signal<CodeFile | null>(null);
@@ -99,7 +106,13 @@ export class CodePage {
         { label: 'Code' },
       ],
     }); });
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(() => void this.load());
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((q) => {
+      // Only the line changed (the code graph panel): scroll, without loading the file again.
+      const key = `${q.get('ref')}\n${q.get('file')}`;
+      if (key === this.shownKey && this.html()) return this.showLine(this.line());
+      this.shownKey = key;
+      void this.load();
+    });
   }
 
   protected readonly nodes = signal<FileNode[]>([]);
@@ -131,6 +144,22 @@ export class CodePage {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { ref: this.ref(), file },
+    });
+  }
+
+  protected openLine(line: number): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { ref: this.ref(), file: this.file(), line } });
+  }
+
+  /** Scrolls the highlighted code to a line and marks it. */
+  private showLine(line: number | null): void {
+    if (!line) return;
+    setTimeout(() => {
+      const lines = document.querySelectorAll('.viewer .code .line');
+      lines.forEach((el) => el.classList.remove('marked'));
+      const el = lines[line - 1];
+      el?.classList.add('marked');
+      el?.scrollIntoView({ block: 'center' });
     });
   }
 
@@ -297,6 +326,7 @@ export class CodePage {
         const html = await this.highlight(blob.text, file).catch(() => null);
         if (request !== this.request) return;
         this.html.set(html);
+        this.showLine(this.line());
       }
     }
     if (request === this.request) this.loading.set(false);

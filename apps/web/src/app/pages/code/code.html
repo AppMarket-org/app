@@ -43,7 +43,7 @@
           <ng-container *ngTemplateOutlet="explorer; context: { overview: false }" />
         </aside>
       }
-      <section class="viewer" aria-label="File contents">
+      <section class="viewer" aria-label="File contents" [class.with-graph]="graphPanel()">
         <div class="viewer-head">
           <mat-icon aria-hidden="true">{{ file() ? 'draft' : 'code' }}</mat-icon>
           <span class="name">{{ file() || slug }}</span>
@@ -106,6 +106,9 @@
           </div>
         }
       </section>
+      @if (graphPanel()) {
+        <app-code-graph-panel class="graph" [repo]="full" [file]="file()!" [ref]="ref() || tree()!.ref" (openFile)="openFile($event)" (openLine)="openLine($event)" />
+      }
     </div>
     }
 
