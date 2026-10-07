@@ -21,7 +21,8 @@ export interface HeadingPart {
 }
 
 const ORIGIN = 'https://appmarket.org';
-const DEFAULT_CARD = '/api/og/home.png';
+// The version busts social sites' caches when the card design changes (DESIGN in apps/api/src/og/routes.ts).
+const DEFAULT_CARD = '/api/og/home.png?v=2';
 const absolute = (url: string) => (url.startsWith('/') ? ORIGIN + url : url);
 
 /** Sets title, description, canonical, Open Graph, Twitter and JSON-LD tags; rendered into server HTML. */

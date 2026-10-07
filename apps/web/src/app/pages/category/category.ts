@@ -21,7 +21,7 @@ export class Category {
     const slug = inject(ActivatedRoute).snapshot.paramMap.get('slug') ?? '';
     inject(Seo).set(
       this.category
-        ? { title: `${this.category.name} apps`, description: `${this.category.name} apps you can deploy to your own Cloudflare account.`, path: `/category/${slug}`, image: `/api/og/category/${slug}.png` }
+        ? { title: `${this.category.name} apps`, description: `${this.category.name} apps you can deploy to your own Cloudflare account.`, path: `/category/${slug}`, image: `/api/og/category/${slug}.png?v=2` }
         : { title: 'Category not found', description: 'This category does not exist.', path: `/category/${slug}`, noindex: true },
     );
   }

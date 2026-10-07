@@ -7,7 +7,7 @@ import type { CardContent } from "./card.ts";
 import { renderCard } from "./render.ts";
 
 /** Bump when the card design changes so stored cards are regenerated. */
-const DESIGN = 1;
+const DESIGN = 2;
 
 async function serveCard(c: Context, content: CardContent): Promise<Response> {
 	const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([DESIGN, content]))));
@@ -21,7 +21,12 @@ async function serveCard(c: Context, content: CardContent): Promise<Response> {
 	return new Response(png, { headers });
 }
 
-const SITE: CardContent = { title: "Apps you deploy to your own Cloudflare account", subtitle: "Discover, try and deploy apps built on Cloudflare. You own the code, the data and the bill.", tags: [] };
+const SITE: CardContent = {
+	title: "A Git platform",
+	highlight: "for agents and humans.",
+	subtitle: "Every commit keeps its prompt, model and context. Deploy apps to your own Cloudflare.",
+	tags: ["Checkpoints", "Agent memory", "A2A"],
+};
 
 /** Social preview cards (1200×630 PNG) for published apps, categories and the home page. Mounted under /api/og. */
 export const ogRoutes = new Hono()
