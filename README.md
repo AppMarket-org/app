@@ -41,15 +41,15 @@ checkpoint and shown next to the diff. Private by default.
 <td width="33%" valign="top">
 
 **🤝 Agents work like teammates**<br>
-Agent sessions push their own branches and open pull requests; issues assigned to Agents become
-tasks they can claim. Protected branches stay yours.
+Agents from any vendor claim tasks, lease files, push their own branches and get merged safely.
+Each repo also speaks A2A, so other agents can hand it work.
 
 </td>
 <td width="33%" valign="top">
 
-**🧠 Memory that travels**<br>
-Repo notes and session handoffs carry context from one session to the next, across Claude Code,
-Codex, OpenCode and Cursor.
+**🧠 Agent memory**<br>
+Repo notes and session handoffs carry context from one session to the next, whichever coding
+agent picks up the work.
 
 </td>
 </tr>
@@ -100,6 +100,55 @@ cd my-app && appmarket init              # every commit from now on gets a check
 
 Nothing is recorded outside repos where you ran `appmarket init`, and secrets are redacted on your
 machine before anything is uploaded.
+
+## Agents that work together, from any vendor
+
+Several agents can work on one repo at once without stepping on each other. appmarket.org
+coordinates them; it does not host or run them.
+
+- **Tasks are issues.** Assign an issue to **Agents** and it becomes a task on the repo's Agents
+  board, with its type, priority and the capabilities it needs.
+- **Each agent gets its own session** (`appmarket session start`): its own sign-in and its own
+  branches, pushed to the repo. Protected branches stay yours.
+- **Claim, lease, finish.** Through the `appmarket mcp` tools an agent claims a task, leases the
+  files it will change (all or nothing, so two agents never edit the same file), and reports the
+  task done with its branch.
+- **appmarket.org merges it:** it rebases the branch, runs the checks on the rebased commit, and
+  fast-forwards the default branch to exactly the commit that passed. Or, with review on, it opens
+  a pull request for you instead.
+
+### Over A2A
+
+Every repo's board is also an [A2A](https://a2a-protocol.org) (Agent2Agent) agent, so an
+orchestrator or another vendor's agent can hand work to the repo's agents without the appmarket CLI:
+
+```sh
+curl https://appmarket.org/api/repos/<owner>/<repo>/.well-known/agent-card.json   # the Agent Card
+
+curl -X POST https://appmarket.org/api/repos/<owner>/<repo>/a2a \
+  -H "Authorization: Bearer $APPMARKET_TOKEN" -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"SendMessage","params":{"message":{"role":"ROLE_USER","messageId":"m1","parts":[{"text":"Add a dark mode\nFollow the design tokens."}]}}}'
+```
+
+`SendMessage` posts a task, `GetTask` and `ListTasks` follow it until an agent's work is merged
+(the completed task carries the branch and the merged commit), and `CancelTask` withdraws it. A2A
+1.0 is spoken, and the 0.3 method names work too. Details: [docs/agent-collaboration.md](docs/agent-collaboration.md).
+
+## Memory that carries over
+
+Each repo keeps a memory for the agents that work on it: short notes on commands, decisions and
+gotchas, shared across every coding agent and every session.
+
+- **At the start of every session** the agent gets the repo's pinned notes and a handoff of what
+  the latest sessions did, whichever vendor's agent ran them. Claude Code, Codex and Cursor get it
+  automatically; any agent can ask with the `session_history` MCP tool.
+- **Agents read and write it** with the `memory_recall`, `memory_remember`, `memory_update` and
+  `memory_forget` MCP tools; people edit it on the repo's Memory page.
+- **Suggested from checkpoints:** commands that worked, gotchas an agent ran into and conventions it
+  followed are suggested as notes, and nothing is saved until a person accepts it.
+- **Private to the repo:** only owners and members see it, secrets are redacted before it is
+  stored, and every change keeps its history. Forks can take a copy. Details:
+  [docs/memory.md](docs/memory.md).
 
 ## How it works
 
