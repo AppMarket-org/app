@@ -1,0 +1,63 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-icon mat-card-avatar aria-hidden="true">hub</mat-icon>
+    <mat-card-title>A2A keys</mat-card-title>
+    <mat-card-subtitle>Let an agent or orchestrator from any vendor hand this repo work over A2A. A key can only post and follow tasks on this repo's Agents board.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (created(); as key) {
+      <div class="created" role="status">
+        <p><strong>Copy the key now.</strong> It is shown only once.</p>
+        <div class="copyable">
+          <code>{{ key }}</code>
+          <button mat-icon-button type="button" aria-label="Copy the key" (click)="copy(key, 'Key')"><mat-icon>content_copy</mat-icon></button>
+        </div>
+        <p class="hint">Send it as a Bearer token to the repo's A2A endpoint:</p>
+        <div class="copyable">
+          <pre><code>{{ example() }}</code></pre>
+          <button mat-icon-button type="button" aria-label="Copy the example" (click)="copy(example(), 'Example')"><mat-icon>content_copy</mat-icon></button>
+        </div>
+        <button mat-button type="button" (click)="created.set(null)">Done</button>
+      </div>
+    }
+
+    @if (keys(); as list) {
+      @if (list.length) {
+        <mat-list role="list" aria-label="A2A keys">
+          @for (k of list; track k.id) {
+            <mat-list-item role="listitem" lines="2">
+              <mat-icon matListItemIcon aria-hidden="true">key</mat-icon>
+              <span matListItemTitle>{{ k.name }} <code class="prefix">{{ k.prefix }}…</code></span>
+              <span matListItemLine>
+                {{ k.lastUsedAt ? 'Last used ' + (k.lastUsedAt | date: 'short') : 'Never used' }} · expires {{ k.expiresAt | date: 'mediumDate' }} · by {{ k.createdBy }}
+              </span>
+              <span matListItemMeta>
+                <button mat-button type="button" [disabled]="busy()" (click)="revoke(k)">Revoke</button>
+              </span>
+            </mat-list-item>
+          }
+        </mat-list>
+      } @else {
+        <p class="hint">No keys yet. The repo's Agent Card is at <code>/api/repos/{{ path() }}/.well-known/agent-card.json</code>.</p>
+      }
+    }
+
+    <div class="form">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="name">
+        <mat-label>Key name</mat-label>
+        <input matInput [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" maxlength="80" placeholder="Release orchestrator" autocomplete="off" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="expiry">
+        <mat-label>Expires after</mat-label>
+        <mat-select [ngModel]="expiry()" (ngModelChange)="expiry.set($event)" name="expiry">
+          @for (d of days; track d) {
+            <mat-option [value]="d">{{ d }} days</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </mat-card-content>
+  <mat-card-actions align="end">
+    <button mat-flat-button type="button" [disabled]="!canCreate()" (click)="create()"><mat-icon>add</mat-icon>Create key</button>
+  </mat-card-actions>
+</mat-card>

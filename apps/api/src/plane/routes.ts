@@ -7,6 +7,9 @@ import { logEvent } from "../observability/log.ts";
 import { nextNumber } from "../repos/numbers.ts";
 import { RepoStore } from "../repos/repository.ts";
 import { agentCard, dispatch } from "./a2a.ts";
+import { createKey, keyFor, listKeys, revokeKey } from "./a2a-keys.ts";
+import { OwnerStore } from "../owners/store.ts";
+import { A2A_KEY_DAYS } from "@appmarket/shared";
 import { sessionFork, startMerge } from "./merge.ts";
 import { tellBoard } from "./merge-workflow.ts";
 import { insertPull, pullSettings } from "../pulls/store.ts";
@@ -153,9 +156,10 @@ export const planeRoutes = new Hono<Ctx>()
 	});
 
 /**
- * #239: the board as an A2A agent. The Agent Card is public for published repos (so other agents
- * can find the board); the JSON-RPC endpoint is for the repo's owners and members (their device
- * token or browser session). Mounted under /api/repos.
+ * #239: the board as an A2A agent. The Agent Card is public for public repos (so other agents can
+ * find the board); the JSON-RPC endpoint takes a repo A2A key (for an outside agent or
+ * orchestrator), or an owner's or member's device token or browser session. Mounted under
+ * /api/repos.
  */
 export const a2aRoutes = new Hono<Ctx>()
 	.get("/:owner/:slug/a2a", (c) => card(c))
@@ -163,8 +167,23 @@ export const a2aRoutes = new Hono<Ctx>()
 	.post("/:owner/:slug/a2a", async (c) => {
 		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
 		const session = c.get("session");
-		if (!session) return c.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Sign in: send an appmarket.org device token as a Bearer token." } }, 401, { "WWW-Authenticate": "Bearer" });
-		if (!repo || !canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
+		const unauthenticated = () =>
+			c.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Send this repo's A2A key (or an appmarket.org device token of an owner or member) as a Bearer token." } }, 401, { "WWW-Authenticate": "Bearer" });
+		// Who posts: the signed-in owner or member, or the owner who created the A2A key used.
+		let actor: { userId: string; key?: string };
+		if (session) {
+			if (!repo || !canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
+			actor = { userId: session.user.id };
+		} else {
+			const bearer = c.req.header("authorization")?.replace(/^bearer\s+/i, "").trim() ?? "";
+			const key = repo && repo.state !== "removed" ? await keyFor(repo.id, bearer) : null;
+			if (!repo || !key) return unauthenticated();
+			// A key stops working when the person who created it can no longer change the repo.
+			const user = await env.DB.prepare('SELECT role FROM "user" WHERE id = ?').bind(key.createdBy).first<{ role: string }>();
+			const creator = { user: { id: key.createdBy, role: user?.role ?? "buyer" }, orgIds: await new OwnerStore(env.DB).orgIdsOf(key.createdBy) } as unknown as AuthVariables["session"];
+			if (!user || !canEdit(repo, creator)) return unauthenticated();
+			actor = { userId: key.createdBy, key: key.name };
+		}
 		const request = await c.req.json<Record<string, unknown>>().catch(() => null);
 		if (!request || Array.isArray(request)) return c.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Send one JSON-RPC request object." } }, 400);
 		const stub = stubFor(repo.id);
@@ -174,17 +193,54 @@ export const a2aRoutes = new Hono<Ctx>()
 				canWrite: true,
 				state: () => stub.state(),
 				create: async (input) => {
-					const result = await createTaskIssue(repo.id, session.user.id, { title: input.title, description: input.description, capabilities: cleanTags(input.capabilities) });
+					const description = actor.key ? `${input.description}${input.description ? "\n\n" : ""}_Posted over A2A with the key “${actor.key}”._` : input.description;
+					const result = await createTaskIssue(repo.id, actor.userId, { title: input.title, description, capabilities: cleanTags(input.capabilities) });
 					if (!result.ok) throw new Error(result.error);
 					return result.value;
 				},
-				remove: async (id) => void (await cancelTaskIssue(repo.id, session.user.id, id)),
+				remove: async (id) => void (await cancelTaskIssue(repo.id, actor.userId, id)),
 			},
 			repo.fullName,
 		);
+		if (actor.key) logEvent("a2a.key_used", { repo: repo.fullName, key: actor.key, method: String(request.method ?? "") });
 		c.header("A2A-Version", "1.0");
 		return c.json(response);
+	})
+	// Repo A2A keys, managed by the repo's owners and members in the browser.
+	.get("/:owner/:slug/a2a-keys", async (c) => {
+		const repo = await keyAdmin(c);
+		if (repo instanceof Response) return repo;
+		return c.json({ items: await listKeys(repo.id) });
+	})
+	.post("/:owner/:slug/a2a-keys", async (c) => {
+		const repo = await keyAdmin(c);
+		if (repo instanceof Response) return repo;
+		const body = (await c.req.json().catch(() => null)) as { name?: unknown; days?: unknown } | null;
+		const name = typeof body?.name === "string" ? body.name.trim() : "";
+		const days = A2A_KEY_DAYS.find((d) => d === body?.days);
+		if (!name || name.length > 80 || !days) return c.json({ error: "invalid", message: "Name the key (up to 80 characters) and choose 30, 90 or 365 days." }, 400);
+		if ((await listKeys(repo.id)).length >= 20) return c.json({ error: "limit", message: "A repo has at most 20 A2A keys; revoke one first." }, 409);
+		const created = await createKey(repo.id, c.get("session")!.user.id, name, days);
+		logEvent("a2a.key_created", { repo: repo.fullName, key: name, days });
+		return c.json(created, 201);
+	})
+	.delete("/:owner/:slug/a2a-keys/:id", async (c) => {
+		const repo = await keyAdmin(c);
+		if (repo instanceof Response) return repo;
+		if (!(await revokeKey(repo.id, c.req.param("id")))) return c.json({ error: "not_found" }, 404);
+		logEvent("a2a.key_revoked", { repo: repo.fullName, id: c.req.param("id") });
+		return c.json({ ok: true });
 	});
+
+/** Owners and members, signed in in the browser (device tokens cannot mint keys). */
+async function keyAdmin(c: Context<Ctx>): Promise<Repo | Response> {
+	const session = c.get("session");
+	if (!session) return c.json({ error: "unauthenticated" }, 401);
+	if (session.deviceScopes) return c.json({ error: "insufficient_scope" }, 403);
+	const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
+	if (!repo || repo.state === "removed" || !canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
+	return repo;
+}
 
 async function card(c: Context<Ctx>) {
 	const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);

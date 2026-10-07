@@ -190,7 +190,7 @@ export function agentCard(repo: { fullName: string; name: string }, endpoint: st
 		version: "1.0.0",
 		documentationUrl: `${origin}/${repo.fullName}`,
 		capabilities: { streaming: false, pushNotifications: false },
-		securitySchemes: { bearer: { httpAuthSecurityScheme: { scheme: "Bearer", description: "An appmarket.org device token (`appmarket login`) of an owner or member of the repo." } } },
+		securitySchemes: { bearer: { httpAuthSecurityScheme: { scheme: "Bearer", description: "This repo's A2A key (an owner creates one in the repo's Settings), or an appmarket.org device token of an owner or member." } } },
 		securityRequirements: [{ schemes: { bearer: { list: [] } } }],
 		defaultInputModes: ["text/plain"],
 		defaultOutputModes: ["text/plain", "application/json"],
