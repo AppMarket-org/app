@@ -1,0 +1,11 @@
+appmarket.org
+Copyright 2026 Chris Portscheller
+
+This product includes software developed for appmarket.org (https://appmarket.org).
+
+"appmarket.org", the appmarket.org name and logo, and the cow mascot are trademarks of
+appmarket.org. The Apache License 2.0 does not grant permission to use them (section 6),
+except as needed to describe the origin of the work and reproduce this NOTICE file.
+
+The appmarket CLI (packages/cli) and the Claude Code plugin (plugins/claude-code) are licensed
+under the MIT License; see their LICENSE files.

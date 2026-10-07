@@ -10,7 +10,7 @@ Host your repositories, build apps with your coding agents, keep the context beh
 and deploy straight into your own Cloudflare account.
 
 [![CI](https://github.com/AppMarket-org/app/actions/workflows/ci.yml/badge.svg)](https://github.com/AppMarket-org/app/actions/workflows/ci.yml)
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-8a3a1c)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-8a3a1c)](LICENSE)
 [![npm](https://img.shields.io/npm/v/appmarket?label=appmarket%20CLI&color=2b2a26)](https://www.npmjs.com/package/appmarket)
 [![Runs on Cloudflare](https://img.shields.io/badge/runs%20on-Cloudflare%20Workers-f38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
 
@@ -200,13 +200,12 @@ Found a security problem? Please don't open an issue; see [SECURITY.md](SECURITY
 
 ## License
 
-The appmarket.org platform is licensed under the [GNU Affero General Public License v3.0](LICENSE)
-(AGPL-3.0-only): you can use, change and self-host it, and if you offer a modified version as a
-network service, you share your changes under the same license.
+The appmarket.org platform is licensed under the [Apache License 2.0](LICENSE): you can use,
+change and self-host it. Keep the copyright and [NOTICE](NOTICE) files and mark the files you
+change. The license does not grant use of the appmarket.org name, logo or cow mascot.
 
-The [`appmarket` CLI](packages/cli) and the [Claude Code plugin](plugins/claude-code) run on your
-machine and record your sessions, so they stay under the permissive [MIT license](packages/cli/LICENSE):
-read, audit and reuse them freely.
+The [`appmarket` CLI](packages/cli) and the [Claude Code plugin](plugins/claude-code) are under
+the [MIT license](packages/cli/LICENSE).
 
 <div align="center">
 <br>

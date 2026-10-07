@@ -1,7 +1,7 @@
 {
   "name": "@appmarket/docs",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "astro dev --port 4321",
