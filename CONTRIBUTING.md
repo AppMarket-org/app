@@ -81,5 +81,5 @@ responsible for the change, the same as for code they typed.
 ## License
 
 By contributing, you agree that your contributions are licensed under the repository's licenses:
-[AGPL-3.0](LICENSE) for the platform, and [MIT](packages/cli/LICENSE) for code in `packages/cli`
+[Apache-2.0](LICENSE) for the platform, and [MIT](packages/cli/LICENSE) for code in `packages/cli`
 and `plugins/claude-code`.
