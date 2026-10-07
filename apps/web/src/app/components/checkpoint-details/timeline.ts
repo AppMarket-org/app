@@ -69,3 +69,53 @@ export function builtWith(summary: CheckpointSummary): string {
   if (!names.length) return '';
   return `Built with ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`}`;
 }
+
+export interface ToolGroup {
+  name: string;
+  calls: number;
+  errors: number;
+  /** What it was called on, most used first: a file name, a command, a pattern. */
+  targets: { label: string; count: number }[];
+  /** Targets beyond those listed. */
+  more: number;
+}
+
+const TOOL_TARGETS = 4;
+
+/** A path's file name; anything else (a command, a pattern) shortened to its first 48 characters. */
+function target(args: string): string {
+  const text = args.trim();
+  if (!text) return '';
+  if (!/\s/.test(text) && /[/.]/.test(text)) return text.split('/').pop() || text;
+  return text.length > 48 ? `${text.slice(0, 47)}…` : text;
+}
+
+/** A checkpoint's tool calls summed up per tool, in the order each was first used. */
+export function toolGroups(tools: NonNullable<Checkpoint['tools']>): ToolGroup[] {
+  const groups = new Map<string, { calls: number; errors: number; targets: Map<string, number> }>();
+  for (const t of tools) {
+    const g = groups.get(t.name) ?? { calls: 0, errors: 0, targets: new Map<string, number>() };
+    g.calls++;
+    if (t.outcome === 'error') g.errors++;
+    const label = target(t.args_summary);
+    if (label) g.targets.set(label, (g.targets.get(label) ?? 0) + 1);
+    groups.set(t.name, g);
+  }
+  return [...groups].map(([name, g]) => {
+    const targets = [...g.targets].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+    return { name, calls: g.calls, errors: g.errors, targets: targets.slice(0, TOOL_TARGETS), more: Math.max(0, targets.length - TOOL_TARGETS) };
+  });
+}
+
+/** Material Symbols for common agent tools; others get a generic one. */
+export function toolIcon(name: string): string {
+  const n = name.toLowerCase();
+  if (/^(edit|write|multiedit|apply_patch|notebookedit)/.test(n)) return 'edit';
+  if (/^(read|view)/.test(n)) return 'description';
+  if (/^(bash|shell|exec|run|terminal)/.test(n)) return 'terminal';
+  if (/^(grep|glob|search|find|list|ls)/.test(n)) return 'search';
+  if (/^(web|fetch)/.test(n)) return 'public';
+  if (n.startsWith('mcp__') || n.includes('mcp')) return 'extension';
+  if (/^(task|agent)/.test(n)) return 'smart_toy';
+  return 'build';
+}

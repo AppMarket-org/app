@@ -33,6 +33,7 @@ function checkpoint(n: number, extra: Partial<Checkpoint> = {}): Checkpoint {
     state: 'pending',
     visibility: 'private',
     device: 'laptop',
+    os: 'macOS',
     received_at: `2026-10-03T10:1${n}:00Z`,
     ...extra,
   };

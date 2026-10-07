@@ -16,7 +16,7 @@ export async function call<T>(api: string, path: string, init: { method?: string
 	const response = await fetch(api + path, {
 		method: init.method ?? (init.body === undefined ? "GET" : "POST"),
 		headers: {
-			"user-agent": `appmarket-cli/${VERSION}`,
+			"user-agent": `appmarket-cli/${VERSION} (${process.platform}; ${process.arch})`,
 			...(init.body === undefined ? {} : { "content-type": "application/json" }),
 			...(init.token ? { authorization: `Bearer ${init.token}` } : {}),
 		},
