@@ -26,7 +26,13 @@ export class CloudflareApiError extends Error {
 }
 
 export async function call<T>(fetcher: typeof fetch, token: string, path: string, init?: RequestInit): Promise<T> {
-	const response = await fetcher(`${API}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+	const send = () => fetcher(`${API}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+	let response = await send();
+	// Cloudflare's API sometimes answers a read with a passing 5xx (seen right after a Worker is created); read again once.
+	if (response.status >= 500 && (!init?.method || init.method === "GET")) {
+		await new Promise((r) => setTimeout(r, 500));
+		response = await send();
+	}
 	const body = (await response.json().catch(() => null)) as { success?: boolean; result?: T; errors?: { message: string }[] } | null;
 	if (!response.ok || !body?.success) throw new CloudflareApiError(response.status, body?.errors?.map((e) => e.message).join("; ") || `HTTP ${response.status}`);
 	return body.result as T;

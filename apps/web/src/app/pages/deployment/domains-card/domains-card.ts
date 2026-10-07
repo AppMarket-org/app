@@ -100,6 +100,15 @@ export class DomainsCard {
     }
   }
 
+  protected async retry(): Promise<void> {
+    this.busy.set(true);
+    try {
+      await this.load();
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   private async load(): Promise<void> {
     try {
       const r = await firstValueFrom(this.http.get<{ zones: { id: string; name: string }[] | null; domains: WorkerDomain[] }>(`/api/deployments/${this.deploymentId()}/domains`));
