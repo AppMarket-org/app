@@ -8,7 +8,10 @@
       <mat-progress-bar mode="indeterminate" aria-label="Working" />
     }
     @if (loadError(); as e) {
-      <p class="error" role="alert">{{ e }}</p>
+      <div class="load-error" role="alert">
+        <p class="error">{{ e }}</p>
+        <button mat-stroked-button type="button" [disabled]="busy()" (click)="retry()"><mat-icon>refresh</mat-icon>Try again</button>
+      </div>
     }
     @if (domains(); as list) {
       @if (list.length) {

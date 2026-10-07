@@ -27,4 +27,14 @@ describe("custom domains (#39)", () => {
 		expect(domainErrorMessage(new CloudflareApiError(409, "Hostname 'app.example.com' already has externally managed DNS records (A, CNAME, etc)."), "app.example.com")).toMatch(/already has a DNS record/);
 		expect(domainErrorMessage(new CloudflareApiError(400, "Could not find zone for hostname"), "app.nope.dev")).toMatch(/not on a Cloudflare zone/);
 	});
+
+	it("reads again once when Cloudflare answers a read with a 5xx, never a write", async () => {
+		let n = 0;
+		const flaky = vi.fn(async () => (n++ === 0 ? new Response("bad gateway", { status: 502 }) : ok([{ id: "d1", hostname: "app.example.com", service: "w" }])));
+		expect((await listDomains(flaky as unknown as typeof fetch, "t", "acct", "w")).map((d) => d.id)).toEqual(["d1"]);
+		expect(flaky).toHaveBeenCalledTimes(2);
+		const down = vi.fn(async () => new Response("bad gateway", { status: 502 }));
+		await expect(attachDomain(down as unknown as typeof fetch, "t", "acct", "w", "app.example.com", "z1")).rejects.toThrow();
+		expect(down).toHaveBeenCalledTimes(1);
+	});
 });
