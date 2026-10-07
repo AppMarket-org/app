@@ -4,7 +4,15 @@
     <a mat-button class="owner" [routerLink]="['/', owner()]">{{ owner() }}</a><span class="slash">/</span>
     <h1><a mat-button class="name" [routerLink]="managed() ? ['/dashboard/repos', owner(), slug()] : ['/', owner(), slug(), 'code']">{{ slug() }}</a></h1>
     @if (repo(); as repo) {
-      <mat-chip-set aria-label="Repository status"><mat-chip>{{ states[repo.state].label }}</mat-chip></mat-chip-set>
+      <mat-chip-set aria-label="Repository status">
+        @if (repo.state !== 'removed') {
+          @let vis = visibility[repo.visibility || 'private'];
+          <mat-chip><mat-icon aria-hidden="true">{{ vis.icon }}</mat-icon>{{ vis.label }}</mat-chip>
+        }
+        @if (repo.state !== 'draft') {
+          <mat-chip>{{ states[repo.state].label }}</mat-chip>
+        }
+      </mat-chip-set>
     }
   </div>
   <div class="actions">

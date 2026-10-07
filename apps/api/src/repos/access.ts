@@ -14,7 +14,20 @@ export function canEdit(repo: Repo, session: SessionLike): boolean {
 	return isOwner(repo, { id: session.user.id, orgIds: session.orgIds }) || session.user.role === "admin";
 }
 
-/** Published repos are public; others only to the owner and admins. */
+/** #366: anyone may read a public repo (published ones always are); others only the owner and admins. */
+export function isPublic(repo: Pick<Repo, "state" | "visibility">): boolean {
+	return repo.state === "published" || (repo.visibility === "public" && repo.state !== "removed");
+}
+
 export function canView(repo: Repo, session: SessionLike): boolean {
-	return repo.state === "published" || canEdit(repo, session);
+	return isPublic(repo) || canEdit(repo, session);
+}
+
+/**
+ * #366: may read any branch, tag or commit in the code browser: owners and admins, and everyone
+ * for a public repo, except a paid app, whose visitors see only its published version.
+ */
+export function canBrowse(repo: Repo, session: SessionLike): boolean {
+	if (canEdit(repo, session)) return true;
+	return repo.visibility === "public" && repo.state !== "removed" && !(repo.state === "published" && repo.priceCents > 0);
 }

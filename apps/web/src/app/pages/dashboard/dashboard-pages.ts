@@ -17,7 +17,7 @@ import { Developer } from '../../api/developer';
 import { RepoCard } from '../../components/repo-card/repo-card';
 import { RuntimeBadge } from '../../components/runtime-badge/runtime-badge';
 import { Seo } from '../../seo/seo';
-import { STATE_LABELS } from '../state-labels';
+import { STATE_LABELS, VISIBILITY_LABELS } from '../state-labels';
 import { DashboardCounts } from './dashboard';
 
 function setPage(title: string, path: string, description: string): void {
@@ -33,6 +33,7 @@ function setPage(title: string, path: string, description: string): void {
 })
 export class DashboardRepositories {
   protected readonly states = STATE_LABELS;
+  protected readonly visibility = VISIBILITY_LABELS;
   protected readonly repos = toSignal(inject(Developer).mine().pipe(catchError(() => of(null))));
   protected readonly impacts = toSignal(inject(HttpClient)
     .get<{ items: { id: string; kind: string; target: string; affected: string | null; title: string; guidance: string; repos: { repo: string; detail: string | null }[] }[] }>('/api/me/impacts')

@@ -1,0 +1,29 @@
+mat-card-content {
+  padding-top: 1rem;
+}
+
+mat-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option {
+  display: block;
+  font: var(--mat-sys-title-small);
+}
+
+.help,
+.hint {
+  display: block;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.hint {
+  margin: 0.75rem 0 0;
+}
+
+mat-card-actions {
+  padding: 0.5rem 1rem 1rem;
+}

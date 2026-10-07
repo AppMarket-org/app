@@ -1,7 +1,7 @@
 // Zod validation schemas. Server-side only: import from "@appmarket/shared/schemas".
 // Kept out of the main entry so the browser bundle does not include zod.
 import { z } from "zod";
-import { CATEGORIES, IOS_APP_STORE_URL, IOS_TESTFLIGHT_URL, REPO_SORTS, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
+import { CATEGORIES, IOS_APP_STORE_URL, IOS_TESTFLIGHT_URL, REPO_SORTS, REPO_VISIBILITIES, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
@@ -255,6 +255,8 @@ export const checkpointTranscriptSchema = checkpointRecordSchema.extend({
 export const checkpointPatchSchema = z
 	.object({ visibility: z.enum(CHECKPOINT_VISIBILITIES).optional(), add_prompt: z.string().trim().min(1).max(100_000).optional() })
 	.refine((p) => p.visibility || p.add_prompt, "Nothing to change");
+/** #366: who can read a repo. */
+export const repoVisibilitySchema = z.object({ visibility: z.enum(REPO_VISIBILITIES) });
 /** Repo default for new checkpoints, or one visibility for every checkpoint of a session. */
 export const checkpointVisibilitySchema = z.object({ visibility: z.enum(CHECKPOINT_VISIBILITIES) });
 export const sessionVisibilitySchema = z.object({ session: z.string().min(1).max(128), visibility: z.enum(CHECKPOINT_VISIBILITIES) });

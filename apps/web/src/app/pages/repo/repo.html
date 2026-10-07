@@ -102,8 +102,8 @@
         @if (d.repo.state !== 'published') {
           <section class="publication" aria-labelledby="publication-heading">
             <span class="eyebrow"
-              ><mat-icon aria-hidden="true">lock</mat-icon
-              >{{
+              ><mat-icon aria-hidden="true">{{ d.repo.visibility === 'public' && d.repo.state !== 'removed' ? 'public' : 'lock' }}</mat-icon
+              >{{ d.repo.visibility === 'public' && d.repo.state !== 'removed' ? 'Public · ' : '' }}{{
                 d.repo.state === 'submitted'
                   ? 'In review'
                   : d.repo.state === 'removed'
@@ -123,8 +123,13 @@
               }}
             </h2>
             <p>
-              This app is visible to its owner, workspace members, and admins. Marketplace
-              deployment becomes available after a version is approved.
+              @if (d.repo.visibility === 'public') {
+                Anyone can read this repo's code. It is not on the marketplace until a version is
+                approved.
+              } @else {
+                This repo is private: only its owner, workspace members, and admins see it. It is
+                not on the marketplace until a version is approved.
+              }
               @if (canManage()) { You can deploy it to your own Cloudflare account now. }
             </p>
             @if (canManage() && d.repo.state !== 'removed') {

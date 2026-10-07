@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { listBranches, listRefs, readDirectory, readPath, resolveRef, sourceFiles } from "../artifacts/git.ts";
 import type { AuthVariables } from "../auth/middleware.ts";
-import { canEdit, canView } from "./access.ts";
+import { canBrowse, canEdit, canView } from "./access.ts";
 import { pickBranch } from "./pick-branch.ts";
 import { RepoStore } from "./repository.ts";
 
@@ -12,21 +12,23 @@ const MAX_FILE = 1024 * 1024;
 const SAFE_PATH = /^(?!.*(^|\/)\.\.(\/|$))[^\0]{0,1024}$/;
 
 /**
- * Code browser. Everyone who can see the app reads its published version; owners and members can
- * also read any branch, tag or commit. Mounted under /api/repos.
+ * Code browser. Owners and members read any branch, tag or commit, and so does everyone for a
+ * public repo (#366, not a paid app); others read the published version. Visitors of a published app start at
+ * that version. Mounted under /api/repos.
  */
 async function target(c: { req: { param(n: string): string | undefined; query(n: string): string | undefined }; get(k: "session"): AuthVariables["session"] }) {
 	const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner")!, c.req.param("slug")!);
 	const session = c.get("session");
 	if (!repo?.gitRepo || !canView(repo, session)) return null;
 	const editor = canEdit(repo, session);
+	const browse = canBrowse(repo, session);
 	const asked = c.req.query("ref")?.trim();
 	let commit: string | null = null;
 	let ref: string;
-	if (editor && asked) {
+	if (browse && asked) {
 		commit = /^[0-9a-f]{40}$/.test(asked) ? asked : await resolveRef(repo.gitRepo, asked);
 		ref = asked;
-	} else if (!editor) {
+	} else if (!browse || (!editor && repo.state === "published" && repo.publishedCommit)) {
 		commit = repo.publishedCommit;
 		ref = repo.publishedTag ?? "";
 	} else {
@@ -37,7 +39,7 @@ async function target(c: { req: { param(n: string): string | undefined; query(n:
 		ref = pick?.name ?? defaultBranch;
 		commit = pick?.sha ?? null;
 	}
-	return { repo, editor, commit, ref };
+	return { repo, editor, browse, commit, ref };
 }
 
 export const codeRoutes = new Hono<Ctx>()
@@ -47,10 +49,10 @@ export const codeRoutes = new Hono<Ctx>()
 		const path = (c.req.query("path") ?? "").replace(/^\/+|\/+$/g, "");
 		if (!SAFE_PATH.test(path)) return c.json({ error: "invalid" }, 400);
 		c.header("Cache-Control", t.editor ? "private, no-store" : "public, max-age=300");
-		if (!t.commit) return c.json({ ref: t.ref, commit: null, path, entries: [], editor: t.editor, empty: true });
+		if (!t.commit) return c.json({ ref: t.ref, commit: null, path, entries: [], editor: t.editor, browse: t.browse, empty: true });
 		const entries = await readDirectory(t.repo.gitRepo!, t.commit, path);
 		if (!entries) return c.json({ error: "not_found" }, 404);
-		return c.json({ ref: t.ref, commit: t.commit, path, editor: t.editor, entries: entries.map(({ name, type }) => ({ name, type })) });
+		return c.json({ ref: t.ref, commit: t.commit, path, editor: t.editor, browse: t.browse, entries: entries.map(({ name, type }) => ({ name, type })) });
 	})
 	.get("/:owner/:slug/code/files", async (c) => {
 		const t = await target(c);
@@ -76,7 +78,8 @@ export const codeRoutes = new Hono<Ctx>()
 	})
 	.get("/:owner/:slug/code/branches", async (c) => {
 		const repo = await new RepoStore(env.DB).findByPath(c.req.param("owner"), c.req.param("slug"));
-		if (!repo?.gitRepo || !canEdit(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const session = c.get("session");
+		if (!repo?.gitRepo || !canBrowse(repo, session)) return c.json({ error: "not_found" }, 404);
 		const { defaultBranch, refs } = await listRefs(repo.gitRepo);
 		const names = Object.keys(refs);
 		const branches = names.filter((ref) => ref.startsWith("refs/heads/")).map((ref) => ref.slice(11));

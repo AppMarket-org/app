@@ -1,6 +1,6 @@
 import { HttpClient, type HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { Repo, RepoEvent, RepoUpdate, Release, ReleasePlatform, GitToken, Screenshot, TokenRecord, TransitionRequest } from '@appmarket/shared';
+import type { Repo, RepoEvent, RepoUpdate, RepoVisibility, Release, ReleasePlatform, GitToken, Screenshot, TokenRecord, TransitionRequest } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** Owner-side API for the developer dashboard (PRD R16). */
@@ -27,6 +27,11 @@ export class Developer {
 
   transition(path: string, request: TransitionRequest): Observable<Repo> {
     return this.http.post<Repo>(`/api/repos/${path}/transitions`, request);
+  }
+
+  /** #366: private or public. */
+  setVisibility(path: string, visibility: RepoVisibility): Observable<Repo> {
+    return this.http.put<Repo>(`/api/repos/${path}/visibility`, { visibility });
   }
 
   update(path: string, update: RepoUpdate): Observable<Repo> {

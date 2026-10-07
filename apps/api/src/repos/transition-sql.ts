@@ -20,9 +20,9 @@ export function transitionUpdate(
 			request.to === "submitted" ? [request.tag, submittedCommit, request.releaseNotes, submittedChecks] : [null, null, null, null],
 		],
 		draft: [CLEAR_SUBMITTED, []],
-		// D3: the reviewed version's manifest becomes the repo's.
+		// D3: the reviewed version's manifest becomes the repo's. #366: a published repo is public.
 		published: [
-			`published_tag = submitted_tag, published_commit = submitted_commit, published_manifest = json_extract(submitted_checks, '$.manifest'), published_pwa = json_extract(submitted_checks, '$.pwa'), ${CLEAR_SUBMITTED}, approved_by = ?`,
+			`visibility = 'public', published_tag = submitted_tag, published_commit = submitted_commit, published_manifest = json_extract(submitted_checks, '$.manifest'), published_pwa = json_extract(submitted_checks, '$.pwa'), ${CLEAR_SUBMITTED}, approved_by = ?`,
 			[actorId],
 		],
 		unpublished: [CLEAR_SUBMITTED, []],
