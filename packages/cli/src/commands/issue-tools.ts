@@ -35,7 +35,8 @@ export async function callIssueTool(name: string, args: Record<string, unknown>,
 			}
 			case "issue_comment": {
 				if (typeof args.body !== "string" || !args.body.trim()) return text("body is required.", true);
-				await ctx.call(`${issuePath(ctx, args.number)}/comments`, { method: "POST", body: { body: args.body } });
+				// From an agent session, the comment names the agent.
+				await ctx.call(`${issuePath(ctx, args.number)}/comments`, { method: "POST", body: { body: args.body, ...(ctx.agent ? { agent: ctx.agent } : {}) } });
 				return text(`Commented on #${args.number}.`);
 			}
 			default:

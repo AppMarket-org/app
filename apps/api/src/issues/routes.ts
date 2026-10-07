@@ -1,4 +1,4 @@
-import { ISSUE_LIMITS, type Issue, type IssueAssignee, type IssueComment, type IssueCloseReason, type IssuePriority, type IssueState, type IssueType, type IssueWork, parseIssueInput, redactSecrets, type Repo } from "@appmarket/shared";
+import { HARNESS_LABELS, ISSUE_LIMITS, type Issue, type IssueAssignee, type IssueComment, type IssueCloseReason, type IssuePriority, type IssueState, type IssueType, type IssueWork, parseIssueInput, redactSecrets, type Repo } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { AppSession, AuthVariables } from "../auth/middleware.ts";
@@ -196,14 +196,15 @@ export const issueRoutes = new Hono<Ctx>()
 		if (!repo || !row) return notFound(c);
 		const session = c.get("session");
 		const editor = canEdit(repo, session);
-		const { results } = await env.DB.prepare(`SELECT c.*, u.name AS author FROM issue_comments c LEFT JOIN "user" u ON u.id = c.author_id WHERE c.issue_id = ? AND c.deleted_at IS NULL ORDER BY c.created_at LIMIT 1000`)
+		const { results } = await env.DB.prepare(`SELECT c.*, u.name AS author, s.harness FROM issue_comments c LEFT JOIN "user" u ON u.id = c.author_id LEFT JOIN agent_sessions s ON s.id = c.agent_session_id WHERE c.issue_id = ? AND c.deleted_at IS NULL ORDER BY c.created_at LIMIT 1000`)
 			.bind(row.id)
-			.all<{ id: string; author_id: string; author: string | null; body: string; created_at: string; updated_at: string }>();
+			.all<{ id: string; author_id: string; author: string | null; harness: string | null; body: string; created_at: string; updated_at: string }>();
 		return c.json({
 			items: results.map(
 				(r): IssueComment => ({
 					id: r.id,
 					author: r.author ?? "",
+					agent: r.harness ? (HARNESS_LABELS[r.harness] ?? "An agent") : null,
 					body: r.body,
 					createdAt: r.created_at,
 					updatedAt: r.updated_at,
@@ -224,9 +225,14 @@ export const issueRoutes = new Hono<Ctx>()
 		if (!success) return c.json({ error: "rate_limited", retryAfter: 60 }, 429, { "Retry-After": "60" });
 		const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
 		if (typeof body.body !== "string" || !body.body.trim() || body.body.length > ISSUE_LIMITS.comment) return invalid(c, `A comment is 1 to ${ISSUE_LIMITS.comment} characters.`);
+		// An agent posting from its agent session (this repo's, started by this user) is named on the comment.
+		const agent =
+			typeof body.agent === "string" && body.agent
+				? await env.DB.prepare("SELECT id FROM agent_sessions WHERE id = ? AND repo_id = ? AND user_id = ? AND status = 'active'").bind(body.agent, repo.id, session.user.id).first<{ id: string }>()
+				: null;
 		const id = crypto.randomUUID();
 		await env.DB.batch([
-			env.DB.prepare("INSERT INTO issue_comments (id, issue_id, author_id, body) VALUES (?, ?, ?, ?)").bind(id, row.id, session.user.id, redactSecrets(body.body.trim()).text),
+			env.DB.prepare("INSERT INTO issue_comments (id, issue_id, author_id, body, agent_session_id) VALUES (?, ?, ?, ?, ?)").bind(id, row.id, session.user.id, redactSecrets(body.body.trim()).text, agent?.id ?? null),
 			env.DB.prepare("UPDATE issues SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.id),
 		]);
 		// #298: the author, the assignee and everyone who commented.

@@ -54,7 +54,15 @@
 
         @for (c of comments(); track c.id) {
           <mat-card appearance="outlined">
-            <mat-card-header><mat-card-title>{{ c.author }}</mat-card-title><mat-card-subtitle>{{ c.createdAt | date: 'medium' }}</mat-card-subtitle></mat-card-header>
+            @if (c.agent) {
+              <mat-card-header class="agent">
+                <mat-icon mat-card-avatar aria-hidden="true">smart_toy</mat-icon>
+                <mat-card-title>{{ c.agent }}</mat-card-title>
+                <mat-card-subtitle>Agent for {{ c.author }} · {{ c.createdAt | date: 'medium' }}</mat-card-subtitle>
+              </mat-card-header>
+            } @else {
+              <mat-card-header><mat-card-title>{{ c.author }}</mat-card-title><mat-card-subtitle>{{ c.createdAt | date: 'medium' }}</mat-card-subtitle></mat-card-header>
+            }
             <mat-card-content><app-markdown [source]="c.body" [shiftHeadings]="false" /></mat-card-content>
             @if (c.canDelete) {
               <mat-card-actions align="end"><button mat-button type="button" (click)="remove(c)" [disabled]="busy()">Delete</button></mat-card-actions>

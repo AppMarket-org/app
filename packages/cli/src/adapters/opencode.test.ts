@@ -119,7 +119,7 @@ describe("OpenCode adapter (#119)", () => {
 		expect(existsSync(join(home, "sessions"))).toBe(false);
 		execFileSync("git", ["-C", repo, "config", "appmarket.repo", "dev/app"]);
 		expect(await send(repo)).toBe(0);
-		const buffer = readFileSync(join(home, "sessions", "dev__app.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { type: string; harness: string });
+		const buffer = readFileSync(join(home, "sessions", readdirSync(join(home, "sessions")).find((f) => /^dev__app__[0-9a-f]{8}\.jsonl$/.test(f))!), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { type: string; harness: string });
 		expect(buffer.map((e) => `${e.harness}:${e.type}`)).toEqual(["opencode:prompt", "opencode:settings"]);
 		expect(await hook("opencode", "not json")).toBe(0);
 	});

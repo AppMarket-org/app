@@ -32,10 +32,15 @@ export interface BufferEvent {
 
 const ROTATE_BYTES = 50 * 1024 * 1024;
 
-/** The buffer for a repo: keyed by the appmarket repo (owner/slug) once initialised, else by its path. */
+/**
+ * The buffer for a checkout: keyed by the appmarket repo (owner/slug) once initialised, else by its
+ * path, and by the checkout itself, so two agents in two clones of one repo on the same machine
+ * (agent sessions) never mix their events.
+ */
 export function bufferKey(root: string): string {
 	const repo = gitOr(["config", "--get", "appmarket.repo"], "", { cwd: root });
-	return repo ? repo.replace(/[^A-Za-z0-9_-]+/g, "__") : `path-${createHash("sha256").update(root).digest("hex").slice(0, 16)}`;
+	const where = createHash("sha256").update(root).digest("hex");
+	return repo ? `${repo.replace(/[^A-Za-z0-9_-]+/g, "__")}__${where.slice(0, 8)}` : `path-${where.slice(0, 16)}`;
 }
 
 const paths = (key: string) => ({ buffer: join(SESSIONS_DIR, `${key}.jsonl`), marker: join(SESSIONS_DIR, `${key}.offset`) });
