@@ -35,6 +35,9 @@
     }
     @case (null) {
       <p class="hint" role="alert">{{ error() }}</p>
+      @if (error() !== 'This repo has no commits yet.') {
+        <button mat-stroked-button type="button" class="retry" (click)="retry()"><mat-icon>refresh</mat-icon>Try again</button>
+      }
     }
     @default {
       @let g = graph()!;

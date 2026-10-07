@@ -142,6 +142,10 @@ export class CodeGraphPage {
     });
   }
 
+  protected retry(): void {
+    void this.load(this.path());
+  }
+
   private async load(path: string): Promise<void> {
     this.map.set(undefined);
     this.error.set(null);

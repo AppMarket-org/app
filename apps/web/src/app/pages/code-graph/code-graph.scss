@@ -2,6 +2,69 @@
   padding: 1rem 0 2rem;
 }
 
+// In the signed-in workspace the page fills the window below the toolbar: the map and the side
+// list take the remaining height and only the side list scrolls, never the page as well.
+:host-context(main.workspace) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 4rem - 2 * var(--app-page-padding));
+  min-height: 32rem;
+
+  .page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 0;
+  }
+
+  .layout {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .canvas {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .map {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+
+  .side {
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 64rem) {
+  :host-context(main.workspace) {
+    display: block;
+    height: auto;
+
+    .layout {
+      grid-template-rows: none;
+    }
+
+    .map {
+      height: min(70dvh, 46rem);
+    }
+
+    .side {
+      overflow: visible;
+    }
+  }
+}
+
+.retry {
+  margin-top: 0.5rem;
+}
+
 .head {
   display: flex;
   flex-wrap: wrap;

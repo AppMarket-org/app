@@ -42,7 +42,7 @@ interface CodeFile {
  */
 @Component({
   selector: 'app-code',
-  host: { '[class.embedded]': 'embedded()' },
+  host: { '[class.embedded]': 'embedded()', '[class.viewing]': '!!file()' },
   imports: [
     MatButtonModule,
     MatIconModule,
