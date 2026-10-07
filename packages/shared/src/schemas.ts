@@ -1,7 +1,7 @@
 // Zod validation schemas. Server-side only: import from "@appmarket/shared/schemas".
 // Kept out of the main entry so the browser bundle does not include zod.
 import { z } from "zod";
-import { CATEGORIES, REPO_SORTS, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
+import { CATEGORIES, IOS_APP_STORE_URL, IOS_TESTFLIGHT_URL, REPO_SORTS, RUNTIMES, TARGET_PLATFORMS, type CategorySlug, type Runtime } from "./repo";
 import { RELEASE_PLATFORMS, type ReleasePlatform } from "./releases";
 import { REPORT_REASONS, type ReportReason } from "./reports";
 import { TOKEN_TTL } from "./tokens";
@@ -44,6 +44,22 @@ const repoFields = {
 		.regex(/^https:\/\/[^\s/$.?#][^\s]*$/, "Use an https:// address.")
 		.nullable()
 		.or(z.literal("").transform(() => null)),
+	/** #43 (M4): the app's App Store page, for repos that ship an iOS app the developer submitted to Apple. */
+	iosAppStoreUrl: z
+		.string()
+		.trim()
+		.max(300)
+		.regex(IOS_APP_STORE_URL, "Use the app's App Store address, like https://apps.apple.com/us/app/my-app/id123456789.")
+		.nullable()
+		.or(z.literal("").transform(() => null)),
+	/** #43: a public TestFlight invite, for beta testers. */
+	iosTestflightUrl: z
+		.string()
+		.trim()
+		.max(100)
+		.regex(IOS_TESTFLIGHT_URL, "Use a public TestFlight link, like https://testflight.apple.com/join/AbCd1234.")
+		.nullable()
+		.or(z.literal("").transform(() => null)),
 };
 
 export const repoInputSchema = z.object({
@@ -69,6 +85,8 @@ export const repoInputSchema = z.object({
 	platforms: repoFields.platforms.default(["workers"]),
 	license: repoFields.license.default(null),
 	demoUrl: repoFields.demoUrl.default(null),
+	iosAppStoreUrl: repoFields.iosAppStoreUrl.default(null),
+	iosTestflightUrl: repoFields.iosTestflightUrl.default(null),
 });
 export type RepoInput = z.infer<typeof repoInputSchema>;
 /** Built from the fields without defaults: Zod 4 applies defaults inside .partial(), which would reset omitted fields. */

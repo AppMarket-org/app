@@ -21,7 +21,7 @@ describe('RepoForm', () => {
     const { cmp, emitted } = setup();
     cmp.form.patchValue({ name: 'My App', summary: 'Does useful things', category: 'ai', license: '  ' });
     cmp.submit();
-    expect(emitted).toEqual([{ name: 'My App', summary: 'Does useful things', description: '', category: 'ai', platforms: ['workers'], license: null, demoUrl: null }]);
+    expect(emitted).toEqual([{ name: 'My App', summary: 'Does useful things', description: '', category: 'ai', platforms: ['workers'], license: null, demoUrl: null, iosAppStoreUrl: null, iosTestflightUrl: null }]);
   });
 
   it('accepts a license with surrounding spaces, trimmed', () => {
@@ -36,6 +36,23 @@ describe('RepoForm', () => {
     cmp.form.patchValue({ name: 'x', summary: 'short', license: 'not a license!' });
     cmp.submit();
     expect(emitted).toEqual([]);
+  });
+
+  it('shows the iOS links only for iOS, validates them, and clears them when iOS is unticked (#43)', () => {
+    const { fixture, cmp, emitted } = setup();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('App Store link');
+    cmp.form.patchValue({ name: 'My App', summary: 'Does useful things', category: 'ai', platforms: ['workers', 'ios'], iosAppStoreUrl: 'https://example.com/app' });
+    fixture.detectChanges();
+    expect(el.textContent).toContain('App Store link');
+    cmp.submit();
+    expect(emitted).toEqual([]);
+    cmp.form.patchValue({ iosAppStoreUrl: ' https://apps.apple.com/us/app/my-app/id1234567890 ', iosTestflightUrl: 'https://testflight.apple.com/join/AbCd1234' });
+    cmp.submit();
+    expect(emitted[0]).toMatchObject({ iosAppStoreUrl: 'https://apps.apple.com/us/app/my-app/id1234567890', iosTestflightUrl: 'https://testflight.apple.com/join/AbCd1234' });
+    cmp.form.patchValue({ platforms: ['workers'] });
+    cmp.submit();
+    expect(emitted[1]).toMatchObject({ platforms: ['workers'], iosAppStoreUrl: null, iosTestflightUrl: null });
   });
 
   it('prefills from an existing repo and shows server field errors', () => {

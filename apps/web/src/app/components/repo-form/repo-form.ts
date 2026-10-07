@@ -5,7 +5,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { CATEGORIES, TARGET_PLATFORMS, type Repo, type RepoInput } from '@appmarket/shared';
+import { CATEGORIES, IOS_APP_STORE_URL, IOS_TESTFLIGHT_URL, TARGET_PLATFORMS, type Repo, type RepoInput } from '@appmarket/shared';
 
 /** What the form edits; the runtime is detected from the code, never entered. */
 export type RepoFormValue = Omit<RepoInput, 'runtime'>;
@@ -24,6 +24,14 @@ const SPDX = /^[A-Za-z0-9.+-]+( (AND|OR|WITH) [A-Za-z0-9.+-]+)*$/;
 function licenseValidator(control: AbstractControl<string>): ValidationErrors | null {
   const value = control.value.trim();
   return !value || SPDX.test(value) ? null : { pattern: true };
+}
+
+/** An optional field: empty, or matching `pattern` once trimmed (as the API checks it). */
+function optionalPattern(pattern: RegExp) {
+  return (control: AbstractControl<string>): ValidationErrors | null => {
+    const value = control.value.trim();
+    return !value || pattern.test(value) ? null : { pattern: true };
+  };
 }
 
 /** Repo details form, shared by create and edit (PRD R1, R24, R26). Validation mirrors the API. */
@@ -56,6 +64,9 @@ export class RepoForm {
     platforms: [['workers'] as string[], [Validators.required]],
     license: ['', [Validators.maxLength(64), licenseValidator]],
     demoUrl: ['', [Validators.maxLength(300), Validators.pattern(/^\s*(https:\/\/\S+)?\s*$/)]],
+    // #43: shown while iOS is a platform.
+    iosAppStoreUrl: ['', [Validators.maxLength(300), optionalPattern(IOS_APP_STORE_URL)]],
+    iosTestflightUrl: ['', [Validators.maxLength(100), optionalPattern(IOS_TESTFLIGHT_URL)]],
   });
 
 
@@ -63,7 +74,7 @@ export class RepoForm {
     effect(() => {
       const l = this.initial();
       if (l) {
-        this.form.reset({ name: l.name, summary: l.summary, description: l.description, category: l.category, platforms: [...l.platforms], license: l.license ?? '', demoUrl: l.demoUrl ?? '' });
+        this.form.reset({ name: l.name, summary: l.summary, description: l.description, category: l.category, platforms: [...l.platforms], license: l.license ?? '', demoUrl: l.demoUrl ?? '', iosAppStoreUrl: l.iosAppStoreUrl ?? '', iosTestflightUrl: l.iosTestflightUrl ?? '' });
       }
     });
     effect(() => {
@@ -93,6 +104,9 @@ export class RepoForm {
       platforms: v.platforms as RepoInput['platforms'],
       license: v.license.trim() || null,
       demoUrl: v.demoUrl.trim() || null,
+      // Links for a platform the repo no longer targets are cleared.
+      iosAppStoreUrl: (v.platforms.includes('ios') && v.iosAppStoreUrl.trim()) || null,
+      iosTestflightUrl: (v.platforms.includes('ios') && v.iosTestflightUrl.trim()) || null,
       name: v.name.trim(),
       summary: v.summary.trim(),
     });

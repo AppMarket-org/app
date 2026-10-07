@@ -37,6 +37,10 @@ export function canTransition(from: RepoState, to: RepoState, actor?: Transition
 export const TARGET_PLATFORMS = ["workers", "pwa", "android", "ios", "download"] as const;
 export type TargetPlatform = (typeof TARGET_PLATFORMS)[number];
 
+/** #43 (M4): App Store pages (any storefront, with or without the app's name) and TestFlight invites. */
+export const IOS_APP_STORE_URL = /^https:\/\/apps\.apple\.com\/(?:[a-z]{2}\/)?app\/(?:[^\s/?#]+\/)?id\d{6,12}\/?(?:\?[^\s#]*)?$/;
+export const IOS_TESTFLIGHT_URL = /^https:\/\/testflight\.apple\.com\/join\/[A-Za-z0-9]{6,12}$/;
+
 /** PRD R26: how a repo runs on Cloudflare, and how well appmarket.org supports it. */
 export const RUNTIMES = {
 	"workers-js": { name: "JavaScript / TypeScript", tier: "supported", note: "Including Next.js, Astro, SvelteKit, Nuxt, React Router, Angular and other frameworks Cloudflare configures automatically." },
@@ -95,6 +99,9 @@ export interface Repo {
 	android: { package: string; verifiedAt: string } | null;
 	/** #32: live demo URL (also the web app install URL). */
 	demoUrl: string | null;
+	/** #43 (M4): where iOS users get the app; the developer submits it to Apple themselves. */
+	iosAppStoreUrl: string | null;
+	iosTestflightUrl: string | null;
 	/** #32: installability of the published version. */
 	pwa: PwaCheck | null;
 	/** D3: what deploying the published version creates. */

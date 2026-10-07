@@ -35,6 +35,30 @@ describe("repoUpdateSchema", () => {
 	});
 });
 
+describe("iOS links (#43)", () => {
+	const ok = (field: "iosAppStoreUrl" | "iosTestflightUrl", value: string) => repoUpdateSchema.safeParse({ [field]: value }).success;
+	it("accepts App Store pages and public TestFlight invites", () => {
+		expect(ok("iosAppStoreUrl", "https://apps.apple.com/us/app/my-app/id1234567890")).toBe(true);
+		expect(ok("iosAppStoreUrl", "https://apps.apple.com/app/id1234567890")).toBe(true);
+		expect(ok("iosAppStoreUrl", " https://apps.apple.com/gb/app/my-app/id123456789?platform=iphone ")).toBe(true);
+		expect(ok("iosTestflightUrl", "https://testflight.apple.com/join/AbCd1234")).toBe(true);
+		expect(repoUpdateSchema.parse({ iosAppStoreUrl: "", iosTestflightUrl: null })).toEqual({ iosAppStoreUrl: null, iosTestflightUrl: null });
+	});
+
+	it("refuses other addresses", () => {
+		expect(ok("iosAppStoreUrl", "http://apps.apple.com/us/app/my-app/id1234567890")).toBe(false);
+		expect(ok("iosAppStoreUrl", "https://apps.apple.com.evil.example/app/id1234567890")).toBe(false);
+		expect(ok("iosAppStoreUrl", "https://apps.apple.com/us/developer/someone/id1234567890")).toBe(false);
+		expect(ok("iosAppStoreUrl", "https://play.google.com/store/apps/details?id=x")).toBe(false);
+		expect(ok("iosTestflightUrl", "https://testflight.apple.com/v1/app/123")).toBe(false);
+		expect(ok("iosTestflightUrl", "https://testflight.apple.com/join/AbCd1234/../x")).toBe(false);
+	});
+
+	it("defaults to no links on create", () => {
+		expect(repoInputSchema.parse({ name: "My App", summary: "Does useful things", category: "ai" })).toMatchObject({ iosAppStoreUrl: null, iosTestflightUrl: null });
+	});
+});
+
 describe("repoSearchSchema", () => {
 	it("coerces paging and caps page size", () => {
 		expect(repoSearchSchema.parse({ page: "2" })).toMatchObject({ page: 2, pageSize: 20 });

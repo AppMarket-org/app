@@ -26,6 +26,19 @@ fieldset {
   }
 }
 
+// #43: the iOS links stack, full width.
+fieldset.ios {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.hint {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
 .error {
   color: var(--mat-sys-error);
   margin: 0;
