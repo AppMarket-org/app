@@ -7,4 +7,4 @@ export const assigneeLabel = (issue: Pick<Issue, 'assignee'>): string =>
 
 /** Open, closed as completed, or closed as not planned. */
 export const stateIcon = (issue: Pick<Issue, 'state' | 'reason'>): string =>
-  issue.state === 'open' ? 'radio_button_unchecked' : issue.reason === 'not_planned' ? 'block' : 'check_circle';
+  issue.state === 'open' ? 'confirmation_number' : issue.reason === 'not_planned' ? 'block' : 'check_circle';
