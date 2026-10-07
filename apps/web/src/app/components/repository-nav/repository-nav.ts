@@ -49,7 +49,7 @@ export class RepositoryNav {
     const publicRoot = ['/', this.owner(), this.slug()];
     return [
       { id: 'code', label: 'Code', icon: 'code', link: this.managed() ? root : [...publicRoot, 'code'], query: {} },
-      { id: 'issues', label: 'Issues', icon: 'radio_button_unchecked', link: [...publicRoot, 'issues'], query: {} },
+      { id: 'issues', label: 'Issues', icon: 'confirmation_number', link: [...publicRoot, 'issues'], query: {} },
       { id: 'pulls', label: 'Pull requests', icon: 'call_split', link: [...publicRoot, 'pulls'], query: {} },
       ...(this.managed() ? [
         { id: 'agents', label: 'Agents', icon: 'smart_toy', link: [...root, 'agents'], query: {} },
