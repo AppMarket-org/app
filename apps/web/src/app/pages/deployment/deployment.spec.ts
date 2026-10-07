@@ -54,6 +54,26 @@ describe('DeploymentPage', () => {
     expect(el.textContent).not.toContain('Deploy steps');
   });
 
+  it('follows the domains Cloudflare reports when the Domains tab loads them', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: base.id }) } } },
+        { provide: DeploymentsApi, useValue: { get: vi.fn(() => of(base)), logs: vi.fn(() => of('')) } },
+        { provide: HttpClient, useValue: { get: vi.fn((url: string) => of(url.endsWith('/domains') ? { zones: [], domains: [{ id: 'd1', hostname: 'bombfind.com', zoneName: 'bombfind.com' }] } : { active: true })) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DeploymentPage);
+    fixture.detectChanges();
+    for (let i = 0; i < 5; i++) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.links a')?.getAttribute('href')).toBe('https://bombfind.com');
+  });
+
   it('without a custom domain it opens workers.dev', async () => {
     const el = await render(base);
     expect([...el.querySelectorAll('.links a')].map((a) => a.getAttribute('href'))).toEqual(['https://bombfind.cport1.workers.dev']);
