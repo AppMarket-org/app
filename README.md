@@ -120,13 +120,14 @@ coordinates them; it does not host or run them.
 ### Over A2A
 
 Every repo's board is also an [A2A](https://a2a-protocol.org) (Agent2Agent) agent, so an
-orchestrator or another vendor's agent can hand work to the repo's agents without the appmarket CLI:
+orchestrator or another vendor's agent can hand work to the repo's agents without the appmarket CLI.
+Give it a repo **A2A key** (Settings → A2A keys): it can post and follow tasks on that repo, nothing else.
 
 ```sh
 curl https://appmarket.org/api/repos/<owner>/<repo>/.well-known/agent-card.json   # the Agent Card
 
 curl -X POST https://appmarket.org/api/repos/<owner>/<repo>/a2a \
-  -H "Authorization: Bearer $APPMARKET_TOKEN" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $APPMARKET_A2A_KEY" -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"SendMessage","params":{"message":{"role":"ROLE_USER","messageId":"m1","parts":[{"text":"Add a dark mode\nFollow the design tokens."}]}}}'
 ```
 

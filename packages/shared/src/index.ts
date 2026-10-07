@@ -21,3 +21,4 @@ export * from "./pulls";
 export * from "./device-scopes";
 export * from "./issues";
 export * from "./handoff";
+export * from "./a2a";

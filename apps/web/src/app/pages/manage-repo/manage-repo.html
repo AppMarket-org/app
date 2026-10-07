@@ -299,6 +299,9 @@
     <div class="grid">
       @if (l.state !== 'removed') {
         <app-visibility-card [repo]="l" (changed)="repo.set($event)" />
+        @if (!l.sessionOf) {
+          <app-a2a-keys-card [path]="l.fullName" />
+        }
         <mat-card appearance="outlined" class="push-card">
           <mat-card-header>
             <mat-card-title>Push your code</mat-card-title>

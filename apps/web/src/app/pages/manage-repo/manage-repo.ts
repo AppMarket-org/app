@@ -32,6 +32,7 @@ import { Conformance } from '../../components/conformance/conformance';
 import { ExportCard } from './export-card/export-card';
 import { PreviewsCard } from './previews-card/previews-card';
 import { VisibilityCard } from './visibility-card/visibility-card';
+import { A2aKeysCard } from './a2a-keys-card/a2a-keys-card';
 import { PriceCard } from './price-card/price-card';
 import { SessionsCard } from './sessions-card/sessions-card';
 import { WebhooksCard } from './webhooks-card/webhooks-card';
@@ -45,6 +46,7 @@ import { STATE_LABELS, VISIBILITY_LABELS } from '../state-labels';
   selector: 'app-manage-repo',
   imports: [
     VisibilityCard,
+    A2aKeysCard,
     DatePipe,
     ReactiveFormsModule,
     RouterLink,
