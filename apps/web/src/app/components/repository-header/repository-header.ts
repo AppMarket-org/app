@@ -10,7 +10,7 @@ import type { Repo } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { Developer } from '../../api/developer';
 import { CowbellButton } from '../cowbell-button/cowbell-button';
-import { STATE_LABELS } from '../../pages/state-labels';
+import { STATE_LABELS, VISIBILITY_LABELS } from '../../pages/state-labels';
 
 @Component({
   selector: 'app-repository-header',
@@ -31,6 +31,7 @@ export class RepositoryHeader {
   protected readonly cloneUrl = computed(() => this.remote() === undefined ? this.fetchedRemote() : this.remote());
   protected readonly path = computed(() => `${this.owner()}/${this.slug()}`);
   protected readonly states = STATE_LABELS;
+  protected readonly visibility = VISIBILITY_LABELS;
   private readonly api = inject(Developer);
   private readonly clipboard = inject(Clipboard);
   private readonly snackBar = inject(MatSnackBar);

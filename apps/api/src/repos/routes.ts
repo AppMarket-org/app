@@ -1,5 +1,5 @@
 import { ANDROID_PACKAGE, MAX_REPOS_PER_DEVELOPER, SCREENSHOT_LIMITS, TOKEN_TTL, canTransition, type Repo, type GitToken, type Role, type TransitionActor } from "@appmarket/shared";
-import { repoInputSchema, repoSearchSchema, repoUpdateSchema, tokenRequestSchema, transitionSchema } from "@appmarket/shared/schemas";
+import { repoInputSchema, repoSearchSchema, repoUpdateSchema, repoVisibilitySchema, tokenRequestSchema, transitionSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
@@ -188,6 +188,20 @@ export const repoRoutes = new Hono<{ Variables: AuthVariables }>()
 		if (!update.success) return c.json(invalid(update.error), 400);
 		await store.update(repo.id, update.data);
 		if (repo.state === "published") c.executionCtx.waitUntil(purgeRepoPage(repo.fullName));
+		return c.json(await store.findById(repo.id));
+	})
+	// #366: who can read the repo. A published repo stays public; it is unpublished first.
+	.put("/:owner/:slug/visibility", requireRole(), async (c) => {
+		const store = repos();
+		const repo = await store.findByPath(c.req.param("owner"), c.req.param("slug"));
+		const session = c.get("session")!;
+		if (!repo || !canEdit(repo, session)) return c.json({ error: "not_found" }, 404);
+		if (repo.state === "removed") return c.json({ error: "removed" }, 409);
+		const body = repoVisibilitySchema.safeParse(await c.req.json().catch(() => null));
+		if (!body.success) return c.json(invalid(body.error), 400);
+		if (body.data.visibility === "private" && repo.state === "published") return c.json({ error: "published", message: "A published app is public. Unpublish it first to make the repo private." }, 409);
+		await store.setVisibility(repo.id, body.data.visibility);
+		logEvent("repo.visibility", { repo: repo.fullName, visibility: body.data.visibility, user: session.user.id });
 		return c.json(await store.findById(repo.id));
 	})
 	// PRD R12: lifecycle. Owners submit a tag, withdraw, unpublish or remove; admins publish (approve).

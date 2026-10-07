@@ -2,6 +2,10 @@ import type { CheckpointVisibility } from "./checkpoints";
 import type { OwnerKind } from "./owners";
 import type { ContractIssue, DeployManifest, PwaCheck } from "./manifest";
 
+/** #366: private repos are readable by their owner, its organization's members and admins; public ones by anyone. */
+export const REPO_VISIBILITIES = ["private", "public"] as const;
+export type RepoVisibility = (typeof REPO_VISIBILITIES)[number];
+
 // Repo lifecycle (PRD R12). A published version pins to a Git tag in the app's Artifacts repo.
 export const REPO_STATES = ["draft", "submitted", "published", "unpublished", "removed"] as const;
 export type RepoState = (typeof REPO_STATES)[number];
@@ -117,6 +121,8 @@ export interface Repo {
 	languages: Record<string, number> | null;
 	/** Checkpoints PRD: default visibility for new checkpoints on this repo. */
 	checkpointVisibility: CheckpointVisibility;
+	/** #366: who can read it. Published repos are always public. */
+	visibility: RepoVisibility;
 	/** Cowbells (appmarket's stars) from signed-in users. */
 	cowbells: number;
 	updatedAt: string;

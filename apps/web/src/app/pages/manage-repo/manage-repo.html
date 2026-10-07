@@ -69,7 +69,7 @@
           </div>
           <a mat-button [routerLink]="['/dashboard/repos', owner(), slug(), 'checkpoints']"><mat-icon>history</mat-icon>Commit checkpoints</a>
           <a mat-button [routerLink]="[]" [queryParams]="{tab:'marketplace'}"><mat-icon>storefront</mat-icon>{{ l.publishedTag ? 'Version ' + l.publishedTag : 'Prepare app listing' }}</a>
-          <div class="visibility-note"><mat-icon aria-hidden="true">{{ l.state === 'published' ? 'public' : 'lock' }}</mat-icon><p>{{ states[l.state].help }}</p></div>
+          <div class="visibility-note"><mat-icon aria-hidden="true">{{ l.visibility === 'public' ? 'public' : 'lock' }}</mat-icon><p>{{ visibilityLabels[l.visibility || 'private'].help }} {{ states[l.state].help }}</p></div>
         </aside>
       </section>
     }
@@ -293,11 +293,12 @@
 
       <div>
         <h2 id="access-history-heading">Repository settings</h2>
-        <p>Manage repository access and review its activity.</p>
+        <p>Who can read the repo, Git access, and its activity.</p>
       </div>
     </div>
     <div class="grid">
       @if (l.state !== 'removed') {
+        <app-visibility-card [repo]="l" (changed)="repo.set($event)" />
         <mat-card appearance="outlined" class="push-card">
           <mat-card-header>
             <mat-card-title>Push your code</mat-card-title>

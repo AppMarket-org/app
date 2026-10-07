@@ -31,18 +31,20 @@ import { ChecksCard } from './checks-card/checks-card';
 import { Conformance } from '../../components/conformance/conformance';
 import { ExportCard } from './export-card/export-card';
 import { PreviewsCard } from './previews-card/previews-card';
+import { VisibilityCard } from './visibility-card/visibility-card';
 import { PriceCard } from './price-card/price-card';
 import { SessionsCard } from './sessions-card/sessions-card';
 import { WebhooksCard } from './webhooks-card/webhooks-card';
 import { PullSettingsCard } from './pull-settings-card/pull-settings-card';
 import { Seo } from '../../seo/seo';
 import { describeRepoError } from '../repo-errors';
-import { STATE_LABELS } from '../state-labels';
+import { STATE_LABELS, VISIBILITY_LABELS } from '../state-labels';
 
 /** PRD R16/R12: one repo: its Git storage, push token, version submission, lifecycle actions and history. */
 @Component({
   selector: 'app-manage-repo',
   imports: [
+    VisibilityCard,
     DatePipe,
     ReactiveFormsModule,
     RouterLink,
@@ -98,6 +100,7 @@ export class ManageRepo {
   private readonly seo = inject(Seo);
 
   protected readonly states = STATE_LABELS;
+  protected readonly visibilityLabels = VISIBILITY_LABELS;
   protected readonly repo = signal<Repo | null>(null);
   protected readonly runtimeName = (r: keyof typeof RUNTIMES) => RUNTIMES[r].name;
   protected readonly remote = signal<string | null>(null);

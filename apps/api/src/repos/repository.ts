@@ -13,7 +13,7 @@ import type {
 	TransitionActor,
 	TransitionRequest,
 } from "@appmarket/shared";
-import { avatarUrl, slugify, type CheckpointVisibility, type OwnerKind } from "@appmarket/shared";
+import { avatarUrl, slugify, type CheckpointVisibility, type OwnerKind, type RepoVisibility } from "@appmarket/shared";
 import { buildSearchWhere } from "./search.ts";
 import { transitionUpdate } from "./transition-sql.ts";
 
@@ -60,6 +60,7 @@ interface RepoRow {
 	android_verified_at: string | null;
 	cowbell_count: number;
 	checkpoint_visibility: CheckpointVisibility;
+	visibility: RepoVisibility;
 	created_at: string;
 	updated_at: string;
 }
@@ -67,6 +68,9 @@ interface RepoRow {
 // The owner is a user or an organization (#102); users show their profile name.
 const SELECT = `SELECT l.*, (SELECT fo.handle || '/' || f.slug FROM repos f JOIN owners fo ON fo.id = f.owner_id WHERE f.id = l.forked_from) AS forked_from_path, o.handle AS owner_handle, o.kind AS owner_kind, COALESCE(o.name, u.name, o.handle) AS owner_name, o.avatar_id AS owner_avatar_id, u.image AS owner_image
 	FROM repos l JOIN owners o ON o.id = l.owner_id LEFT JOIN "user" u ON u.id = o.user_id`;
+
+/** #366: repos anyone can read (as access.ts canView for signed-out visitors). */
+const PUBLIC = "(l.state = 'published' OR (l.visibility = 'public' AND l.state != 'removed' AND l.session_of IS NULL))";
 
 function toRepo(row: RepoRow): Repo {
 	return {
@@ -98,6 +102,7 @@ function toRepo(row: RepoRow): Repo {
 		android: row.android_package && row.android_verified_at ? { package: row.android_package, verifiedAt: row.android_verified_at } : null,
 		cowbells: row.cowbell_count,
 		checkpointVisibility: row.checkpoint_visibility,
+		visibility: row.visibility,
 		importedFrom: row.imported_from,
 		sessionOf: row.session_of,
 		forkedFrom: row.forked_from_path ? { fullName: row.forked_from_path, tag: row.forked_tag, commit: row.forked_commit } : null,
@@ -160,29 +165,29 @@ export class RepoStore {
 		return results.map(toRepo);
 	}
 
-	/** An owner's public repos (owner pages). */
+	/** An owner's public repos, published or not (owner pages). */
 	async listPublicByOwner(ownerId: string): Promise<Repo[]> {
 		const { results } = await this.db
-			.prepare(`${SELECT} WHERE l.owner_id = ? AND l.state = 'published' ORDER BY l.cowbell_count DESC, l.updated_at DESC LIMIT 200`)
+			.prepare(`${SELECT} WHERE l.owner_id = ? AND ${PUBLIC} ORDER BY l.cowbell_count DESC, l.updated_at DESC LIMIT 200`)
 			.bind(ownerId)
 			.all<RepoRow>();
 		return results.map(toRepo);
 	}
 
-	/** Published repos of any of these owners (pin candidates, #142), most cowbells first. */
+	/** Public repos of any of these owners (pin candidates, #142), most cowbells first. */
 	async listPublicByOwners(ownerIds: string[]): Promise<Repo[]> {
 		if (!ownerIds.length) return [];
 		const { results } = await this.db
-			.prepare(`${SELECT} WHERE l.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND l.state = 'published' ORDER BY l.cowbell_count DESC, l.updated_at DESC LIMIT 500`)
+			.prepare(`${SELECT} WHERE l.owner_id IN (${ownerIds.map(() => "?").join(",")}) AND ${PUBLIC} ORDER BY l.cowbell_count DESC, l.updated_at DESC LIMIT 500`)
 			.bind(...ownerIds)
 			.all<RepoRow>();
 		return results.map(toRepo);
 	}
 
-	/** #142: an owner's pinned repos that are still published, in order. */
+	/** #142: an owner's pinned repos that are still public, in order. */
 	async pinned(ownerId: string): Promise<Repo[]> {
 		const { results } = await this.db
-			.prepare(`${SELECT} JOIN owner_pins p ON p.repo_id = l.id WHERE p.owner_id = ? AND l.state = 'published' ORDER BY p.position`)
+			.prepare(`${SELECT} JOIN owner_pins p ON p.repo_id = l.id WHERE p.owner_id = ? AND ${PUBLIC} ORDER BY p.position`)
 			.bind(ownerId)
 			.all<RepoRow>();
 		return results.map(toRepo);
@@ -236,6 +241,11 @@ export class RepoStore {
 	}
 
 	/** Updates editable fields. The slug stays fixed so published URLs never break. */
+	/** #366: private or public. */
+	async setVisibility(id: string, visibility: RepoVisibility): Promise<void> {
+		await this.db.prepare("UPDATE repos SET visibility = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(visibility, id).run();
+	}
+
 	async update(id: string, update: RepoUpdate): Promise<void> {
 		const columns = {
 			name: update.name,

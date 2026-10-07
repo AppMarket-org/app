@@ -28,6 +28,13 @@ describe("tokenPolicy", () => {
 		expect(tokenPolicy(repo("submitted"), buyer, "read")).toMatchObject({ allowed: false, status: 404 });
 	});
 
+	it("#366: gives read to anyone signed in for a public repo that is not published, never write", () => {
+		const open = { ...repo("draft"), visibility: "public" } as Repo;
+		expect(tokenPolicy(open, buyer, "read")).toEqual({ allowed: true });
+		expect(tokenPolicy(open, buyer, "write")).toMatchObject({ allowed: false, status: 403 });
+		expect(tokenPolicy({ ...repo("removed"), visibility: "public" } as Repo, buyer, "read")).toMatchObject({ allowed: false, status: 404 });
+	});
+
 	it("refuses removed repos and repos without a repo", () => {
 		expect(tokenPolicy(repo("removed"), owner, "read")).toMatchObject({ allowed: false, status: 409, error: "removed" });
 		expect(tokenPolicy(repo("draft", null), owner, "write")).toMatchObject({ allowed: false, status: 409, error: "no_repo" });

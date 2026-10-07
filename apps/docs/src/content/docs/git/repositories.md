@@ -12,12 +12,24 @@ https://appmarket.org/<owner>/<repo>.git
 It speaks Git's smart HTTPS protocol, so `git clone`, `fetch` and `push` work as usual. SSH is not
 offered: the repos are stored in Cloudflare Artifacts, which only serves HTTPS.
 
+## Private, public and published
+
+- **Private** (new repos start private): only the repo's owners, its organization's members and
+  appmarket.org admins can see it.
+- **Public**: anyone can read its code, browse its branches, clone it, and follow its pull requests
+  and issues. It is not listed on the marketplace.
+- **Published**: a reviewed version is listed on the marketplace, where people find, deploy and
+  fork it. A published app is always public.
+
+Change it under the repo's **Settings → Visibility**. To make a published app private, unpublish it
+first.
+
 ## Who can do what
 
 - **Clone and fetch:**
-  - published free repos: anyone, without signing in;
+  - public repos and free published apps: anyone, without signing in;
   - paid apps: their buyers;
-  - unpublished repos: their owners and org members (and admins).
+  - private repos: their owners and org members (and admins).
 - **Push:** the repo's owners and org members. Everyone else forks, pushes to the fork, and opens
   a pull request.
 

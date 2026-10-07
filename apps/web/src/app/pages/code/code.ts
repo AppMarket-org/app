@@ -25,6 +25,8 @@ interface CodeTree {
   commit: string | null;
   path: string;
   editor: boolean;
+  /** #366: may pick any branch, tag or commit (owners, and everyone for a public repo). */
+  browse?: boolean;
   empty?: boolean;
   entries: { name: string; type: 'tree' | 'blob' | 'link' }[];
 }
@@ -38,7 +40,8 @@ interface CodeFile {
 
 /**
  * Read-only code browser. The published version for everyone; any branch for owners and
- * members. Highlighting runs in the browser with Shiki, loaded (with each language) on demand.
+ * members, and for everyone on a public repo (#366). Highlighting runs in the browser with
+ * Shiki, loaded (with each language) on demand.
  */
 @Component({
   selector: 'app-code',
@@ -181,7 +184,7 @@ export class CodePage {
   }
   private revision(): Record<string, string> {
     const t = this.tree();
-    const ref = t?.editor ? t.commit : t?.ref;
+    const ref = t?.browse ?? t?.editor ? t?.commit : t?.ref;
     return ref ? { ref } : {};
   }
   private entries(tree: CodeTree): FileNode[] {
@@ -288,7 +291,7 @@ export class CodePage {
         if (generation === this.generation) this.readmeLoading.set(false);
       });
     }
-    if (tree?.editor) {
+    if (tree?.browse ?? tree?.editor) {
       const b = await firstValueFrom(
         this.http.get<{ branches: string[]; tags?: string[] }>(`${this.base}/branches`),
       ).catch(() => null);

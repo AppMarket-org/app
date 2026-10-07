@@ -65,9 +65,11 @@
           </div>
           <div class="meta">
             <mat-chip-set [attr.aria-label]="item.name + ' status'">
-              <mat-chip [class]="item.state">{{ states[item.state].label }}</mat-chip>
+              <mat-chip [class]="item.visibility">{{ visibility[item.visibility || 'private'].label }}</mat-chip>
               @if (item.publishedTag) {
-                <mat-chip>Public: {{ item.publishedTag }}</mat-chip>
+                <mat-chip [class]="item.state">{{ item.state === 'published' ? 'Published' : states[item.state].label }}: {{ item.publishedTag }}</mat-chip>
+              } @else if (item.state !== 'draft' && item.state !== 'submitted') {
+                <mat-chip [class]="item.state">{{ states[item.state].label }}</mat-chip>
               }
               @if (item.submittedTag) {
                 <mat-chip>In review: {{ item.submittedTag }}</mat-chip>

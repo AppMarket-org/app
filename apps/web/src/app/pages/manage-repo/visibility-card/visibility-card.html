@@ -1,0 +1,24 @@
+<mat-card appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Visibility</mat-card-title>
+    <mat-card-subtitle>Who can read this repo. Listing it on the marketplace is separate: submit a version under Marketplace.</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-radio-group [ngModel]="choice()" (ngModelChange)="choice.set($event)" name="visibility" aria-label="Visibility">
+      <mat-radio-button value="private" [disabled]="published()">
+        <span class="option">Private</span>
+        <span class="help">You and your organization's members.</span>
+      </mat-radio-button>
+      <mat-radio-button value="public">
+        <span class="option">Public</span>
+        <span class="help">Anyone can read the code, clone it and follow its pull requests and issues.</span>
+      </mat-radio-button>
+    </mat-radio-group>
+    @if (published()) {
+      <p class="hint">A published app is public. Unpublish it under Marketplace to make the repo private.</p>
+    }
+  </mat-card-content>
+  <mat-card-actions align="end">
+    <button mat-flat-button type="button" [disabled]="!dirty() || busy()" (click)="save()">Save</button>
+  </mat-card-actions>
+</mat-card>

@@ -1,17 +1,19 @@
 import type { ActivityMonth, ActivityPage, ContributionCalendar, ContributionKind } from "@appmarket/shared";
 
+const PUBLIC = "(r.state = 'published' OR (r.visibility = 'public' AND r.state != 'removed'))";
+
 /** Who is looking at a profile: signed out (null), or a user with their organizations. */
 export type ContributionViewer = { id: string; orgIds: readonly string[]; admin: boolean } | null;
 
 /**
- * Repos `viewer` can open (as repos/access.ts canView): published ones, and private ones they own
+ * Repos `viewer` can open (as repos/access.ts canView): public ones, and private ones they own
  * or belong to through an organization; admins all. Removed repos never.
  */
 export function visibleTo(viewer: ContributionViewer): { sql: string; binds: string[] } {
 	if (viewer?.admin) return { sql: "r.state != 'removed'", binds: [] };
 	const mine = viewer ? [viewer.id, ...viewer.orgIds] : [];
-	if (!mine.length) return { sql: "r.state = 'published'", binds: [] };
-	return { sql: `(r.state = 'published' OR (r.state != 'removed' AND r.owner_id IN (${mine.map(() => "?").join(",")})))`, binds: mine };
+	if (!mine.length) return { sql: PUBLIC, binds: [] };
+	return { sql: `(${PUBLIC} OR (r.state != 'removed' AND r.owner_id IN (${mine.map(() => "?").join(",")})))`, binds: mine };
 }
 
 /** A commit as Artifacts reports it (seconds or milliseconds since the epoch). */
@@ -36,14 +38,14 @@ export class ContributionStore {
 	async calendar(userId: string, from: string, to: string, viewer: ContributionViewer = null, anonymous = false): Promise<Omit<ContributionCalendar, "from" | "to">> {
 		const seen = visibleTo(viewer);
 		const counted = anonymous ? { sql: "r.state != 'removed'", binds: [] as string[] } : seen;
-		const [days, years, repos] = await this.db.batch<{ day?: string; n?: number; year?: string; full_name?: string; name?: string; state?: string }>([
+		const [days, years, repos] = await this.db.batch<{ day?: string; n?: number; year?: string; full_name?: string; name?: string; state?: string; visibility?: string }>([
 			this.db
 				.prepare(`SELECT c.day, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${counted.sql} AND c.day BETWEEN ? AND ? GROUP BY c.day`)
 				.bind(userId, ...counted.binds, from, to),
 			this.db.prepare(`SELECT DISTINCT substr(c.day, 1, 4) AS year FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${counted.sql} ORDER BY year DESC`).bind(userId, ...counted.binds),
 			this.db
 				.prepare(
-					`SELECT o.handle || '/' || r.slug AS full_name, r.name, r.state, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id
+					`SELECT o.handle || '/' || r.slug AS full_name, r.name, r.state, r.visibility, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id
 					 WHERE c.user_id = ? AND ${seen.sql} AND c.day BETWEEN ? AND ? GROUP BY r.id ORDER BY n DESC, full_name`,
 				)
 				.bind(userId, ...seen.binds, from, to),
@@ -53,7 +55,7 @@ export class ContributionStore {
 			days: map,
 			total: Object.values(map).reduce((a, b) => a + b, 0),
 			years: (years!.results ?? []).map((r) => Number(r.year)),
-			repos: (repos!.results ?? []).map((r) => ({ fullName: r.full_name!, name: r.name!, count: r.n!, private: r.state !== "published" })),
+			repos: (repos!.results ?? []).map((r) => ({ fullName: r.full_name!, name: r.name!, count: r.n!, private: r.state !== "published" && r.visibility !== "public" })),
 		};
 	}
 
@@ -78,11 +80,11 @@ export class ContributionStore {
 		const inShown = `substr(c.day, 1, 7) IN (${shown.map(() => "?").join(",")})`;
 		const { results } = await this.db
 			.prepare(
-				`SELECT substr(c.day, 1, 7) AS month, c.kind, o.handle || '/' || r.slug AS full_name, r.name, r.state, COUNT(*) AS n ${scope} AND ${seen.sql}
+				`SELECT substr(c.day, 1, 7) AS month, c.kind, o.handle || '/' || r.slug AS full_name, r.name, r.state, r.visibility, COUNT(*) AS n ${scope} AND ${seen.sql}
 				 AND ${inShown} GROUP BY month, c.kind, r.id ORDER BY month DESC, n DESC`,
 			)
 			.bind(id, from, before, ...seen.binds, ...shown)
-			.all<{ month: string; kind: ContributionKind; full_name: string; name: string; state: string; n: number }>();
+			.all<{ month: string; kind: ContributionKind; full_name: string; name: string; state: string; visibility: string; n: number }>();
 		const privateCounts = new Map<string, number>();
 		if (anonymous) {
 			const { results: hidden } = await this.db
@@ -98,7 +100,7 @@ export class ContributionStore {
 				month: m,
 				groups: order
 					.map((kind) => {
-						const repos = rows.filter((r) => r.kind === kind).map((r) => ({ fullName: r.full_name, name: r.name, count: r.n, private: r.state !== "published" }));
+						const repos = rows.filter((r) => r.kind === kind).map((r) => ({ fullName: r.full_name, name: r.name, count: r.n, private: r.state !== "published" && r.visibility !== "public" }));
 						return { kind, total: repos.reduce((t, r) => t + r.count, 0), repos };
 					})
 					.filter((g) => g.total > 0),
