@@ -27,6 +27,7 @@ import { LanguageBar } from '../../components/language-bar/language-bar';
 import { ForkDialog, type ForkDialogData } from '../../components/fork-dialog/fork-dialog';
 import { Auth } from '../../auth/auth';
 import { InstallApp } from '../../components/install-app/install-app';
+import { IosApp } from '../../components/ios-app/ios-app';
 import { RepoGraph } from '../../components/repo-graph/repo-graph';
 import { Conformance } from '../../components/conformance/conformance';
 import { Seo } from '../../seo/seo';
@@ -47,6 +48,7 @@ const PLATFORM_NAMES: Record<(typeof TARGET_PLATFORMS)[number], string> = {
     Conformance,
     RepoGraph,
     InstallApp,
+    IosApp,
     LanguageBar,
     DatePipe,
     MatButtonModule,

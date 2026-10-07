@@ -1,0 +1,18 @@
+<section aria-labelledby="ios-heading">
+  <h2 id="ios-heading">iPhone and iPad</h2>
+  <div class="actions">
+    @if (appStoreUrl(); as url) {
+      <a mat-flat-button [href]="url" target="_blank" rel="noopener"
+        ><mat-icon>phone_iphone</mat-icon>Get it on the App Store</a
+      >
+    }
+    @if (testflightUrl(); as url) {
+      <a mat-stroked-button [href]="url" target="_blank" rel="noopener"
+        ><mat-icon>science</mat-icon>Join the TestFlight beta</a
+      >
+    }
+  </div>
+  <p class="hint">
+    {{ name() }} for iOS comes from Apple{{ testflightUrl() ? '. The beta needs the free TestFlight app.' : '.' }}
+  </p>
+</section>

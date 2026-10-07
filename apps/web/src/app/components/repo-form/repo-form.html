@@ -86,6 +86,47 @@
     }
   </mat-form-field>
 
+  @if (form.controls.platforms.value.includes('ios')) {
+    <fieldset class="ios">
+      <legend>iOS</legend>
+      <p class="hint">
+        You submit the app to Apple; people get it from the App Store, or TestFlight for a beta.
+        The links show on the app's page.
+      </p>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>App Store link</mat-label>
+        <input
+          matInput
+          formControlName="iosAppStoreUrl"
+          type="url"
+          inputmode="url"
+          placeholder="https://apps.apple.com/us/app/my-app/id123456789"
+        />
+        @if (form.controls.iosAppStoreUrl.hasError('server')) {
+          <mat-error>{{ form.controls.iosAppStoreUrl.getError('server') }}</mat-error>
+        } @else {
+          <mat-error>Use the app's apps.apple.com address.</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>TestFlight public link</mat-label>
+        <input
+          matInput
+          formControlName="iosTestflightUrl"
+          type="url"
+          inputmode="url"
+          placeholder="https://testflight.apple.com/join/AbCd1234"
+        />
+        <mat-hint>For a beta: TestFlight › External Testing › Public Link in App Store Connect.</mat-hint>
+        @if (form.controls.iosTestflightUrl.hasError('server')) {
+          <mat-error>{{ form.controls.iosTestflightUrl.getError('server') }}</mat-error>
+        } @else {
+          <mat-error>Use a testflight.apple.com/join/… link.</mat-error>
+        }
+      </mat-form-field>
+    </fieldset>
+  }
+
   @if (errorMessage(); as message) {
     <p class="error" role="alert">{{ message }}</p>
   }

@@ -7,4 +7,5 @@
 - [Deploying appmarket.org (runbook)](deploy-runbook.md)
 - [Observability](observability.md)
 - [Device login for CLIs and agents](device-login.md)
+- Mobile: [Android APK downloads](android-sideloading.md) · [iOS App Store and TestFlight links](ios-distribution.md) · [Build in your own CI](ci-github-actions.md)
 - [Web design system](design-system.md)

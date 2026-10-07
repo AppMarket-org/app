@@ -53,6 +53,8 @@ interface RepoRow {
 	published_manifest: string | null;
 	published_pwa: string | null;
 	demo_url: string | null;
+	ios_app_store_url: string | null;
+	ios_testflight_url: string | null;
 	runtime_detected_at: string | null;
 	android_package: string | null;
 	android_verified_at: string | null;
@@ -90,6 +92,8 @@ function toRepo(row: RepoRow): Repo {
 		manifest: row.published_manifest ? JSON.parse(row.published_manifest) : null,
 		pwa: row.published_pwa ? JSON.parse(row.published_pwa) : null,
 		demoUrl: row.demo_url,
+		iosAppStoreUrl: row.ios_app_store_url,
+		iosTestflightUrl: row.ios_testflight_url,
 		runtimeDetected: !!row.runtime_detected_at,
 		android: row.android_package && row.android_verified_at ? { package: row.android_package, verifiedAt: row.android_verified_at } : null,
 		cowbells: row.cowbell_count,
@@ -201,9 +205,9 @@ export class RepoStore {
 	async insert(ids: { id: string; slug: string }, ownerId: string, createdBy: string, input: RepoInput, gitRepo: string): Promise<Repo> {
 		await this.db
 			.prepare(
-				"INSERT INTO repos (id, owner_id, created_by, slug, name, summary, description, category, runtime, platforms, license, git_repo, demo_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				"INSERT INTO repos (id, owner_id, created_by, slug, name, summary, description, category, runtime, platforms, license, git_repo, demo_url, ios_app_store_url, ios_testflight_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
-			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo, input.demoUrl ?? null)
+			.bind(ids.id, ownerId, createdBy, ids.slug, input.name, input.summary, input.description, input.category, input.runtime, JSON.stringify(input.platforms), input.license, gitRepo, input.demoUrl ?? null, input.iosAppStoreUrl ?? null, input.iosTestflightUrl ?? null)
 			.run();
 		return (await this.findById(ids.id))!;
 	}
@@ -242,6 +246,8 @@ export class RepoStore {
 			platforms: update.platforms && JSON.stringify(update.platforms),
 			license: update.license,
 			demo_url: update.demoUrl,
+			ios_app_store_url: update.iosAppStoreUrl,
+			ios_testflight_url: update.iosTestflightUrl,
 		};
 		const set = Object.entries(columns).filter(([, value]) => value !== undefined);
 		if (set.length === 0) return;
