@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Deployment, runningApps } from "./deployments";
+import { appUrl, type Deployment, runningApps } from "./deployments";
 
 const d = (id: string, at: string, status: Deployment["status"], workerName = "bombfind", accountId = "acct"): Deployment => ({
 	id,
@@ -11,6 +11,7 @@ const d = (id: string, at: string, status: Deployment["status"], workerName = "b
 	previewBranch: "main",
 	status,
 	url: null,
+	domains: [],
 	error: null,
 	createdAt: at,
 	updatedAt: at,
@@ -29,5 +30,17 @@ describe("runningApps (#307)", () => {
 		const apps = runningApps([d("1", "2026-10-01", "succeeded"), d("2", "2026-10-02", "failed", "other"), d("3", "2026-10-03", "succeeded", "bombfind", "acct2")]);
 		expect(apps.map((a) => a.key)).toEqual(["acct2/bombfind", "acct/other", "acct/bombfind"]);
 		expect(apps[1]!.live).toBeNull();
+	});
+});
+
+describe("appUrl", () => {
+	const url = "https://bombfind.cport1.workers.dev";
+	it("is the custom domain when there is one: the apex first, then www, then other subdomains", () => {
+		expect(appUrl({ url, domains: [] })).toBe(url);
+		expect(appUrl({ url, domains: ["www.bombfind.com", "bombfind.com"] })).toBe("https://bombfind.com");
+		expect(appUrl({ url, domains: ["play.bombfind.com", "www.bombfind.com"] })).toBe("https://www.bombfind.com");
+		expect(appUrl({ url, domains: ["beta.games.example", "app.example"] })).toBe("https://app.example");
+		expect(appUrl({ url, domains: ["www.hello.example.com", "hello.example.com"] })).toBe("https://hello.example.com");
+		expect(appUrl({ url: null, domains: [] })).toBeNull();
 	});
 });

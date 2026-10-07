@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { DatePipe, LowerCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
-import { runningApps } from '@appmarket/shared';
+import { appUrl, runningApps } from '@appmarket/shared';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -60,6 +60,8 @@ export class DashboardRunningApps {
   protected readonly deployStatus: Record<string, string> = { queued: 'Queued', building: 'Building', deploying: 'Deploying', succeeded: 'Live', failed: 'Failed' };
   /** #307: one entry per app (Worker and account), not per deployment. */
   protected readonly apps = computed(() => runningApps(this.deployments() ?? []));
+  /** Where a live app answers: its custom domain, else workers.dev. */
+  protected readonly address = (d: Parameters<typeof appUrl>[0]) => appUrl(d)?.replace(/^https?:\/\//, '') ?? null;
 
   constructor() {
     const counts = inject(DashboardCounts);

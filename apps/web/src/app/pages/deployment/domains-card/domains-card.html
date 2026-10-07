@@ -41,7 +41,7 @@
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="zone">
                 <mat-label>Domain</mat-label>
-                <mat-select [ngModel]="zoneId()" (ngModelChange)="zoneId.set($event)" name="zone">
+                <mat-select [ngModel]="zoneId()" (ngModelChange)="zoneId.set($event)" name="zone" placeholder="Choose a domain">
                   @for (z of zs; track z.id) {
                     <mat-option [value]="z.id">{{ z.name }}</mat-option>
                   }
@@ -61,7 +61,7 @@
         @if (error(); as e) {
           <p class="error" role="alert">{{ e }}</p>
         }
-        <button mat-flat-button type="button" [disabled]="busy() || !valid()" (click)="attach()">Attach {{ valid() ? hostname() : 'domain' }}</button>
+        <button mat-flat-button type="button" [disabled]="busy() || !valid()" (click)="attach()">{{ valid() ? 'Attach ' + hostname() : 'Attach domain' }}</button>
       </div>
 
       <mat-expansion-panel class="guide">

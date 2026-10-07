@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -32,6 +32,8 @@ const message = (error: unknown) => (error instanceof HttpErrorResponse ? (error
 })
 export class DomainsCard {
   readonly deploymentId = input.required<string>();
+  /** A domain was attached or detached (the page's address follows). */
+  readonly changed = output<void>();
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -47,6 +49,7 @@ export class DomainsCard {
   protected readonly hostname = computed(() => {
     const zone = this.zones()?.find((z) => z.id === this.zoneId());
     const name = this.name().trim().toLowerCase().replace(/\.$/, '');
+    if (this.zones() && !zone) return '';
     return zone ? (name ? `${name}.${zone.name}` : zone.name) : name;
   });
   protected readonly valid = computed(() => HOSTNAME.test(this.hostname()));
@@ -67,7 +70,9 @@ export class DomainsCard {
       await firstValueFrom(this.http.post(`/api/deployments/${this.deploymentId()}/domains`, { hostname: this.hostname(), zoneId: this.zoneId() || undefined }));
       this.snackBar.open(`${this.hostname()} attached. The certificate can take a few minutes.`, undefined, { duration: 5000 });
       this.name.set('');
+      this.zoneId.set('');
       await this.load();
+      this.changed.emit();
     } catch (error) {
       this.error.set(message(error) ?? 'Could not attach the domain.');
     } finally {
@@ -89,6 +94,7 @@ export class DomainsCard {
     try {
       await firstValueFrom(this.http.delete(`/api/deployments/${this.deploymentId()}/domains/${d.id}`));
       await this.load();
+      this.changed.emit();
     } catch (error) {
       this.snackBar.open(message(error) ?? 'Could not detach the domain.', 'OK', { duration: 5000 });
     } finally {
@@ -101,7 +107,6 @@ export class DomainsCard {
       const r = await firstValueFrom(this.http.get<{ zones: { id: string; name: string }[] | null; domains: WorkerDomain[] }>(`/api/deployments/${this.deploymentId()}/domains`));
       this.zones.set(r.zones);
       this.domains.set(r.domains);
-      if (r.zones?.length && !this.zoneId()) this.zoneId.set(r.zones[0]!.id);
       this.loadError.set(null);
       await this.checkPending();
     } catch (error) {
