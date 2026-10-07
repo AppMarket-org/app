@@ -5,7 +5,9 @@
   </mat-card-header>
   <mat-card-content>
     @if (settings() !== undefined) {
-      @if (accounts() === null) {
+      @if (unavailable()) {
+        <p class="hint">Deploying to Cloudflare is not available on appmarket.org yet.</p>
+      } @else if (accounts() === null) {
         <p class="hint">Connect your Cloudflare account to deploy into it.</p>
         <a mat-stroked-button [href]="connectUrl"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Connect Cloudflare</a>
         @if (settings()?.enabled || settings()?.deployDefault) {

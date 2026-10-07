@@ -16,6 +16,7 @@ import { Seo } from '../../seo/seo';
 
 const ERRORS: Record<string, string> = {
   access_denied: 'You cancelled the connection on Cloudflare.',
+  unavailable: 'Deploying to Cloudflare is not available on appmarket.org yet.',
   invalid_state: 'That sign-in link expired. Try connecting again.',
   wrong_user: 'The connection was started by a different appmarket.org account.',
   exchange_failed: 'Cloudflare did not accept the connection. Try again.',
