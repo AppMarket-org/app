@@ -112,10 +112,10 @@ export class DeploymentPage {
     }
   }
 
-  /** After a domain change: the addresses at the top follow. */
-  protected async refresh(): Promise<void> {
-    const d = await firstValueFrom(this.api.get(this.id)).catch(() => null);
-    if (d) this.deployment.set(d);
+  /** The domains as Cloudflare has them now (attached or detached here or in its dashboard): the addresses at the top follow. */
+  protected domainsLoaded(hostnames: string[]): void {
+    const d = this.deployment();
+    if (d && [...hostnames].sort().join() !== [...d.domains].sort().join()) this.deployment.set({ ...d, domains: hostnames });
   }
 
   private async poll(): Promise<void> {

@@ -79,7 +79,7 @@
         <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start" animationDuration="0ms" class="tabs">
           <mat-tab label="Domains">
             <ng-template matTabContent>
-              <app-domains-card [deploymentId]="d.id" (changed)="refresh()" />
+              <app-domains-card [deploymentId]="d.id" (loaded)="domainsLoaded($event)" />
             </ng-template>
           </mat-tab>
           <mat-tab label="Variables and secrets">

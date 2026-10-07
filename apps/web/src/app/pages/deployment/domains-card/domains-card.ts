@@ -32,8 +32,8 @@ const message = (error: unknown) => (error instanceof HttpErrorResponse ? (error
 })
 export class DomainsCard {
   readonly deploymentId = input.required<string>();
-  /** A domain was attached or detached (the page's address follows). */
-  readonly changed = output<void>();
+  /** The Worker's domains, after each load from Cloudflare (the page's address follows). */
+  readonly loaded = output<string[]>();
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -72,7 +72,6 @@ export class DomainsCard {
       this.name.set('');
       this.zoneId.set('');
       await this.load();
-      this.changed.emit();
     } catch (error) {
       this.error.set(message(error) ?? 'Could not attach the domain.');
     } finally {
@@ -94,7 +93,6 @@ export class DomainsCard {
     try {
       await firstValueFrom(this.http.delete(`/api/deployments/${this.deploymentId()}/domains/${d.id}`));
       await this.load();
-      this.changed.emit();
     } catch (error) {
       this.snackBar.open(message(error) ?? 'Could not detach the domain.', 'OK', { duration: 5000 });
     } finally {
@@ -107,6 +105,7 @@ export class DomainsCard {
       const r = await firstValueFrom(this.http.get<{ zones: { id: string; name: string }[] | null; domains: WorkerDomain[] }>(`/api/deployments/${this.deploymentId()}/domains`));
       this.zones.set(r.zones);
       this.domains.set(r.domains);
+      this.loaded.emit(r.domains.map((d) => d.hostname));
       this.loadError.set(null);
       await this.checkPending();
     } catch (error) {
