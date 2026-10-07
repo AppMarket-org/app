@@ -18,7 +18,12 @@
           </mat-chip>
         </mat-chip-set>
         <span>
-          {{ p.author }} {{ p.state === 'merged' ? 'merged' : p.state === 'closed' ? 'wanted to merge' : 'wants to merge' }} <code>{{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }}</code> into
+          @if (p.agent) {
+            <mat-icon class="agent-icon" aria-hidden="true">smart_toy</mat-icon><strong>{{ p.agent }}</strong> (agent for {{ p.author }})
+          } @else {
+            {{ p.author }}
+          }
+          {{ p.state === 'merged' ? 'merged' : p.state === 'closed' ? 'wanted to merge' : 'wants to merge' }} <code>{{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }}</code> into
           <code>{{ p.target.branch }}</code> · {{ p.createdAt | date: 'medium' }}
         </span>
       </div>

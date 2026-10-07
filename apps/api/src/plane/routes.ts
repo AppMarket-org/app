@@ -109,7 +109,7 @@ export const planeRoutes = new Hono<Ctx>()
 			if (fork && task) {
 				// #260: with review on, the work waits in a pull request for the owner; otherwise it merges.
 				const next = (await pullSettings(p.repo.id)).reviewAgentWork
-					? openTaskPull(p.repo, task, fork, branch, c.get("session")!.user.id, text(body.note, 2000))
+					? openTaskPull(p.repo, task, fork, branch, c.get("session")!.user.id, text(body.note, 2000), s.id)
 					: startMerge({ repo: p.repo, sourceRepoId: fork, branch, taskId: task.id, sessionId: s.id });
 				await next.catch((error: unknown) => logEvent("plane.merge_start_failed", { repo: p.repo.fullName, error: String(error) }, "error"));
 			}
@@ -257,7 +257,7 @@ async function hintsFor(repoId: string, paths: string[], leases: PlaneLease[], a
 }
 
 /** #260: a pull request for a finished task, from the agent session's fork, linked to the task. */
-async function openTaskPull(repo: Repo, task: PlaneTask, forkId: string, branch: string, authorId: string, note: string): Promise<void> {
+async function openTaskPull(repo: Repo, task: PlaneTask, forkId: string, branch: string, authorId: string, note: string, agentSessionId: string): Promise<void> {
 	const fork = await env.DB.prepare("SELECT git_repo FROM repos WHERE id = ?").bind(forkId).first<{ git_repo: string | null }>();
 	const head = fork?.git_repo ? (await listBranches(fork.git_repo)).branches.find((b) => b.name === branch) : undefined;
 	if (!head) {
@@ -267,7 +267,7 @@ async function openTaskPull(repo: Repo, task: PlaneTask, forkId: string, branch:
 	const targets = await listBranches(repo.gitRepo!);
 	const base = pickBranch(targets.defaultBranch, targets.branches);
 	const body = [task.issue ? `Closes #${task.issue.number}` : "", note, task.description, "Opened by the Agents board for this task; merging it completes the task."].filter(Boolean).join("\n\n");
-	const pull = await insertPull({ repoId: repo.id, title: task.title, body, authorId, sourceRepoId: forkId, sourceBranch: branch, targetBranch: base?.name ?? targets.defaultBranch, headSha: head.sha, taskId: task.id });
+	const pull = await insertPull({ repoId: repo.id, title: task.title, body, authorId, sourceRepoId: forkId, sourceBranch: branch, targetBranch: base?.name ?? targets.defaultBranch, headSha: head.sha, taskId: task.id, agentSessionId });
 	await tellBoard(repo.id, task.id, { id: pull.id, status: "review", sha: head.sha, error: null, pull: pull.number });
 	logEvent("plane.pull_opened", { repo: repo.fullName, number: pull.number, task: task.id });
 }

@@ -13,14 +13,16 @@ export async function insertPull(p: {
 	targetBranch: string;
 	headSha: string;
 	taskId?: string;
+	/** The agent session whose work it is (a task's pull request). */
+	agentSessionId?: string;
 }): Promise<{ id: string; number: number }> {
 	const id = crypto.randomUUID();
 	const number = await nextNumber(env.DB, p.repoId);
 	await env.DB.prepare(
-		`INSERT INTO pull_requests (id, repo_id, number, title, body, author_id, source_repo_id, source_branch, target_branch, head_sha, task_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO pull_requests (id, repo_id, number, title, body, author_id, source_repo_id, source_branch, target_branch, head_sha, task_id, agent_session_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
-		.bind(id, p.repoId, number, redactSecrets(p.title).text, redactSecrets(p.body).text, p.authorId, p.sourceRepoId, p.sourceBranch, p.targetBranch, p.headSha, p.taskId ?? null)
+		.bind(id, p.repoId, number, redactSecrets(p.title).text, redactSecrets(p.body).text, p.authorId, p.sourceRepoId, p.sourceBranch, p.targetBranch, p.headSha, p.taskId ?? null, p.agentSessionId ?? null)
 		.run();
 	return { id, number };
 }

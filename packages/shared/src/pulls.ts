@@ -25,6 +25,8 @@ export interface PullRequest {
 	body: string;
 	state: PullState;
 	author: string;
+	/** The coding agent whose work it is (a task's pull request opened by the Agents board), e.g. "Claude Code". */
+	agent: string | null;
 	/** The repo the branch lives in (this repo, or a fork). */
 	source: { repo: string; branch: string; fork: boolean };
 	target: { repo: string; branch: string };
