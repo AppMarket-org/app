@@ -128,12 +128,16 @@ export class PreviewsCard {
     await this.save();
   }
 
+  /** appmarket.org cannot deploy to Cloudflare yet (its OAuth client is not set up). */
+  protected readonly unavailable = signal(false);
+
   private async loadAccounts(): Promise<void> {
     try {
       const accounts = await firstValueFrom(this.cloudflare.accounts());
       this.accounts.set(accounts);
       if (!this.accountId() && accounts.length === 1) this.accountId.set(accounts[0]!.id);
-    } catch {
+    } catch (e) {
+      this.unavailable.set(e instanceof HttpErrorResponse && (e.error as { error?: string } | null)?.error === 'unavailable');
       this.accounts.set(null);
     }
   }

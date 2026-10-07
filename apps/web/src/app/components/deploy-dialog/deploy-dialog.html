@@ -53,7 +53,9 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button type="button" mat-dialog-close>Cancel</button>
-  @if (accounts() === null) {
+  @if (unavailable()) {
+    <!-- Nothing to connect to yet. -->
+  } @else if (accounts() === null) {
     <a mat-flat-button [href]="connectUrl"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Connect Cloudflare account</a>
   } @else {
     <button mat-flat-button type="submit" form="deploy-form" [disabled]="!accounts() || sending()">Deploy</button>

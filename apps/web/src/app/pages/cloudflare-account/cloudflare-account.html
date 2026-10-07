@@ -52,10 +52,15 @@
       <mat-card-content>
         <p>Connect your Cloudflare account to deploy apps from appmarket.org into it with one click. Apps run in your account: you own the deployment, the bill and the data.</p>
         <p class="muted">appmarket.org asks for access to deploy Workers and create the resources an app needs (D1, KV, R2). It never stores the secrets you give your apps, and you can disconnect at any time.</p>
+        @if (!c.available) {
+          <p class="unavailable" role="status"><mat-icon inline aria-hidden="true">schedule</mat-icon>Deploying to Cloudflare is not available on appmarket.org yet. It is coming soon.</p>
+        }
       </mat-card-content>
-      <mat-card-actions align="end">
-        <a mat-flat-button [href]="connectUrl"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Connect Cloudflare account</a>
-      </mat-card-actions>
+      @if (c.available) {
+        <mat-card-actions align="end">
+          <a mat-flat-button [href]="connectUrl"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Connect Cloudflare account</a>
+        </mat-card-actions>
+      }
     </mat-card>
   }
 } @else {

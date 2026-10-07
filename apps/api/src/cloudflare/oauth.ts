@@ -87,9 +87,16 @@ export async function cloudflareAccounts(userId: string): Promise<CloudflareAcco
 	return (body.result ?? []).map((a) => ({ id: a.id, name: a.name }));
 }
 
+/** The OAuth client is set (a deploy without its secrets stores a placeholder). */
+export function cloudflareConfigured(): boolean {
+	const ok = (value: string | undefined) => !!value && value !== "not-configured";
+	return ok(env.CF_OAUTH_CLIENT_ID) && ok(env.CF_OAUTH_CLIENT_SECRET);
+}
+
 export async function connection(userId: string): Promise<CloudflareConnection> {
+	const available = cloudflareConfigured();
 	const row = await env.DB.prepare("SELECT cf_email, scopes, created_at FROM cloudflare_connections WHERE user_id = ?").bind(userId).first<{ cf_email: string | null; scopes: string; created_at: string }>();
-	return row ? { connected: true, email: row.cf_email, scopes: row.scopes.split(" ").filter(Boolean), connectedAt: row.created_at } : { connected: false, email: null, scopes: [], connectedAt: null };
+	return row ? { connected: true, available, email: row.cf_email, scopes: row.scopes.split(" ").filter(Boolean), connectedAt: row.created_at } : { connected: false, available, email: null, scopes: [], connectedAt: null };
 }
 
 /** PRD D5: disconnect revokes the tokens at Cloudflare (best effort) and deletes them. */

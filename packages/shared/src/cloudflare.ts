@@ -15,6 +15,8 @@ export const CF_OAUTH_SCOPES = {
 
 export interface CloudflareConnection {
 	connected: boolean;
+	/** False until appmarket.org's own Cloudflare OAuth client is set up on this server: nobody can connect yet. */
+	available: boolean;
 	email: string | null;
 	scopes: string[];
 	connectedAt: string | null;

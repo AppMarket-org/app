@@ -70,10 +70,15 @@ export class DeployDialog {
       const accounts = await firstValueFrom(this.cloudflare.accounts());
       this.accounts.set(accounts);
       if (accounts.length === 1) this.form.controls.accountId.setValue(accounts[0]!.id);
-    } catch {
+    } catch (e) {
+      this.unavailable.set(e instanceof HttpErrorResponse && e.error?.error === 'unavailable');
+      if (this.unavailable()) this.error.set('Deploying to Cloudflare is not available on appmarket.org yet. It is coming soon.');
       this.accounts.set(null);
     }
   }
+
+  /** appmarket.org cannot deploy to Cloudflare yet (its OAuth client is not set up). */
+  protected readonly unavailable = signal(false);
 
   protected async deploy(): Promise<void> {
     this.form.markAllAsTouched();
