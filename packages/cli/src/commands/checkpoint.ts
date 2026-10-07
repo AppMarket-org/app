@@ -11,6 +11,7 @@ import { log } from "../log.ts";
 import { enqueue } from "../queue.ts";
 import { fitRecord } from "../fit.ts";
 import { createRedactor, envValues } from "../redact.ts";
+import { awaitSummary } from "../summaries.ts";
 
 /** The commit being checkpointed: HEAD, its parents, branch, author and diff stat. */
 export function commitInfo(root: string, sha: string): CommitInfo {
@@ -47,6 +48,9 @@ export function redactionSettings(root: string): { extra: string[]; ignore: stri
 	})();
 	return { extra: [...(read(join(HOME, "config.json")).redact ?? []), ...(read(join(root, ".appmarket.json")).redact ?? [])], ignore };
 }
+
+/** Harnesses that tell the CLI when a turn ends, with the agent's final reply. */
+const FINAL_REPLY_HARNESSES = new Set(["claude-code", "cursor", "opencode"]);
 
 /** A rebase in progress, or HEAD just made by `git commit --amend`. */
 function rewriting(root: string): boolean {
@@ -106,6 +110,8 @@ export function checkpoint(flags: { hook?: boolean; commit?: string; noSync?: bo
 		const fitted = fitRecord(record);
 		enqueue(api, repo, fitted.record, fitted.transcript ? { transcript: fitted.transcript } : {});
 		advanceMarker(key);
+		// The agent's final reply replaces the summary when its turn ends (summaries.ts).
+		if (FINAL_REPLY_HARNESSES.has(record.harness)) awaitSummary(root, record.session_id, sha);
 		if (!flags.noSync) {
 			// C14: upload detached so the hook returns immediately.
 			spawn(process.execPath, [process.argv[1]!, "sync", "--quiet"], { detached: true, stdio: "ignore", env: process.env }).unref();
