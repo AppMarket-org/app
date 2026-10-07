@@ -9,9 +9,14 @@ const plan = {
 };
 
 describe("deploy commands", () => {
-	it("bundles only when the Worker has an entry", () => {
+	it("bundles a Worker with an entry, and runs a static site's build script", () => {
 		expect(buildCommand(plan)).toContain("/usr/local/bin/wrangler deploy --dry-run --outdir .appmarket/out");
-		expect(buildCommand({ ...plan, config: { name: "site" } })).not.toContain("--dry-run");
+		const site = buildCommand({ ...plan, config: { name: "site" } });
+		expect(site).not.toContain("--dry-run");
+		// A static site built by its own script (Angular, React, Vite) before its assets are copied.
+		expect(site).toContain("pnpm run --if-present build");
+		expect(site).toContain("npm run build --if-present");
+		expect(buildCommand(plan)).not.toContain("run build");
 	});
 
 	it("deploys from a clean directory with the image's Wrangler and removes the secrets file", () => {

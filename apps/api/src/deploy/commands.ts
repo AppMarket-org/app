@@ -23,7 +23,8 @@ const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
 
 /**
  * Runs without the buyer's token: installs dependencies with the lockfile the repo ships and
- * bundles the Worker (running any custom build from its Wrangler config) into .appmarket/out.
+ * bundles the Worker (running any custom build from its Wrangler config) into .appmarket/out, or
+ * for a static site runs its `build` script.
  */
 export function buildCommand(plan: DeployPlan): string {
 	const install = [
@@ -37,8 +38,11 @@ export function buildCommand(plan: DeployPlan): string {
 		return `set -e; ${install}; if [ -f pyproject.toml ]; then ${PYWRANGLER} sync; fi`;
 	}
 	// Rust Workers build here too: Wrangler runs the repo's build.command (worker-build) first.
-	const bundle = typeof plan.config.main === "string" ? `${WRANGLER} deploy --dry-run --outdir .appmarket/out` : "true";
-	return `set -e; ${install}; ${bundle}`;
+	if (typeof plan.config.main === "string") return `set -e; ${install}; ${WRANGLER} deploy --dry-run --outdir .appmarket/out`;
+	// A static site (assets, no Worker): the repo's `build` script writes the assets directory
+	// (an Angular, React or Vite app); a site with its files checked in has none.
+	const build = "if [ -f package.json ]; then if [ -f pnpm-lock.yaml ]; then pnpm run --if-present build; else npm run build --if-present; fi; fi";
+	return `set -e; ${install}; ${build}`;
 }
 
 /**
