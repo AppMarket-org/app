@@ -10,6 +10,8 @@ export interface CardContent {
 	subtitle: string;
 	/** Small labels in the footer, e.g. owner/repo, category, runtime. */
 	tags: string[];
+	/** The name beside the logo; appmarket.org unless set (the docs site's cards). */
+	brand?: string;
 }
 
 export interface CardImages {
@@ -67,7 +69,7 @@ export function cardTree(content: CardContent, images: CardImages): SatoriNode {
 			el("div", { display: "flex", flexDirection: "column", justifyContent: "space-between", width: site ? 700 : 760, height: CARD_HEIGHT, padding: "60px 0 60px 72px" }, [
 				el("div", { display: "flex", alignItems: "center", gap: 18 }, [
 					el("img", { width: 56, height: 49 }, undefined, { src: images.logo, width: 56, height: 49 }),
-					el("div", { fontFamily: "Manrope", fontSize: 32, fontWeight: 800, color: PAPER }, "appmarket.org"),
+					el("div", { fontFamily: "Manrope", fontSize: 32, fontWeight: 800, color: PAPER }, content.brand ?? "appmarket.org"),
 				]),
 				el("div", { display: "flex", flexDirection: "column", gap: 22 }, [
 					el("div", { display: "flex", flexDirection: "column", fontFamily: "Manrope", fontWeight: 800, fontSize: site ? 70 : title.length > 28 ? 60 : 76, lineHeight: 1.05, letterSpacing: -1.5 }, [
