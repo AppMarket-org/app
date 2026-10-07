@@ -23,8 +23,8 @@
           } @else {
             {{ p.author }}
           }
-          {{ p.state === 'merged' ? 'merged' : p.state === 'closed' ? 'wanted to merge' : 'wants to merge' }} <code>{{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }}</code> into
-          <code>{{ p.target.branch }}</code> · {{ p.createdAt | date: 'medium' }}
+          {{ p.state === 'open' ? 'wants to merge' : 'wanted to merge' }} <code>{{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }}</code> into
+          <code>{{ p.target.branch }}</code> · {{ p.createdAt | date: 'medium' }}{{ p.state === 'merged' ? ' · merged' : '' }}
         </span>
       </div>
     </header>
