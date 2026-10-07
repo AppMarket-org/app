@@ -22,6 +22,8 @@ describe("Claude Code hook events", () => {
 		writeFileSync(transcript, "x".repeat(42));
 		const [prompt] = eventsFor({ hook_event_name: "UserPromptSubmit", session_id: "s", transcript_path: transcript, prompt: "Add tests" });
 		expect(prompt).toMatchObject({ type: "prompt", text: "Add tests", session_id: "s", transcript_offset: 42, harness: "claude-code" });
+		// Claude Code's own messages (a background command ended) are not prompts.
+		expect(eventsFor({ hook_event_name: "UserPromptSubmit", session_id: "s", prompt: "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n</task-notification>" })).toEqual([]);
 		const [tool] = eventsFor({ hook_event_name: "PostToolUse", tool_name: "Bash", tool_input: { command: "npm   test" }, tool_response: { interrupted: false } });
 		expect(tool).toMatchObject({ type: "tool", name: "Bash", args: "npm test", outcome: "ok" });
 		expect(eventsFor({ hook_event_name: "PostToolUseFailure", tool_name: "Edit", tool_input: { file_path: "a.ts" } })[0]).toMatchObject({ outcome: "error", args: "a.ts" });

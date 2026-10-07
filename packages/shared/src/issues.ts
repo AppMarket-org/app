@@ -54,6 +54,8 @@ export interface Issue {
 export interface IssueComment {
 	id: string;
 	author: string;
+	/** The coding agent that posted it from its agent session (e.g. "Claude Code"), on the author's behalf. */
+	agent: string | null;
 	body: string;
 	createdAt: string;
 	updatedAt: string;

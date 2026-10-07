@@ -41,6 +41,8 @@ export interface PullContext {
 	/** Where it is proposed (owner/repo). */
 	target: string;
 	branch: string | null;
+	/** The agent session this checkout works in, if any. */
+	agent?: string;
 	call: <T>(path: string, init?: { method?: string; body?: unknown }) => Promise<T>;
 }
 
@@ -57,7 +59,7 @@ export async function pullContext(cwd = process.cwd(), deps: Deps = defaults): P
 	if (!token) throw new PullError("Not signed in to appmarket.org: run `appmarket login`.");
 	const call = <T>(path: string, init: { method?: string; body?: unknown } = {}) => deps.call<T>(api, path, { ...init, token, timeoutMs: 60_000 });
 	const branch = gitOr(["symbolic-ref", "--quiet", "--short", "HEAD"], "", { cwd: root }) || null;
-	if (session) return { api, token, source: session.fork, target: repo, branch, call };
+	if (session) return { api, token, source: session.fork, target: repo, branch, call, agent: session.id };
 	const info = await call<{ fullName: string; forkedFrom: { fullName: string } | null }>(`/api/repos/${repo}`);
 	return { api, token, source: info.fullName, target: info.forkedFrom?.fullName ?? info.fullName, branch, call };
 }

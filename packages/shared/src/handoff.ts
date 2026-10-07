@@ -60,7 +60,9 @@ export function summarizeSessions(records: Recordish[], limit = 3): SessionSumma
 	return sessions.sort((a, b) => b.endedAt.localeCompare(a.endedAt)).slice(0, limit);
 }
 
-const HARNESS: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex", cursor: "Cursor", opencode: "OpenCode" };
+/** Display names of coding agents (harnesses). */
+export const HARNESS_LABELS: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex", cursor: "Cursor", opencode: "OpenCode" };
+const HARNESS = HARNESS_LABELS;
 
 /** The handoff as text for an agent's context, within `budget` characters (the most recent sessions first). */
 export function handoffText(sessions: SessionSummary[], budget = 2500): string {

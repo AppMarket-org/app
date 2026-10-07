@@ -44,6 +44,8 @@ export const serverRoutes: ServerRoute[] = [
   { path: ':owner/:slug/pulls/:number', renderMode: RenderMode.Client },
   { path: ':owner/:slug/pulls', renderMode: RenderMode.Client },
   { path: ':owner/:slug/code', renderMode: RenderMode.Client },
+  { path: ':owner/:slug/graph', renderMode: RenderMode.Client },
+  { path: ':owner/:slug/commits', renderMode: RenderMode.Client },
   { path: ':owner/:slug/history', renderMode: RenderMode.Server },
   { path: ':owner/:slug', renderMode: RenderMode.Server },
   { path: ':owner', renderMode: RenderMode.Server },

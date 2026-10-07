@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -58,7 +58,7 @@ describe("Cursor adapter (#120)", () => {
 			execFileSync("git", ["-C", repo, "config", "appmarket.repo", "dev/app"]);
 			expect(await prompt()).toBe(0);
 			expect(out.mock.calls.map((c) => String(c[0]))).toEqual(['{"continue":true}\n', '{"continue":true}\n']);
-			const buffer = readFileSync(join(home, "sessions", "dev__app.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { type: string; harness: string });
+			const buffer = readFileSync(join(home, "sessions", readdirSync(join(home, "sessions")).find((f) => /^dev__app__[0-9a-f]{8}\.jsonl$/.test(f))!), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { type: string; harness: string });
 			expect(buffer.map((e) => `${e.harness}:${e.type}`)).toEqual(["cursor:prompt", "cursor:settings"]);
 			expect(await hook("cursor", "not json")).toBe(0);
 		} finally {

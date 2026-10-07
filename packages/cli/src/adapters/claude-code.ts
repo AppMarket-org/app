@@ -2,6 +2,9 @@ import { closeSync, openSync, readSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import type { BufferEvent } from "../buffer.ts";
 
+/** Messages Claude Code writes into the conversation itself, e.g. when a background command ends. */
+const HARNESS_MESSAGE = /^\s*<(task-notification|system-reminder|local-command-stdout|local-command-caveat)>/;
+
 /** Claude Code hook input (common fields plus the per-event ones we use). */
 export interface HookInput {
 	hook_event_name: string;
@@ -58,7 +61,8 @@ export function eventsFor(input: HookInput, now = new Date().toISOString(), root
 		case "SessionStart":
 			return [{ ...base, type: "session.start", model, transcript_offset: sizeOf(input.transcript_path) }];
 		case "UserPromptSubmit":
-			return input.prompt ? [{ ...base, type: "prompt", text: input.prompt, transcript_offset: sizeOf(input.transcript_path) }] : [];
+			// Claude Code also submits its own messages (a background command finished, …); not prompts.
+			return input.prompt && !HARNESS_MESSAGE.test(input.prompt) ? [{ ...base, type: "prompt", text: input.prompt, transcript_offset: sizeOf(input.transcript_path) }] : [];
 		case "PostToolUse":
 		case "PostToolUseFailure":
 			return input.tool_name
