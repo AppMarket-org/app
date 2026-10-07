@@ -208,4 +208,17 @@
 @media (max-width: 48rem) { .readme .markdown-preview { padding: 1rem; } .revision-bar { flex-wrap: wrap; } .revision-bar a:first-of-type { margin-left: 0; } }
 
 :host.embedded { padding: 0; }
+// An open file fills the window below the toolbar: the files, the code and
+// the code graph panel each scroll on their own, and the page itself does not scroll.
+:host(.viewing:not(.embedded)) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 4rem);
+  padding-bottom: 0.5rem;
+  box-sizing: border-box;
+  .layout { flex: 1; min-height: 0; height: auto; }
+}
+@media (max-width: 48rem) {
+  :host(.viewing:not(.embedded)) { display: block; height: auto; }
+}
 @media (max-width: 37.5rem) { :host:not(.embedded) { padding-inline: 1rem; } }
