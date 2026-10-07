@@ -169,7 +169,7 @@ export class RepoPage {
       path: `/${app.fullName}`,
       heading: [{ label: app.owner.handle, link: `/${app.owner.handle}` }, { label: app.slug }],
       // Generated card; ?v= changes with the repo so social sites fetch a new one after edits.
-      image: `/api/og/${app.fullName}.png?v=${Date.parse(app.updatedAt) || 0}`,
+      image: `/api/og/${app.fullName}.png?v=2-${Date.parse(app.updatedAt) || 0}`,
       noindex: app.state !== 'published',
       jsonLd: {
         '@type': 'SoftwareApplication',
