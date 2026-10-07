@@ -10,8 +10,19 @@ import { RepoStore } from "../repos/repository.ts";
 import { markPreviewDeleted, previewStore } from "./store.ts";
 import { accessToken } from "../cloudflare/oauth.ts";
 import { listBranches } from "../artifacts/git.ts";
+import { pickBranch } from "../repos/pick-branch.ts";
+import { startPreview } from "./scan.ts";
 
 type Ctx = { Variables: AuthVariables };
+
+const deployNowSchema = z.object({
+	workerName: z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/),
+	accountId: z.string().regex(/^[0-9a-f]{32}$/),
+	/** Keep redeploying the default branch on every push. */
+	deployDefault: z.boolean().default(true),
+	/** Previews of other branches; unchanged when left out. */
+	previews: z.boolean().optional(),
+});
 
 const settingsSchema = z.object({
 	enabled: z.boolean(),
@@ -59,6 +70,35 @@ export const previewRoutes = new Hono<Ctx>()
 		logEvent("previews.deleted", { repo: repo.fullName, branch: preview.branch, worker: preview.workerName });
 		return c.json({ ok: true, resources: preview.resources });
 	})
+	// The first (or a repeated) deploy of the default branch's head, to the Worker and account
+	// chosen, saving the automatic deploy settings with it.
+	.post("/:owner/:slug/previews/deploy", requireRole(), async (c) => {
+		const repo = await editable(c);
+		if (!repo?.gitRepo) return c.json({ error: "not_found" }, 404);
+		const input = deployNowSchema.safeParse(await c.req.json().catch(() => null));
+		if (!input.success) return c.json({ error: "invalid", message: "Choose a Cloudflare account and a valid Worker name." }, 400);
+		const userId = c.get("session")!.user.id;
+		const accounts = await cloudflareAccounts(userId);
+		if (!Array.isArray(accounts)) return c.json({ error: accounts, message: "Connect your Cloudflare account first." }, 409);
+		if (!accounts.some((a) => a.id === input.data.accountId)) return c.json({ error: "account_not_connected" }, 403);
+		const { defaultBranch, branches } = await listBranches(repo.gitRepo);
+		const head = pickBranch(defaultBranch, branches);
+		if (!head) return c.json({ error: "empty", message: "Push a commit first." }, 409);
+		const current = (await previewStore.latest(repo.id)).find((p) => p.branch === head.name);
+		let id: string;
+		let already = false;
+		if (current && ["queued", "building", "deploying"].includes(current.status)) {
+			id = current.deploymentId;
+			already = true;
+		} else {
+			id = await startPreview({ repo_id: repo.id, user_id: userId, account_id: input.data.accountId, git_repo: repo.gitRepo, slug: repo.slug }, head.name, head.sha, input.data.workerName);
+		}
+		// Saved after the deploy is recorded, so the scheduled scan does not start the same commit again.
+		const existing = await previewStore.settings(repo.id);
+		await previewStore.save(repo.id, userId, input.data.accountId, { enabled: input.data.previews ?? !!existing?.enabled, deployDefault: input.data.deployDefault, workerName: input.data.workerName });
+		logEvent("previews.deploy_now", { repo: repo.fullName, user: userId, deployment: id, already });
+		return c.json({ id, branch: head.name, already }, already ? 200 : 201);
+	})
 	.put("/:owner/:slug/previews", requireRole(), async (c) => {
 		const repo = await editable(c);
 		if (!repo) return c.json({ error: "not_found" }, 404);
@@ -74,7 +114,8 @@ export const previewRoutes = new Hono<Ctx>()
 		const accounts = await cloudflareAccounts(userId);
 		if (!Array.isArray(accounts)) return c.json({ error: accounts, message: "Connect your Cloudflare account first." }, 409);
 		if (!input.data.accountId || !accounts.some((a) => a.id === input.data.accountId)) return c.json({ error: "account_not_connected" }, 403);
-		await previewStore.save(repo.id, userId, input.data.accountId, { enabled: input.data.enabled, deployDefault: input.data.deployDefault, workerName: input.data.deployDefault ? input.data.workerName! : null });
+		// The Worker name is kept with auto deploy off, so the default branch's deploy stays its Worker.
+		await previewStore.save(repo.id, userId, input.data.accountId, { enabled: input.data.enabled, deployDefault: input.data.deployDefault, workerName: input.data.workerName ?? null });
 		logEvent("previews.enabled", { repo: repo.fullName, user: userId, previews: input.data.enabled, deployDefault: input.data.deployDefault });
 		return c.json({ ok: true });
 	});
