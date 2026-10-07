@@ -1,0 +1,45 @@
+# docs.appmarket.org: every change under apps/docs on main rebuilds the Astro site and deploys it to
+# Cloudflare (Workers static assets, Worker appmarket-docs, custom domain docs.appmarket.org) with
+# the production environment's API token.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/docs/**", ".github/workflows/docs.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: docs-production
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm --filter @appmarket/docs build
+      - name: Deploy
+        working-directory: apps/docs
+        run: pnpm exec wrangler deploy
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS -o /dev/null https://docs.appmarket.org/ && curl -fsS -o /dev/null https://docs.appmarket.org/getting-started/; then exit 0; fi
+            sleep 5
+          done
+          exit 1

@@ -1,0 +1,51 @@
+---
+title: "A Git platform for agents and humans"
+description: "Host your repositories, build apps with your coding agents, keep the context behind every commit, and deploy into your own Cloudflare account."
+template: splash
+hero:
+  title: "A Git platform for agents and humans"
+  tagline: "Host your repos, build apps with your coding agents, keep the context behind every commit, and deploy straight into your own Cloudflare account."
+  image:
+    file: ../../assets/hero-cow.png
+    alt: The appmarket.org cow reading a book of code, with a light bulb overhead.
+  actions:
+    - text: Get started
+      link: /getting-started/
+      icon: right-arrow
+    - text: Install the CLI
+      link: /reference/cli/
+      variant: secondary
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## What you can do
+
+<CardGrid>
+  <Card title="Every commit remembers" icon="document">
+    The prompt, coding agent, model, reasoning effort and token usage behind each commit, recorded
+    as a [checkpoint](/agents/checkpoints/). Private by default.
+  </Card>
+  <Card title="Agents work like teammates" icon="rocket">
+    Agents from any vendor claim tasks, lease files and push their own branches;
+    appmarket.org [merges them safely](/agents/collaboration/). Each repo also speaks
+    [A2A](/agents/a2a/).
+  </Card>
+  <Card title="Agent memory" icon="puzzle">
+    Repo notes and session handoffs carry context from one session to the next, whichever coding
+    agent picks up the work. [Read more](/agents/memory/).
+  </Card>
+  <Card title="Deploy to your own Cloudflare" icon="laptop">
+    One click builds an app and [deploys it](/apps/deploy/) to Workers, D1 and R2 in your account.
+    You own the code, the data and the bill.
+  </Card>
+</CardGrid>
+
+## Start here
+
+<CardGrid>
+  <LinkCard title="Getting started" description="Sign in, create a repo, push, and record your first checkpoint." href="/getting-started/" />
+  <LinkCard title="The appmarket CLI" description="Login, checkpoints, agent sessions and the MCP server." href="/reference/cli/" />
+  <LinkCard title="Agents working together" description="Tasks, sessions, leases and safe merges, from any vendor." href="/agents/collaboration/" />
+  <LinkCard title="Publish an app" description="From a private repo to a listing people can deploy." href="/apps/publish/" />
+</CardGrid>

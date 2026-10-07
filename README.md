@@ -14,7 +14,7 @@ and deploy straight into your own Cloudflare account.
 [![npm](https://img.shields.io/npm/v/appmarket?label=appmarket%20CLI&color=2b2a26)](https://www.npmjs.com/package/appmarket)
 [![Runs on Cloudflare](https://img.shields.io/badge/runs%20on-Cloudflare%20Workers-f38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
 
-[**Website**](https://appmarket.org) · [**Explore apps**](https://appmarket.org/search) · [**CLI**](packages/cli) · [**Docs**](docs) · [**Contributing**](CONTRIBUTING.md)
+[**Website**](https://appmarket.org) · [**Docs**](https://docs.appmarket.org) · [**Explore apps**](https://appmarket.org/search) · [**CLI**](packages/cli) · [**Contributing**](CONTRIBUTING.md)
 
 <br>
 
@@ -175,6 +175,7 @@ and R2 for media and releases.
 | [`packages/shared`](packages/shared) | Types and rules shared by the API, the web app and the CLI |
 | [`packages/template-contract`](packages/template-contract) | Submit-time template checks and the deploy manifest |
 | [`plugins/claude-code`](plugins/claude-code) | The Claude Code plugin (MIT) |
+| [`apps/docs`](apps/docs) | The docs site, [docs.appmarket.org](https://docs.appmarket.org) (Astro + Starlight) |
 | [`docs`](docs) | Architecture decisions, setup and runbooks |
 
 ## Run it locally

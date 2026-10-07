@@ -1,0 +1,10 @@
+// docs.appmarket.org: the built site served as Workers static assets (no Worker code).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "appmarket-docs",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist", "not_found_handling": "404-page", "html_handling": "auto-trailing-slash" },
+  "routes": [{ "pattern": "docs.appmarket.org", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false
+}
