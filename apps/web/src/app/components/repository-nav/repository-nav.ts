@@ -52,6 +52,7 @@ export class RepositoryNav {
       { id: 'issues', label: 'Issues', icon: 'confirmation_number', link: [...publicRoot, 'issues'], query: {} },
       { id: 'pulls', label: 'Pull requests', icon: 'call_split', link: [...publicRoot, 'pulls'], query: {} },
       ...(this.managed() ? [
+        { id: 'graph', label: 'Graph', icon: 'hub', link: [...publicRoot, 'graph'], query: {} },
         { id: 'agents', label: 'Agents', icon: 'smart_toy', link: [...root, 'agents'], query: {} },
         { id: 'checkpoints', label: 'Checkpoints', icon: 'history_edu', link: [...root, 'checkpoints'], query: {} },
         { id: 'memory', label: 'Memory', icon: 'psychology', link: [...root, 'memory'], query: {} },

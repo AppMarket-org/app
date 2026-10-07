@@ -23,7 +23,7 @@ const report = (file, index, text, message) => {
 
 // A plain element is allowed only when it carries one of these Material directives.
 const NEEDS_MATERIAL = {
-	button: /\bmat-(?:button|flat-button|stroked-button|raised-button|icon-button|fab|mini-fab|menu-item)\b|\bmatButton\b|\bmatChipRemove\b/,
+	button: /\bmat-(?:button|flat-button|stroked-button|raised-button|icon-button|fab|mini-fab|menu-item|list-item)\b|\bmatButton\b|\bmatChipRemove\b/,
 	a: /\bmat-(?:button|flat-button|stroked-button|raised-button|icon-button|chip|list-item|menu-item)\b|\bmatButton\b|\bmat-tab-link\b/,
 	input: /\bmatInput\b|\[matChipInputFor\]|\btype="file"[^>]*\bhidden\b|\bhidden\b[^>]*\btype="file"/,
 	textarea: /\bmatInput\b/,

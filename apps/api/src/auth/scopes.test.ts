@@ -61,7 +61,7 @@ describe("deviceMayCall", () => {
 	});
 
 	it("lets device tokens read the code graph (#240)", () => {
-		for (const sub of ["", "/symbols", "/references", "/impact"]) expect(deviceMayCall(["repos:read"], "GET", `/api/repos/dev/app/code-graph${sub}`)).toBe(true);
+		for (const sub of ["", "/symbols", "/references", "/impact", "/map", "/file"]) expect(deviceMayCall(["repos:read"], "GET", `/api/repos/dev/app/code-graph${sub}`)).toBe(true);
 		expect(deviceMayCall(["repos:read"], "POST", "/api/repos/dev/app/code-graph")).toBe(false);
 		expect(deviceMayCall(["checkpoints:write"], "GET", "/api/repos/dev/app/code-graph/symbols")).toBe(false);
 	});

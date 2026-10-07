@@ -1,0 +1,76 @@
+<aside class="panel" aria-labelledby="graph-panel-heading">
+  <div class="head">
+    <h2 id="graph-panel-heading"><mat-icon aria-hidden="true">hub</mat-icon>Code graph</h2>
+    <a mat-button [routerLink]="['/', repo().split('/')[0], repo().split('/')[1], 'graph']" [queryParams]="{ file: file() }">Map</a>
+  </div>
+  @switch (data()) {
+    @case (undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading the code graph" />
+    }
+    @case (null) {
+      <p class="hint">This file is not in the code graph of the default branch.</p>
+    }
+    @default {
+      @let d = data()!;
+      @if (otherBranch()) {
+        <p class="hint">From {{ d.branch }}, the default branch.</p>
+      }
+      @if (d.symbols.length) {
+        <h3>Defined here <span class="n">{{ d.symbols.length }}</span></h3>
+        <mat-action-list aria-label="Defined in this file">
+          @for (s of d.symbols; track s.name + s.line) {
+            <button mat-list-item type="button" (click)="openLine.emit(s.line)">
+              <mat-icon matListItemIcon aria-hidden="true">{{ icons[s.kind] ?? 'tag' }}</mat-icon>
+              <span matListItemTitle class="mono">{{ s.name }}</span>
+              <span matListItemLine>{{ s.kind }}{{ s.exported ? ', exported' : '' }} · line {{ s.line }}</span>
+            </button>
+          }
+        </mat-action-list>
+      }
+      <h3>Imports <span class="n">{{ d.imports.length }}</span></h3>
+      @if (d.imports.length) {
+        <mat-action-list aria-label="Files this file imports">
+          @for (p of d.imports; track p) {
+            <button mat-list-item type="button" (click)="openFile.emit(p)" [title]="p">
+              <mat-icon matListItemIcon aria-hidden="true">north_east</mat-icon>
+              <span matListItemTitle class="mono">{{ name(p) }}</span>
+              <span matListItemLine>{{ p }}</span>
+            </button>
+          }
+        </mat-action-list>
+      } @else {
+        <p class="hint">No files of this repo.</p>
+      }
+      <h3>Imported by <span class="n">{{ d.importedBy.length }}</span></h3>
+      @if (d.importedBy.length) {
+        <mat-action-list aria-label="Files that import this file">
+          @for (p of d.importedBy; track p) {
+            <button mat-list-item type="button" (click)="openFile.emit(p)" [title]="p">
+              <mat-icon matListItemIcon aria-hidden="true">south_west</mat-icon>
+              <span matListItemTitle class="mono">{{ name(p) }}</span>
+              <span matListItemLine>{{ p }}</span>
+            </button>
+          }
+        </mat-action-list>
+      } @else {
+        <p class="hint">Nothing imports it.</p>
+      }
+      <h3>A change here can affect <span class="n">{{ d.impact.length }}</span></h3>
+      @if (d.impact.length) {
+        <mat-action-list aria-label="Files a change to this file can affect">
+          @for (a of d.impact.slice(0, 20); track a.path) {
+            <button mat-list-item type="button" (click)="openFile.emit(a.path)" [title]="a.path">
+              <span matListItemTitle class="mono">{{ name(a.path) }}</span>
+              <span matListItemLine>{{ a.depth === 1 ? 'imports it' : a.depth + ' steps away, via ' + name(a.via) }}</span>
+            </button>
+          }
+        </mat-action-list>
+        @if (d.impact.length > 20) {
+          <p class="hint">and {{ d.impact.length - 20 }} more on the map.</p>
+        }
+      } @else {
+        <p class="hint">Nothing else in the repo.</p>
+      }
+    }
+  }
+</aside>

@@ -30,7 +30,7 @@ export default defineConfig({
       ],
       sidebar: [
         { label: 'Start here', items: ['getting-started', 'concepts'] },
-        { label: 'Git and code', items: ['git/repositories', 'git/pull-requests', 'git/issues'] },
+        { label: 'Git and code', items: ['git/repositories', 'git/pull-requests', 'git/issues', 'git/code-graph'] },
         {
           label: 'Agents',
           items: ['agents/checkpoints', 'agents/adapters', 'agents/sessions', 'agents/collaboration', 'agents/a2a', 'agents/memory'],

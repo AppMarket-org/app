@@ -1,0 +1,134 @@
+<app-repository-header [owner]="owner()" [slug]="slug()" [managed]="managed()" />
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="graph" [managed]="managed()" />
+
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>Code graph</h1>
+      @if (map(); as m) {
+        <p class="sub">
+          {{ m.branch }} · <code>{{ m.commit.slice(0, 7) }}</code> · {{ m.files.length }} file{{ m.files.length === 1 ? '' : 's' }} ·
+          {{ m.edges.length }} import{{ m.edges.length === 1 ? '' : 's' }}
+          @if (!m.complete) { · <span class="warn">partial: the repo is larger than the indexing limits</span> }
+        </p>
+      }
+    </div>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Find a symbol</mat-label>
+      <input matInput [ngModel]="q()" (ngModelChange)="search($event)" [matAutocomplete]="auto" autocomplete="off" spellcheck="false" />
+      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="chooseSymbol($event)" [displayWith]="symbolLabel">
+        @for (s of hits(); track s.path + s.name + s.line) {
+          <mat-option [value]="s">
+            <mat-icon>{{ symbolIcons[s.kind] ?? 'tag' }}</mat-icon><span class="mono">{{ s.name }}</span>
+            <span class="where">{{ s.path }}:{{ s.line }}</span>
+          </mat-option>
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+  </header>
+
+  @switch (map()) {
+    @case (undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Building the code graph" />
+      <p class="hint">Indexing the default branch the first time can take a few seconds.</p>
+    }
+    @case (null) {
+      <p class="hint" role="alert">{{ error() }}</p>
+    }
+    @default {
+      @let g = graph()!;
+      <div class="layout">
+        <section class="canvas" aria-label="Map of the repo's files and imports">
+          <div class="toolbar">
+            @if (g.grouped) {
+              @if (openFolder(); as folder) {
+                <button mat-button type="button" (click)="backToFolders()"><mat-icon>arrow_back</mat-icon>All folders</button>
+                <span class="mono">{{ folder }}/</span>
+              } @else {
+                <span class="hint">A large repo: folders first. Open one to see its files.</span>
+              }
+            }
+            <span class="spacer"></span>
+            @if (focus()) {
+              <mat-slide-toggle [checked]="impactMode()" (change)="impactMode.set($event.checked)">What a change affects</mat-slide-toggle>
+              <button mat-button type="button" (click)="clear()"><mat-icon>close</mat-icon>Clear</button>
+            }
+            <button mat-icon-button type="button" (click)="zoom(0.8)" aria-label="Zoom in" matTooltip="Zoom in"><mat-icon>add</mat-icon></button>
+            <button mat-icon-button type="button" (click)="zoom(1.25)" aria-label="Zoom out" matTooltip="Zoom out"><mat-icon>remove</mat-icon></button>
+            <button mat-icon-button type="button" (click)="reset()" aria-label="Fit" matTooltip="Fit"><mat-icon>fit_screen</mat-icon></button>
+          </div>
+          <svg
+            #svg
+            class="map"
+            [attr.viewBox]="viewBox()"
+            role="img"
+            [attr.aria-label]="g.nodes.length + ' nodes and ' + g.edges.length + ' imports'"
+            (wheel)="wheel($event, svg)"
+            (pointerdown)="down($event)"
+            (pointermove)="move($event, svg)"
+            (pointerup)="up()"
+            (pointerleave)="up()"
+          >
+            <defs>
+              <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L8,4 L0,8 z" class="arrow" />
+              </marker>
+            </defs>
+            <g class="edges">
+              @for (e of g.edges; track e.source + '>' + e.target) {
+                @let s = node(e.source);
+                @let t = node(e.target);
+                <line [attr.x1]="s.x" [attr.y1]="s.y" [attr.x2]="t.x" [attr.y2]="t.y" [attr.class]="edgeClass(e)" [attr.stroke-width]="strokeWidth(e)" marker-end="url(#arrow)" />
+              }
+            </g>
+            <g class="nodes">
+              @for (n of g.nodes; track n.id) {
+                <g
+                  class="node"
+                  [attr.class]="'node ' + nodeClass(n)"
+                  [attr.transform]="'translate(' + n.x + ',' + n.y + ')'"
+                  (click)="select(n)"
+                  (pointerenter)="hovered.set(n.id)"
+                  (pointerleave)="hovered.set(null)"
+                >
+                  <title>{{ n.id }}{{ n.kind === 'folder' ? ' (' + n.files + ' files)' : '' }} · {{ n.symbols }} symbol{{ n.symbols === 1 ? '' : 's' }}</title>
+                  <circle [attr.r]="radius(n)" [attr.fill]="color(n.group)" [class.folder]="n.kind === 'folder'" />
+                  @if (showLabel(n)) {
+                    <text [attr.y]="-radius(n) - 4 * scale()" [attr.font-size]="11 * scale()">{{ n.label }}</text>
+                  }
+                </g>
+              }
+            </g>
+          </svg>
+          <mat-chip-set class="legend" aria-label="Top-level folders">
+            @for (group of groups(); track group) {
+              <mat-chip><span class="dot" matChipAvatar [style.background]="color(group)"></span>{{ group }}</mat-chip>
+            }
+          </mat-chip-set>
+          @if (focus() && !impactMode()) {
+            <p class="hint key"><span class="swatch imports"></span>imports · <span class="swatch importedBy"></span>imported by</p>
+          } @else if (focus()) {
+            <p class="hint key">{{ impactCount() }} file{{ impactCount() === 1 ? '' : 's' }} can be affected (up to 3 steps of importers)</p>
+          }
+        </section>
+
+        <aside class="side">
+          @if (selected(); as file) {
+            <div class="file-head">
+              <span class="mono" [title]="file">{{ file }}</span>
+              <a mat-stroked-button [routerLink]="['/', owner(), slug(), 'code']" [queryParams]="{ file }"><mat-icon>code</mat-icon>Open</a>
+            </div>
+            <app-code-graph-panel [repo]="path()" [file]="file" (openFile)="selectFile($event)" (openLine)="openLine($event)" />
+          } @else {
+            <div class="empty">
+              <mat-icon aria-hidden="true">hub</mat-icon>
+              <p>Select a file to see what it defines, what it imports and what imports it, or find a symbol above.</p>
+              <p class="hint">Dots are files, coloured by top-level folder and sized by what they define. Lines are imports between the repo's own files (TypeScript, JavaScript and Python).</p>
+            </div>
+          }
+        </aside>
+      </div>
+    }
+  }
+</div>
