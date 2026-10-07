@@ -55,7 +55,8 @@ export function taskState(task: PlaneTask, agents: PlaneAgent[]): { state: State
 	if (task.status === "claimed") return { state: "working", message: `${by} is working on it.` };
 	if (task.status === "failed") return { state: "failed", message: task.note ? `${by} could not finish it: ${task.note}` : `${by} could not finish it.` };
 	const merge = task.merge;
-	if (!merge) return { state: "completed", message: `Done by ${by}.` };
+	// Done with a branch but no merge yet: the merge (or the review pull request) is about to start.
+	if (!merge) return task.branch ? { state: "working", message: `Done by ${by}; handing ${task.branch} to merge.` } : { state: "completed", message: `Done by ${by}.` };
 	if (merge.status === "merged") return { state: "completed", message: `Done by ${by} and merged${merge.sha ? ` as ${merge.sha.slice(0, 12)}` : ""}.` };
 	if (merge.status === "conflict" || merge.status === "failed") return { state: "failed", message: `Done by ${by}, but not merged: ${merge.error ?? merge.status}` };
 	if (merge.status === "review") return { state: "working", message: `Done by ${by}; waiting for review in pull request #${merge.pull}.` };
