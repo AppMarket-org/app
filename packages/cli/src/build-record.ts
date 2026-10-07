@@ -13,7 +13,7 @@ export interface CommitInfo {
 	files: { path: string; added: number; removed: number }[];
 }
 
-const truncate = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+export const truncate = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
 
 /**
  * Turns the buffer events since the last checkpoint into a record (#109, #114). Effort metrics are

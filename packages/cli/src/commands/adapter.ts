@@ -13,7 +13,7 @@ export const hookCommand = (harness: HookHarness) => `command -v appmarket >/dev
 export const HOOK_COMMAND = hookCommand("claude-code");
 
 const HARNESSES: Record<HookHarness, { events: readonly string[]; toolMatcher: string; name: string }> = {
-	"claude-code": { events: ["SessionStart", "UserPromptSubmit", "PostToolUse", "PostToolUseFailure", "SessionEnd"], toolMatcher: "*", name: "Claude Code" },
+	"claude-code": { events: ["SessionStart", "UserPromptSubmit", "PostToolUse", "PostToolUseFailure", "Stop", "SessionEnd"], toolMatcher: "*", name: "Claude Code" },
 	// Codex matchers are regular expressions.
 	codex: { events: ["SessionStart", "UserPromptSubmit", "PostToolUse"], toolMatcher: ".*", name: "Codex" },
 	// #120: Cursor's own hooks.json shape (editCursorHooks); events listed in adapters/cursor.ts.

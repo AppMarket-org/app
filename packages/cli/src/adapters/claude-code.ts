@@ -13,6 +13,8 @@ export interface HookInput {
 	tool_name?: string;
 	tool_input?: Record<string, unknown>;
 	tool_response?: unknown;
+	/** Stop: the reply that ended the turn (newer Claude Code versions send it). */
+	last_assistant_message?: string;
 }
 
 export const COMMIT_COMMAND = /\bgit\b[^\n|;&]*\bcommit\b/;
@@ -135,4 +137,33 @@ export function transcriptEvents(path: string, offset: number, until: string, si
 	if (last) events.push({ v: 1, ts: last.timestamp!, type: "settings", harness: "claude-code", model: last.message?.model, effort: last.effort, harness_version: last.version });
 	if (lastText) events.push({ v: 1, ts: last!.timestamp!, type: "assistant", harness: "claude-code", text: lastText });
 	return events;
+}
+
+/** The agent's final reply in a session: the last text it wrote in the main conversation (not a subagent's). */
+export function lastReply(path: string | undefined): string {
+	if (!path) return "";
+	let text: string;
+	try {
+		const size = statSync(path).size;
+		const start = Math.max(0, size - 2 * 1024 * 1024);
+		const fd = openSync(path, "r");
+		const buffer = Buffer.alloc(size - start);
+		readSync(fd, buffer, 0, buffer.length, start);
+		closeSync(fd);
+		text = buffer.toString("utf8");
+	} catch {
+		return "";
+	}
+	let reply = "";
+	for (const raw of text.split("\n")) {
+		if (!raw.includes('"type":"assistant"')) continue;
+		try {
+			const line = JSON.parse(raw) as TranscriptLine;
+			const block = line.message?.content?.filter((c) => c.type === "text" && c.text).at(-1)?.text;
+			if (line.type === "assistant" && block && !line.isSidechain) reply = block;
+		} catch {
+			// A partial line at the start of the window.
+		}
+	}
+	return reply;
 }

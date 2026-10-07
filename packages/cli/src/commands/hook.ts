@@ -1,5 +1,6 @@
 import { append, bufferKey } from "../buffer.ts";
-import { COMMIT_COMMAND, eventsFor, type HookInput } from "../adapters/claude-code.ts";
+import { COMMIT_COMMAND, eventsFor, lastReply, type HookInput } from "../adapters/claude-code.ts";
+import { finishSummaries } from "../summaries.ts";
 import { cursorCommitted, cursorDirectory, cursorEvents, type CursorInput } from "../adapters/cursor.ts";
 import { opencodeEvents, type OpencodeInput } from "../adapters/opencode.ts";
 import { gitOr, repoRoot } from "../git.ts";
@@ -35,6 +36,11 @@ export async function hook(harness: string, stdin: string, opts: { plugin?: bool
 		// git hook already made one, checkpoint() sees the note and does nothing. The commit call
 		// itself is not recorded: it would land in the next commit's checkpoint.
 		if (committed) return checkpoint({ hook: true, cwd: root });
+		// The turn ended: its final reply becomes the summary of the commits it made.
+		if (input.hook_event_name === "Stop") {
+			if (harness === "claude-code" && input.session_id) finishSummaries(root, input.session_id, input.last_assistant_message || lastReply(input.transcript_path));
+			return 0;
+		}
 		for (const event of eventsFor(input, undefined, root, harness)) append(key, event);
 		if (input.hook_event_name === "SessionStart") {
 			const context = await sessionStartContext(root);
@@ -59,6 +65,7 @@ async function cursorHook(input: CursorInput): Promise<number> {
 		if (cursorCommitted(input)) return checkpoint({ hook: true, cwd: root });
 		const key = bufferKey(root);
 		for (const event of cursorEvents(input, root)) append(key, event);
+		if (input.hook_event_name === "afterAgentResponse" && input.conversation_id && input.text) finishSummaries(root, input.conversation_id, input.text);
 		if (input.hook_event_name === "sessionStart") {
 			const context = await sessionStartContext(root);
 			if (context) process.stdout.write(`${JSON.stringify({ additional_context: context })}\n`);
@@ -79,6 +86,7 @@ function opencodeHook(input: OpencodeInput): number {
 	if (input.event === "tool" && input.tool === "bash" && !input.error && COMMIT_COMMAND.test(command)) return checkpoint({ hook: true, cwd: root });
 	const key = bufferKey(root);
 	for (const event of opencodeEvents(input, root)) append(key, event);
+	if (input.event === "assistant" && input.sessionID && input.text) finishSummaries(root, input.sessionID, input.text);
 	return 0;
 }
 

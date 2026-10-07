@@ -1,6 +1,6 @@
 {
 	"name": "appmarket",
-	"version": "0.8.0",
+	"version": "0.9.0",
 	"description": "appmarket.org CLI: device login and checkpoints for agent commits.",
 	"license": "MIT",
 	"type": "module",

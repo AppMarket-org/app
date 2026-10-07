@@ -27,7 +27,9 @@ you ran `appmarket init` and nowhere else:
 
 - each prompt you send, and each tool call (name, plus the command or file path relative to the repo)
 - at commit time, from the session transcript: model, Claude Code version, effort setting, token
-  usage (thinking tokens separately) and the assistant's last message before the commit
+  usage (thinking tokens separately)
+- when the turn ends (the `Stop` hook): the agent's final reply, as the summary of the commits it
+  made in that turn (agents usually commit first and sum up afterwards)
 
 When an agent runs `git commit`, the hook also makes the checkpoint itself, so commits are recorded
 even where the git hook is missing. Hook failures never interrupt Claude Code; they go to
@@ -51,14 +53,15 @@ OpenCode's events as they happen: prompts (not the task tool's subagent prompts)
 their outcome, the model and variant (effort), token usage and cost per model call, and the final
 message. Each event goes to a detached `appmarket hook opencode`, so OpenCode never waits for it.
 Usage of the model call that ran `git commit` arrives just after the commit, so it counts toward
-the next checkpoint.
+the next checkpoint. The final message becomes the summary of the commits made in that turn.
 
 ## Cursor
 
 `appmarket adapter install cursor` adds hooks to `~/.cursor/hooks.json` (with `--project`: the
 repo's `.cursor/hooks.json`; other hooks there are kept). Restart Cursor to load them. Prompts,
 tool calls (with their outcome), the model, the reasoning-effort setting, Cursor's version and the
-final answer come from the hooks; Cursor gives hooks no token usage, so its checkpoints have none.
+final answer come from the hooks (the final answer becomes the summary of the commits made in that
+turn); Cursor gives hooks no token usage, so its checkpoints have none.
 An agent's `git commit` makes the checkpoint right away, and the repo's memory is added at session
 start. Hooks that fail never block Cursor (it fails open, and the hook always exits 0).
 
