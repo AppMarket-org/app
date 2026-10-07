@@ -28,7 +28,7 @@
           <mat-icon matListItemIcon aria-hidden="true" [class]="p.state">{{ p.state === 'merged' ? 'merge' : p.state === 'closed' ? 'block' : 'call_split' }}</mat-icon>
           <span matListItemTitle>{{ p.title }} <span class="number">#{{ p.number }}</span></span>
           <span matListItemLine>
-            {{ p.author }} · {{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }} → {{ p.target.branch }} · {{ p.updatedAt | date: 'mediumDate' }}
+            {{ p.agent ? p.agent + ' (agent for ' + p.author + ')' : p.author }} · {{ p.source.fork ? p.source.repo + ':' : '' }}{{ p.source.branch }} → {{ p.target.branch }} · {{ p.updatedAt | date: 'mediumDate' }}
             @if (p.review.decision === 'approved') {
               · approved
             } @else if (p.review.decision === 'changes_requested') {

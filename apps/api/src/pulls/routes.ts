@@ -1,4 +1,4 @@
-import { COMMENT_LIMIT, isBranchName, parsePullInput, type PullComment, type PullMerge, type PullRequest, type PullReview, type PullState, type ReviewState, redactSecrets, type Repo, reviewDecision } from "@appmarket/shared";
+import { COMMENT_LIMIT, HARNESS_LABELS, isBranchName, parsePullInput, type PullComment, type PullMerge, type PullRequest, type PullReview, type PullState, type ReviewState, redactSecrets, type Repo, reviewDecision } from "@appmarket/shared";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import { listBranches } from "../artifacts/git.ts";
@@ -25,6 +25,7 @@ interface PullRow {
 	body: string;
 	author_id: string;
 	author: string | null;
+	harness: string | null;
 	source_repo_id: string;
 	source_name: string;
 	source_branch: string;
@@ -38,8 +39,9 @@ interface PullRow {
 	task_id: string | null;
 }
 
-const SELECT = `SELECT p.*, u.name AS author, so.handle || '/' || s.slug AS source_name
-	FROM pull_requests p JOIN repos s ON s.id = p.source_repo_id JOIN owners so ON so.id = s.owner_id LEFT JOIN "user" u ON u.id = p.author_id`;
+const SELECT = `SELECT p.*, u.name AS author, a.harness, so.handle || '/' || s.slug AS source_name
+	FROM pull_requests p JOIN repos s ON s.id = p.source_repo_id JOIN owners so ON so.id = s.owner_id LEFT JOIN "user" u ON u.id = p.author_id
+	LEFT JOIN agent_sessions a ON a.id = p.agent_session_id`;
 
 async function latestMerge(pullId: string): Promise<PullMerge | null> {
 	const m = await env.DB.prepare("SELECT id, status, head_sha, error, details FROM merges WHERE pull_id = ? ORDER BY created_at DESC LIMIT 1")
@@ -76,6 +78,7 @@ async function toPull(row: PullRow, repo: Repo, session: AppSession | null): Pro
 		body: row.body,
 		state: row.state,
 		author: row.author ?? "",
+		agent: row.harness ? (HARNESS_LABELS[row.harness] ?? "An agent") : null,
 		source: { repo: row.source_name, branch: row.source_branch, fork: row.source_repo_id !== row.repo_id },
 		target: { repo: repo.fullName, branch: row.target_branch },
 		headSha: row.head_sha,
