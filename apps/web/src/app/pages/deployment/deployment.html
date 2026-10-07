@@ -1,62 +1,109 @@
-<a mat-button routerLink="/dashboard"><mat-icon>arrow_back</mat-icon>Dashboard</a>
+<div class="page">
+  <a mat-button routerLink="/dashboard" class="back"><mat-icon>arrow_back</mat-icon>Dashboard</a>
 
-@switch (deployment()) {
-  @case (undefined) {
-    <mat-progress-bar mode="indeterminate" aria-label="Loading deployment" />
-  }
-  @case (null) {
-    <app-not-found-view title="Deployment not found" message="It does not exist or belongs to another account." returnUrl="/dashboard" returnLabel="Back to dashboard" />
-  }
-  @default {
-    @let d = deployment()!;
-    <h1>Deploying {{ d.repoName }}</h1>
-    <p class="sub">
-      {{ d.previewBranch ? 'Branch ' + d.previewBranch : d.versionTag }} as <strong>{{ d.workerName }}</strong> · started {{ d.createdAt | date: 'medium' }}
-    </p>
-
-    <mat-card appearance="outlined">
-      <mat-card-content>
-        @if (running()) {
-          <mat-progress-bar mode="indeterminate" aria-label="Deploy in progress" />
-        }
-        <mat-list role="list" aria-label="Deploy steps">
-          @for (step of steps; track step.status) {
-            @let state = stepState(step.status);
-            <mat-list-item role="listitem" [class]="state">
-              <mat-icon matListItemIcon aria-hidden="true">{{ state === 'done' ? 'check_circle' : state === 'current' ? 'pending' : 'radio_button_unchecked' }}</mat-icon>
-              <span matListItemTitle>{{ step.label }}</span>
-            </mat-list-item>
-          }
-        </mat-list>
+  @switch (deployment()) {
+    @case (undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading deployment" />
+    }
+    @case (null) {
+      <app-not-found-view title="Deployment not found" message="It does not exist or belongs to another account." returnUrl="/dashboard" returnLabel="Back to dashboard" />
+    }
+    @default {
+      @let d = deployment()!;
+      <header class="head">
+        <div class="title">
+          <h1>{{ d.repoName }}</h1>
+          <span [class]="'status ' + d.status" role="status">
+            <mat-icon aria-hidden="true">{{ statusIcon[d.status] }}</mat-icon>{{ statusLabel[d.status] }}
+          </span>
+        </div>
+        <p class="meta">
+          {{ d.previewBranch ? 'Branch ' + d.previewBranch : d.versionTag }} · Worker
+          <code>{{ d.workerName }}</code> · {{ d.status === 'succeeded' ? 'deployed' : 'started' }}
+          {{ d.createdAt | date: 'medium' }} · {{ d.repoFullName }}
+        </p>
 
         @if (d.status === 'succeeded') {
-          <p class="done" role="status">Your app is live in your Cloudflare account.</p>
-          @if (d.url) {
-            <a mat-flat-button [href]="d.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>Open {{ d.url }}</a>
+          @if (primaryUrl(); as url) {
+            <div class="links">
+              <a mat-flat-button [href]="url" target="_blank" rel="noopener"
+                ><mat-icon>open_in_new</mat-icon>Open {{ host(url) }}</a
+              >
+              @for (other of otherUrls(); track other) {
+                <a mat-button [href]="other" target="_blank" rel="noopener">{{ host(other) }}</a>
+              }
+            </div>
           } @else {
-            <p>Find it under Workers &amp; Pages in your Cloudflare dashboard; add a route or custom domain to reach it.</p>
+            <p class="hint">
+              No public address yet. Attach a custom domain in the Domains tab, or add a route in the
+              Cloudflare dashboard.
+            </p>
           }
         }
-        @if (d.status === 'failed') {
-          <p class="error" role="alert">The deploy failed. Anything it already created stays in your account and is reused when you try again.</p>
-          @if (d.error) {
-            <pre><code>{{ d.error }}</code></pre>
-          }
-          @if (d.previewBranch) {
-            <!-- An automatic deploy: run it again (same branch, commit and Worker). -->
-            <button mat-stroked-button type="button" [disabled]="retrying()" (click)="retry()">Try again</button>
-          } @else {
-            <a mat-stroked-button [routerLink]="'/' + d.repoFullName" [queryParams]="{ deploy: 1 }">Try again</a>
-          }
-        }
-      </mat-card-content>
-    </mat-card>
-    <app-logs-card [deploymentId]="d.id" [status]="d.status" />
-    @if (d.status === 'succeeded') {
-      <app-config-card [deploymentId]="d.id" />
-      <app-domains-card [deploymentId]="d.id" />
-      <app-versions-card [deploymentId]="d.id" />
-      <app-eject-card [deploymentId]="d.id" />
+      </header>
+
+      @if (d.status !== 'succeeded') {
+        <mat-card appearance="outlined" class="progress">
+          <mat-card-content>
+            @if (running()) {
+              <mat-progress-bar mode="indeterminate" aria-label="Deploy in progress" />
+            }
+            <mat-list role="list" aria-label="Deploy steps" class="steps">
+              @for (step of steps; track step.status) {
+                @let state = stepState(step.status);
+                <mat-list-item role="listitem" [class]="state">
+                  <mat-icon matListItemIcon aria-hidden="true">{{ state === 'done' ? 'check_circle' : state === 'current' ? 'pending' : 'radio_button_unchecked' }}</mat-icon>
+                  <span matListItemTitle>{{ step.label }}</span>
+                </mat-list-item>
+              }
+            </mat-list>
+            @if (d.status === 'failed') {
+              <p class="error" role="alert">
+                The deploy failed. Anything it already created stays in your account and is
+                reused when you try again.
+              </p>
+              @if (d.error) {
+                <pre><code>{{ d.error }}</code></pre>
+              }
+              @if (d.previewBranch) {
+                <!-- An automatic deploy: run it again (same branch, commit and Worker). -->
+                <button mat-flat-button type="button" [disabled]="retrying()" (click)="retry()">Try again</button>
+              } @else {
+                <a mat-flat-button [routerLink]="'/' + d.repoFullName" [queryParams]="{ deploy: 1 }">Try again</a>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+        <app-logs-card [deploymentId]="d.id" [status]="d.status" />
+      } @else {
+        <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start" animationDuration="0ms" class="tabs">
+          <mat-tab label="Domains">
+            <ng-template matTabContent>
+              <app-domains-card [deploymentId]="d.id" (changed)="refresh()" />
+            </ng-template>
+          </mat-tab>
+          <mat-tab label="Variables and secrets">
+            <ng-template matTabContent>
+              <app-config-card [deploymentId]="d.id" />
+            </ng-template>
+          </mat-tab>
+          <mat-tab label="Versions">
+            <ng-template matTabContent>
+              <app-versions-card [deploymentId]="d.id" />
+            </ng-template>
+          </mat-tab>
+          <mat-tab label="Logs">
+            <ng-template matTabContent>
+              <app-logs-card [deploymentId]="d.id" [status]="d.status" />
+            </ng-template>
+          </mat-tab>
+          <mat-tab label="Eject">
+            <ng-template matTabContent>
+              <app-eject-card [deploymentId]="d.id" />
+            </ng-template>
+          </mat-tab>
+        </mat-tab-group>
+      }
     }
   }
-}
+</div>

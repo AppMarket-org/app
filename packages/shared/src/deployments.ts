@@ -20,6 +20,8 @@ export interface Deployment {
 	status: DeploymentStatus;
 	/** workers.dev URL once deployed. */
 	url: string | null;
+	/** The Worker's custom domains (hostnames), as last seen in the buyer's account. */
+	domains: string[];
 	error: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -194,6 +196,16 @@ export const CONFIG_VALUE_MAX = 5 * 1024;
  * #307: one app running in a Cloudflare account (a Worker), from its deployments. Each deploy
  * replaces the Worker's version, so an app is live from its latest successful deployment.
  */
+/**
+ * Where people reach a deployed app: a custom domain, else workers.dev. The highest-level name wins
+ * (bombfind.com before play.bombfind.com), and a name before its www. form.
+ */
+export function appUrl(d: Pick<Deployment, "url" | "domains">): string | null {
+	const [best] = [...d.domains].sort((a, b) => labels(a) - labels(b) || Number(a.startsWith("www.")) - Number(b.startsWith("www.")) || a.localeCompare(b));
+	return best ? `https://${best}` : d.url;
+}
+const labels = (host: string) => host.replace(/^www\./, "").split(".").length;
+
 export interface RunningApp {
 	key: string;
 	accountId: string;

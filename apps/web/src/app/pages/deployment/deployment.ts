@@ -4,14 +4,14 @@ import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, 
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import type { Deployment, DeploymentStatus } from '@appmarket/shared';
+import { appUrl, type Deployment, type DeploymentStatus } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { ConfigCard } from './config-card/config-card';
 import { DomainsCard } from './domains-card/domains-card';
@@ -30,10 +30,16 @@ const STEPS: { status: DeploymentStatus; label: string }[] = [
 const ORDER: DeploymentStatus[] = ['queued', 'building', 'deploying', 'succeeded'];
 const POLL_MS = 3000;
 
-/** PRD D6: progress and result of one deploy; polls until it finishes. */
+const STATUS_LABEL: Record<DeploymentStatus, string> = { queued: 'Queued', building: 'Building', deploying: 'Deploying', succeeded: 'Live', failed: 'Failed' };
+const STATUS_ICON: Record<DeploymentStatus, string> = { queued: 'schedule', building: 'pending', deploying: 'pending', succeeded: 'check_circle', failed: 'error' };
+
+/**
+ * PRD D6: one deployed app. While it deploys: progress and logs. Once live: where it runs (its
+ * custom domain first, workers.dev otherwise) and tabs to manage it.
+ */
 @Component({
   selector: 'app-deployment',
-  imports: [NotFoundView, ConfigCard, DomainsCard, EjectCard, LogsCard, VersionsCard, DatePipe, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
+  imports: [NotFoundView, ConfigCard, DomainsCard, EjectCard, LogsCard, VersionsCard, DatePipe, MatButtonModule, MatCardModule, MatIconModule, MatListModule, MatProgressBarModule, MatTabsModule, RouterLink],
   templateUrl: './deployment.html',
   styleUrl: './deployment.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,6 +56,21 @@ export class DeploymentPage {
   /** undefined while loading; null when not found. */
   protected readonly deployment = signal<Deployment | null | undefined>(undefined);
   protected readonly steps = STEPS;
+  protected readonly statusLabel = STATUS_LABEL;
+  protected readonly statusIcon = STATUS_ICON;
+  /** The app's address: a custom domain when it has one. */
+  protected readonly primaryUrl = computed(() => {
+    const d = this.deployment();
+    return d ? appUrl(d) : null;
+  });
+  /** Its other addresses: more custom domains, and workers.dev. */
+  protected readonly otherUrls = computed(() => {
+    const d = this.deployment();
+    if (!d) return [];
+    const all = [...d.domains.map((h) => `https://${h}`), ...(d.url ? [d.url] : [])];
+    return all.filter((u) => u !== this.primaryUrl());
+  });
+  protected readonly host = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
   protected readonly running = computed(() => {
     const s = this.deployment()?.status;
     return s === 'queued' || s === 'building' || s === 'deploying';
@@ -89,6 +110,12 @@ export class DeploymentPage {
     } finally {
       this.retrying.set(false);
     }
+  }
+
+  /** After a domain change: the addresses at the top follow. */
+  protected async refresh(): Promise<void> {
+    const d = await firstValueFrom(this.api.get(this.id)).catch(() => null);
+    if (d) this.deployment.set(d);
   }
 
   private async poll(): Promise<void> {

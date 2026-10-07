@@ -74,12 +74,13 @@ interface DeploymentRow {
 	preview_branch: string | null;
 	status: DeploymentStatus;
 	url: string | null;
+	domains: string | null;
 	error: string | null;
 	created_at: string;
 	updated_at: string;
 }
 
-const SELECT = `SELECT d.id, o.handle || '/' || l.slug AS full_name, l.name, d.version_tag, d.account_id, d.worker_name, d.preview_branch, d.status, d.url, d.error, d.created_at, d.updated_at
+const SELECT = `SELECT d.id, o.handle || '/' || l.slug AS full_name, l.name, d.version_tag, d.account_id, d.worker_name, d.preview_branch, d.status, d.url, d.domains, d.error, d.created_at, d.updated_at
 	FROM deployments d JOIN repos l ON l.id = d.repo_id JOIN owners o ON o.id = l.owner_id`;
 
 const toDeployment = (r: DeploymentRow): Deployment => ({
@@ -92,6 +93,7 @@ const toDeployment = (r: DeploymentRow): Deployment => ({
 	previewBranch: r.preview_branch,
 	status: r.status,
 	url: r.url,
+	domains: r.domains ? (JSON.parse(r.domains) as string[]) : [],
 	error: r.error,
 	createdAt: r.created_at,
 	updatedAt: r.updated_at,
@@ -105,6 +107,13 @@ export async function deploymentFor(userId: string, id: string): Promise<Deploym
 export async function deploymentsFor(userId: string): Promise<Deployment[]> {
 	const { results } = await env.DB.prepare(`${SELECT} WHERE d.user_id = ? ORDER BY d.created_at DESC LIMIT 50`).bind(userId).all<DeploymentRow>();
 	return results.map(toDeployment);
+}
+
+/** Records the Worker's custom domains on all of the user's deployments of it (see migration 0065). */
+export async function saveWorkerDomains(userId: string, accountId: string, workerName: string, hostnames: string[]): Promise<void> {
+	await env.DB.prepare("UPDATE deployments SET domains = ? WHERE user_id = ? AND account_id = ? AND worker_name = ?")
+		.bind(JSON.stringify([...hostnames].sort()), userId, accountId, workerName)
+		.run();
 }
 
 /** #40: appends a section of build or deploy output, keeping the newest 48,000 characters. */

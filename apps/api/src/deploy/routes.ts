@@ -12,7 +12,7 @@ import { readConfig, writeSecret, writeVar } from "./config.ts";
 import { attachDomain, detachDomain, domainErrorMessage, listDomains, listZones } from "./domains.ts";
 import { entitled } from "../payments/routes.ts";
 import { runtimeLogs } from "./runtime-logs.ts";
-import { deploymentFor, deploymentLogs, deploymentsFor, insertDeployment } from "./store.ts";
+import { deploymentFor, deploymentLogs, deploymentsFor, insertDeployment, saveWorkerDomains } from "./store.ts";
 import { CloudflareApiError, rollbackTo, workerVersions } from "./versions.ts";
 import type { DeployParams } from "./workflow.ts";
 import { logEvent } from "../observability/log.ts";
@@ -123,6 +123,7 @@ export const deploymentRoutes = new Hono<Ctx>()
 		if (target instanceof Response) return target;
 		try {
 			const [zones, domains] = await Promise.all([listZones(fetch, target.token, target.deployment.accountId), listDomains(fetch, target.token, target.deployment.accountId, target.deployment.workerName)]);
+			await rememberDomains(c, target.deployment, domains);
 			return c.json({ zones, domains });
 		} catch (error) {
 			return cloudflareError(c, error);
@@ -139,6 +140,7 @@ export const deploymentRoutes = new Hono<Ctx>()
 		try {
 			const domain = await attachDomain(fetch, target.token, target.deployment.accountId, target.deployment.workerName, hostname, zoneId);
 			logEvent("deploy.domain_attached", { deployment: target.deployment.id, hostname });
+			await rememberDomains(c, target.deployment, [...target.deployment.domains.filter((h) => h !== domain.hostname).map((h) => ({ hostname: h })), domain]);
 			return c.json(domain, 201);
 		} catch (error) {
 			if (error instanceof CloudflareApiError && error.status >= 400 && error.status < 500 && error.status !== 401 && error.status !== 403) {
@@ -156,6 +158,7 @@ export const deploymentRoutes = new Hono<Ctx>()
 			if (!mine.some((d) => d.id === c.req.param("domainId"))) return c.json({ error: "not_found" }, 404);
 			await detachDomain(fetch, target.token, target.deployment.accountId, c.req.param("domainId"));
 			logEvent("deploy.domain_detached", { deployment: target.deployment.id });
+			await rememberDomains(c, target.deployment, mine.filter((d) => d.id !== c.req.param("domainId")));
 			return c.json({ ok: true });
 		} catch (error) {
 			return cloudflareError(c, error);
@@ -224,8 +227,13 @@ async function cloudflareTarget(c: Context<Ctx>): Promise<{ deployment: Deployme
 	if (!deployment) return c.json({ error: "not_found" }, 404);
 	if (deployment.status !== "succeeded") return c.json({ error: "not_deployed", message: "This deploy did not finish, so there is nothing to roll back." }, 409);
 	const token = await accessToken(userId);
-	if (!token) return c.json({ error: "reconnect", message: "Reconnect your Cloudflare account to see its versions." }, 409);
+	if (!token) return c.json({ error: "reconnect", message: "Reconnect your Cloudflare account (Dashboard › Cloudflare account) to manage this app." }, 409);
 	return { deployment, token };
+}
+
+/** Keeps the Worker's custom domains on its deployments, so the app's address is the custom domain. */
+async function rememberDomains(c: Context<Ctx>, deployment: Deployment, domains: { hostname: string }[]): Promise<void> {
+	await saveWorkerDomains(c.get("session")!.user.id, deployment.accountId, deployment.workerName, domains.map((d) => d.hostname));
 }
 
 function cloudflareError(c: Context<Ctx>, error: unknown): Response {

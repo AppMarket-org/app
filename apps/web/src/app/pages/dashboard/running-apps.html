@@ -13,7 +13,7 @@
           @for (a of apps(); track a.key) {
             <a mat-list-item [routerLink]="['/dashboard/deployments', a.latest.id]">
               <mat-icon matListItemIcon aria-hidden="true">{{ a.live ? 'check_circle' : a.latest.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
-              <span matListItemTitle>{{ a.repoName }} → {{ a.workerName }}</span>
+              <span matListItemTitle>{{ a.repoName }}{{ a.live && address(a.live) ? ' · ' + address(a.live) : ' → ' + a.workerName }}</span>
               <span matListItemLine>
                 @if (a.live) {
                   Live since {{ a.live.createdAt | date: 'medium' }}
