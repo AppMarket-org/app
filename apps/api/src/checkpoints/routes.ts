@@ -3,7 +3,8 @@ import { checkpointPatchSchema, checkpointRecordSchema, checkpointTranscriptSche
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
 import type { z } from "zod";
-import { commitExists, pushedCommits } from "../artifacts/git.ts";
+import { commitExists, commitLog, pushedCommits, resolveRef } from "../artifacts/git.ts";
+import { commitEntries } from "./commits.ts";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { suggestFromCheckpoint } from "../memory/store.ts";
 import { logEvent } from "../observability/log.ts";
@@ -116,6 +117,22 @@ export const checkpointRoutes = new Hono<Ctx>()
 			c.executionCtx.waitUntil(suggestFromCheckpoint(repo.id, record.commit, record).catch((e: unknown) => logEvent("memory.suggest_failed", { repo: repo.fullName, error: String(e) }, "warn")));
 		}
 		return c.json(result.checkpoint, result.status);
+	})
+	// The commit history of a branch (default: the repo's default branch), each commit with the
+	// prompts behind it where the viewer may see its checkpoint.
+	.get("/:owner/:slug/commits", async (c) => {
+		const repo = await repoFor(c);
+		if (!repo?.gitRepo || !canView(repo, c.get("session"))) return c.json({ error: "not_found" }, 404);
+		const ref = c.req.query("ref") || null;
+		const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
+		const limit = 30;
+		const head = ref ? await resolveRef(repo.gitRepo, ref) : null;
+		if (ref && !head) return c.json({ error: "not_found", message: "No such branch, tag or commit." }, 404);
+		const log = await commitLog(repo.gitRepo, head, offset, limit);
+		const viewer = viewerOf(c, repo);
+		const cps = await checkpoints().forCommits({ id: repo.id, path: repo.fullName }, log.commits.map((x) => x.hash), viewer);
+		c.header("Cache-Control", c.get("session") ? "private, no-store" : "public, max-age=60");
+		return c.json({ ref: ref ?? log.ref, items: commitEntries(log.commits, cps), next: log.commits.length === limit ? offset + limit : null });
 	})
 	.get("/:owner/:slug/checkpoints", async (c) => {
 		const repo = await repoFor(c);

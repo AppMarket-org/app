@@ -1,7 +1,6 @@
 @if (page(); as p) {
   <div class="profile">
     <aside class="identity" aria-label="Profile">
-      <p class="eyebrow">{{ p.owner.kind === 'org' ? 'Organization' : 'Public profile' }}</p>
       <app-avatar class="photo" [name]="p.owner.name" [src]="p.owner.avatarUrl" [size]="8" [kind]="p.owner.kind" [decorative]="true" [eager]="true" />
       <h1>
         <span class="name">{{ p.owner.name }}</span>
@@ -64,58 +63,56 @@
     </aside>
 
     <div class="content">
-      @if ((!pinnedFallback() && pinned().length) || canEdit()) {
+      <!-- Pins, or the most-cowbelled public apps when none are pinned (#142); nothing when there is neither. -->
+      @if (pinned().length) {
         <section aria-labelledby="pinned-heading" class="pinned">
           <div class="section-head">
-            <h2 id="pinned-heading">Featured repositories</h2>
+            <h2 id="pinned-heading">{{ pinnedFallback() ? 'Popular apps' : 'Pinned' }}</h2>
             @if (canEdit()) {
               <button mat-button type="button" (click)="customizePins()"><mat-icon>push_pin</mat-icon>Customize pins</button>
             }
           </div>
-          @if ((pinnedFallback() || !pinned().length) && canEdit()) {
-            <div class="pin-empty">
-              <mat-icon aria-hidden="true">push_pin</mat-icon>
-              <div><strong>Choose what to showcase</strong><p>Pin up to six public repositories to your profile.</p></div>
-            </div>
-          }
-          @if (!pinnedFallback() && pinned().length) {
-            <div class="cards">
-              @for (r of pinned(); track r.id) {
-                <app-repo-card [repo]="r" />
-              }
-            </div>
-          }
+          <div class="cards">
+            @for (r of pinned(); track r.id) {
+              <app-repo-card [repo]="r" />
+            }
+          </div>
         </section>
       }
 
       @if (calendar(); as cal) {
         <app-contribution-graph class="contributions" [calendar]="cal" [year]="year()" (yearChange)="showYear($event)" />
+        @if (cal.repos.length) {
+          <p class="overview">
+            <mat-icon aria-hidden="true">book</mat-icon>
+            <span>
+              Contributed to
+              @for (r of cal.repos.slice(0, 3); track r.fullName; let last = $last; let i = $index) {
+                <a mat-button class="repo-link" [routerLink]="'/' + r.fullName">
+                  @if (r.private) {<mat-icon aria-label="Private">lock</mat-icon>}{{ r.fullName }}</a
+                >{{ last ? '' : i === cal.repos.slice(0, 3).length - 2 && cal.repos.length <= 3 ? ' and ' : ', ' }}
+              }
+              @if (cal.repos.length > 3) {
+                and {{ cal.repos.length - 3 }} other {{ cal.repos.length - 3 === 1 ? 'repository' : 'repositories' }}
+              }
+            </span>
+          </p>
+        }
       }
       @if (!p.profile?.activityHidden && (p.owner.kind === 'user' || p.repos.length)) {
         <app-activity-feed class="activity" [handle]="p.owner.handle" [year]="year()" />
       }
 
-      <section aria-labelledby="repos-heading" class="public-repos">
-        <div class="section-head"><h2 id="repos-heading">Public apps <span class="count">{{ p.repos.length }}</span></h2></div>
-        @if (p.repos.length) {
+      @if (p.repos.length) {
+        <section aria-labelledby="repos-heading" class="public-repos">
+          <div class="section-head"><h2 id="repos-heading">Apps <span class="count">{{ p.repos.length }}</span></h2></div>
           <div class="cards">
             @for (r of p.repos; track r.id) {
               <app-repo-card [repo]="r" />
             }
           </div>
-        } @else {
-          <div class="repo-empty">
-            <mat-icon aria-hidden="true">code_blocks</mat-icon>
-            <h3>Nothing public yet</h3>
-            <p>{{ canEdit() ? 'Your private repositories stay in your dashboard. Published apps will appear here when they are approved.' : 'Published apps from this profile will appear here.' }}</p>
-            @if (canEdit()) {
-              <a mat-stroked-button routerLink="/dashboard">Open dashboard<mat-icon iconPositionEnd>arrow_forward</mat-icon></a>
-            } @else {
-              <a mat-stroked-button routerLink="/search">Explore apps<mat-icon iconPositionEnd>arrow_forward</mat-icon></a>
-            }
-          </div>
-        }
-      </section>
+        </section>
+      }
     </div>
   </div>
 } @else {

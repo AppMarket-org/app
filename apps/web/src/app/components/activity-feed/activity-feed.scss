@@ -46,3 +46,35 @@ mat-panel-title {
   padding: 0 1.5rem;
   color: var(--mat-sys-on-surface-variant);
 }
+
+// A private repo: visible here only to the people who can open it.
+.repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.lock {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.private-label {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  padding: 0 0.375rem;
+  border: 0.0625rem solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-full);
+}
+
+// Repos under "Created N commits": each opens to its commits.
+.repos {
+  --mat-expansion-header-collapsed-state-height: 3rem;
+  --mat-expansion-container-elevation-shadow: none;
+}
+
+.all {
+  margin-top: 0.5rem;
+}

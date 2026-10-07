@@ -70,12 +70,21 @@ export const MAX_PINS = 6;
 
 export type ContributionKind = "commit" | "repo" | "version" | "release" | "checkpoint";
 
+/** A repo someone contributed to, as the viewer may see it. */
+export interface ContributedRepo {
+	fullName: string;
+	name: string;
+	count: number;
+	private: boolean;
+}
+
 /** #145: a month of activity, grouped by kind, each broken down by repo. */
 export interface ActivityMonth {
 	/** YYYY-MM */
 	month: string;
-	groups: { kind: ContributionKind; total: number; repos: { fullName: string; name: string; count: number }[] }[];
-	/** #146: contributions in unpublished repos, when the user opted in; never with names. */
+	/** Repos the viewer can open; `private` ones are visible only to their owners and members. */
+	groups: { kind: ContributionKind; total: number; repos: ContributedRepo[] }[];
+	/** #146: contributions in repos the viewer cannot open, when the user opted in; never with names. */
 	privateCount?: number;
 }
 
@@ -97,7 +106,9 @@ export interface ContributionCalendar {
 	days: Record<string, number>;
 	/** Years with any contributions, newest first, for the year selector. */
 	years: number[];
-	/** The viewer is the user: private contributions are counted for them, but hidden from others (setting off). */
+	/** The repos contributed to in the period that the viewer can open, most contributions first. */
+	repos: ContributedRepo[];
+	/** The viewer is the user: private repos count here, but other people see them only if they can open them (setting off). */
 	privateOnlyForYou?: boolean;
 }
 

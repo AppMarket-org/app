@@ -1,6 +1,6 @@
 import { monthLabels, monthTotals, tooltip, weeks } from './calendar';
 
-const calendar = { from: '2026-01-01', to: '2026-01-20', total: 13, years: [2026], days: { '2026-01-01': 1, '2026-01-05': 4, '2026-01-20': 8 } };
+const calendar = { from: '2026-01-01', to: '2026-01-20', total: 13, years: [2026], repos: [], days: { '2026-01-01': 1, '2026-01-05': 4, '2026-01-20': 8 } };
 
 describe('contribution calendar', () => {
   it('lays out Sunday-first weeks, marks days outside the range, and scales levels to the busiest day', () => {

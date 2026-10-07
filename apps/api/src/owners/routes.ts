@@ -1,7 +1,7 @@
 import { MAX_PINS, type ActivityPage, type ContributionCalendar, type Owner, type Repo, type SessionInfo } from "@appmarket/shared";
 import { purgeOwnerPage } from "../routes/seo.ts";
 import { DEVICE_CLIENT_SCOPES } from "../auth/scopes.ts";
-import { ContributionStore } from "../contributions/store.ts";
+import { ContributionStore, type ContributionViewer } from "../contributions/store.ts";
 import { handleSchema, orgCreateSchema, orgMemberSchema, profileUpdateSchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -9,12 +9,19 @@ import type { z } from "zod";
 import { type AuthVariables, requireRole } from "../auth/middleware.ts";
 import { logEvent } from "../observability/log.ts";
 import { RepoStore } from "../repos/repository.ts";
+import { commitsBySha } from "../artifacts/git.ts";
+import { commitEntries } from "../checkpoints/commits.ts";
+import { CheckpointStore } from "../checkpoints/store.ts";
+import { canView, isOwner } from "../repos/access.ts";
 import { removeAvatar, replaceAvatar } from "./avatars.ts";
 import { OwnerStore } from "./store.ts";
 
 type Ctx = { Variables: AuthVariables };
 const owners = () => new OwnerStore(env.DB);
 const invalid = (error: z.ZodError) => ({ error: "invalid", issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) });
+
+/** The signed-in viewer, for which repos' contributions they may see. */
+const viewerOf = (session: AuthVariables["session"]): ContributionViewer => (session ? { id: session.user.id, orgIds: session.orgIds, admin: session.user.role === "admin" } : null);
 
 /** Public owner pages: a user or organization and its public repos. Mounted under /api/owners. */
 export const ownerRoutes = new Hono<Ctx>()
@@ -37,11 +44,13 @@ export const ownerRoutes = new Hono<Ctx>()
 			to = today;
 		}
 		const privacy = await owners().privacy(owner.id);
-		// You always see your own private contributions (as counts); others only when you opted in.
-		const self = c.get("session")?.user.id === owner.id;
-		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to, privacy.privateContributions || self);
-		// The profile page is cached at the edge (and purged on changes); privacy changes must show at once here.
-		c.header("Cache-Control", self ? "private, no-store" : "no-cache");
+		// Everyone sees contributions to the repos they can open (you: all of yours); with the
+		// opt-in (#146) the rest count too, as numbers.
+		const session = c.get("session");
+		const self = session?.user.id === owner.id;
+		const data = await new ContributionStore(env.DB).calendar(owner.id, from, to, viewerOf(session), privacy.privateContributions);
+		// The profile page is cached at the edge (and purged on changes); what a signed-in viewer sees depends on who they are.
+		c.header("Cache-Control", session ? "private, no-store" : "no-cache");
 		return c.json({ from, to, ...data, ...(self && !privacy.privateContributions ? { privateOnlyForYou: true } : {}) } satisfies ContributionCalendar);
 	})
 	// #145: activity by month (users: theirs; organizations: on their repos).
@@ -58,10 +67,28 @@ export const ownerRoutes = new Hono<Ctx>()
 		c.header("Cache-Control", "no-cache");
 		// #146: a hidden feed is hidden from the API too.
 		if (privacy.hideActivity) return c.json({ months: [], next: null, hidden: true } satisfies ActivityPage);
-		const self = owner.kind === "user" && c.get("session")?.user.id === owner.id;
-		if (self) c.header("Cache-Control", "private, no-store");
-		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper, 3, owner.kind === "user" && (privacy.privateContributions || self));
+		const session = c.get("session");
+		if (session) c.header("Cache-Control", "private, no-store");
+		const page = await new ContributionStore(env.DB).activity(owner.kind === "user" ? { userId: owner.id } : { ownerId: owner.id }, from, upper, 3, viewerOf(session), owner.kind === "user" && privacy.privateContributions);
 		return c.json(page);
+	})
+	// A user's commits in one repo in one month (an activity row opened), with the prompts behind
+	// them where the viewer may see those checkpoints. Only in repos the viewer can open.
+	.get("/:handle/commits", async (c) => {
+		const owner = await owners().byHandle(c.req.param("handle"));
+		const [repoOwner, slug] = (c.req.query("repo") ?? "").split("/");
+		const month = c.req.query("month") ?? "";
+		if (!owner || owner.kind !== "user" || !repoOwner || !slug || !/^\d{4}-\d{2}$/.test(month)) return c.json({ error: "not_found" }, 404);
+		if ((await owners().privacy(owner.id)).hideActivity) return c.json({ error: "not_found" }, 404);
+		const session = c.get("session");
+		const repo = await new RepoStore(env.DB).findByPath(repoOwner, slug);
+		if (!repo?.gitRepo || repo.state === "removed" || !canView(repo, session)) return c.json({ error: "not_found" }, 404);
+		const { shas, total } = await new ContributionStore(env.DB).commitRefs(owner.id, repo.id, month, 25);
+		const commits = await commitsBySha(repo.gitRepo, shas);
+		const viewer = session && isOwner(repo, { id: session.user.id, orgIds: session.orgIds }) ? "owner" : "public";
+		const cps = await new CheckpointStore(env.DB).forCommits({ id: repo.id, path: repo.fullName }, commits.map((x) => x.hash), viewer);
+		c.header("Cache-Control", session ? "private, no-store" : "no-cache");
+		return c.json({ items: commitEntries(commits, cps), total });
 	})
 	.get("/:handle", async (c) => {
 	const owner = await owners().byHandle(c.req.param("handle"));

@@ -11,23 +11,62 @@
               {{ describe(g.kind, g.total, g.repos.length) }}
             </mat-panel-title>
           </mat-expansion-panel-header>
-          <mat-nav-list [attr.aria-label]="describe(g.kind, g.total, g.repos.length)">
-            @for (r of g.repos; track r.fullName) {
-              <a mat-list-item [routerLink]="'/' + r.fullName">
-                <span matListItemTitle>{{ r.fullName }}</span>
-                <span matListItemMeta class="count">{{ r.count }}</span>
-              </a>
-            }
-          </mat-nav-list>
+          @if (g.kind === 'commit') {
+            <!-- Each repo opens to its commits this month, with the prompts behind them. -->
+            <mat-accordion multi displayMode="flat" class="repos">
+              @for (r of g.repos; track r.fullName) {
+                <mat-expansion-panel (opened)="openCommits(m.month, r.fullName)">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title class="repo"
+                      >{{ r.fullName }}
+                      @if (r.private) {
+                        <mat-icon class="lock" aria-hidden="true">lock</mat-icon><span class="private-label">Private</span>
+                      }
+                    </mat-panel-title>
+                    <mat-panel-description class="count">{{ r.count }} commit{{ r.count === 1 ? '' : 's' }}</mat-panel-description>
+                  </mat-expansion-panel-header>
+                  @switch (commits()[m.month + ' ' + r.fullName]) {
+                    @case (undefined) {
+                      <mat-progress-bar mode="indeterminate" aria-label="Loading commits" />
+                    }
+                    @case (null) {
+                      <p class="empty">Could not load these commits.</p>
+                    }
+                    @default {
+                      @let list = commits()[m.month + ' ' + r.fullName]!;
+                      <app-commit-list [commits]="list.items" [repo]="r.fullName" />
+                      @if (list.total > list.items.length) {
+                        <a mat-button class="all" [routerLink]="['/', r.fullName.split('/')[0], r.fullName.split('/')[1], 'commits']">All commits in {{ r.fullName }}</a>
+                      }
+                    }
+                  }
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+          } @else {
+            <mat-nav-list [attr.aria-label]="describe(g.kind, g.total, g.repos.length)">
+              @for (r of g.repos; track r.fullName) {
+                <a mat-list-item [routerLink]="'/' + r.fullName">
+                  <span matListItemTitle class="repo"
+                    >{{ r.fullName }}
+                    @if (r.private) {
+                      <mat-icon class="lock" aria-hidden="true">lock</mat-icon><span class="private-label">Private</span>
+                    }
+                  </span>
+                  <span matListItemMeta class="count">{{ r.count }}</span>
+                </a>
+              }
+            </mat-nav-list>
+          }
         </mat-expansion-panel>
       }
     </mat-accordion>
     @if (m.privateCount) {
-      <p class="private"><mat-icon aria-hidden="true">lock</mat-icon>{{ m.privateCount }} contribution{{ m.privateCount === 1 ? '' : 's' }} in private repos</p>
+      <p class="private"><mat-icon aria-hidden="true">lock</mat-icon>{{ m.privateCount }} contribution{{ m.privateCount === 1 ? '' : 's' }} in private repositories</p>
     }
   } @empty {
     @if (!loading()) {
-      <p class="empty">No public activity {{ year() ? 'in ' + year() : 'in the last year' }}.</p>
+      <p class="empty">No activity {{ year() ? 'in ' + year() : 'in the last year' }}.</p>
     }
   }
   @if (loading()) {
