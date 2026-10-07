@@ -1,0 +1,20 @@
+{
+  "name": "@appmarket/docs",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview",
+    "deploy": "astro build && wrangler deploy"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.5",
+    "astro": "^7.3.6",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.146.0"
+  }
+}
