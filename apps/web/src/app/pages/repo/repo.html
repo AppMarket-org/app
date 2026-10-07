@@ -125,10 +125,20 @@
             <p>
               This app is visible to its owner, workspace members, and admins. Marketplace
               deployment becomes available after a version is approved.
+              @if (canManage()) { You can deploy it to your own Cloudflare account now. }
             </p>
-            <a mat-flat-button [routerLink]="'/' + d.repo.fullName + '/code'"
-              ><mat-icon>code</mat-icon>Explore code</a
-            >
+            @if (canManage() && d.repo.state !== 'removed') {
+              <a mat-flat-button [routerLink]="'/dashboard/repos/' + d.repo.fullName" [queryParams]="{ tab: 'deployments' }"
+                ><mat-icon>cloud_upload</mat-icon>Deploy</a
+              >
+              <a mat-stroked-button [routerLink]="'/' + d.repo.fullName + '/code'"
+                ><mat-icon>code</mat-icon>Explore code</a
+              >
+            } @else {
+              <a mat-flat-button [routerLink]="'/' + d.repo.fullName + '/code'"
+                ><mat-icon>code</mat-icon>Explore code</a
+              >
+            }
             @if (canManage()) {
               <a mat-stroked-button [routerLink]="'/dashboard/repos/' + d.repo.fullName">{{
                 d.repo.state === 'draft' ? 'Prepare a version' : 'Manage versions'

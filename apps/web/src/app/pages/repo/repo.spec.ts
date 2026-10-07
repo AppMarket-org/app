@@ -67,6 +67,8 @@ it('shows a private app overview with code and version preparation instead of an
   expect(el.textContent).not.toContain('Not public: draft');
   expect(el.querySelector('a[href="/dev/angular-example-app/code"]')).not.toBeNull();
   expect(el.querySelector('a[href="/dashboard/repos/dev/angular-example-app"]')).not.toBeNull();
+  // Its owner can deploy it to their own Cloudflare before any version is published.
+  expect(el.querySelector('a[href="/dashboard/repos/dev/angular-example-app?tab=deployments"]')?.textContent).toContain('Deploy');
 });
 it('keeps published cloning and deployment actions on public apps', () => {
   const el = render('published');
