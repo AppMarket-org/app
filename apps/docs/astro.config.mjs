@@ -16,6 +16,8 @@ export default defineConfig({
       editLink: { baseUrl: 'https://github.com/AppMarket-org/app/edit/main/apps/docs/' },
       lastUpdated: true,
       customCss: ['./src/styles/theme.css'],
+      // Each page's og:image (src/route-data.ts, cards from src/pages/og).
+      routeMiddleware: './src/route-data.ts',
       // The same fonts as appmarket.org (apps/web/src/index.html).
       head: [
         { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' } },

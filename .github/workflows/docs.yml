@@ -1,12 +1,12 @@
-# docs.appmarket.org: every change under apps/docs on main rebuilds the Astro site and deploys it to
-# Cloudflare (Workers static assets, Worker appmarket-docs, custom domain docs.appmarket.org) with
-# the production environment's API token.
+# docs.appmarket.org: every change under apps/docs (or to the share card design its pages' cards
+# use) on main rebuilds the Astro site and deploys it to Cloudflare (Workers static assets, Worker
+# appmarket-docs, custom domain docs.appmarket.org) with the production environment's API token.
 name: Docs
 
 on:
   push:
     branches: [main]
-    paths: ["apps/docs/**", ".github/workflows/docs.yml"]
+    paths: ["apps/docs/**", "apps/api/src/og/card.ts", "apps/api/src/og/assets/**", ".github/workflows/docs.yml"]
   workflow_dispatch:
 
 concurrency:
