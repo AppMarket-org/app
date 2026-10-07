@@ -1,0 +1,24 @@
+<app-repository-header [owner]="owner()" [slug]="slug()" [managed]="managed()" />
+<app-repository-nav [owner]="owner()" [slug]="slug()" active="code" [managed]="managed()" />
+<div class="page">
+  <header class="head">
+    <h1>Commits</h1>
+    @if (ref()) {
+      <p class="sub"><mat-icon aria-hidden="true">account_tree</mat-icon>{{ ref() }}</p>
+    }
+  </header>
+  @switch (items()) {
+    @case (undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading commits" />
+    }
+    @case (null) {
+      <p class="error" role="alert">Could not load the commits. Reload to try again.</p>
+    }
+    @default {
+      <app-commit-list [commits]="items()!" [repo]="path()" />
+      @if (next() !== null) {
+        <button mat-stroked-button type="button" class="more" [disabled]="loadingMore()" (click)="more()">Older commits</button>
+      }
+    }
+  }
+</div>

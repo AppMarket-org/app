@@ -132,6 +132,7 @@
           >
             @if (overview) {
         <div class="revision-bar"><mat-icon aria-hidden="true">commit</mat-icon><span>{{ tree()!.ref }}</span><code>{{ tree()!.commit?.slice(0, 7) }}</code>
+          <a mat-button [routerLink]="'/' + full + '/commits'" [queryParams]="{ ref: tree()!.ref }"><mat-icon>commit</mat-icon>Commits</a>
           <a mat-button [routerLink]="tree()!.editor ? '/dashboard/repos/' + full + '/checkpoints' : '/' + full + '/history'"><mat-icon>history</mat-icon>{{ tree()!.editor ? 'Checkpoints' : 'Build history' }}</a>
         </div>
             }

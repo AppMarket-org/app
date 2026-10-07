@@ -47,7 +47,7 @@ describe("contributions (#143)", () => {
 		db.sqlite.prepare("UPDATE repos SET state = 'published' WHERE id = 'r1'").run();
 		await store.addCommits("r1", [commit("a", "dev@example.test", "2026-10-02"), commit("b", "dev@example.test", "2026-10-02"), commit("c", "dev@example.test", "2025-03-01")]);
 		await store.addCommits("r2", [commit("d", "dev@example.test", "2026-10-02")]);
-		expect(await store.calendar("dev", "2026-01-01", "2026-12-31")).toEqual({ days: { "2026-10-02": 2 }, total: 2, years: [2026, 2025] });
+		expect(await store.calendar("dev", "2026-01-01", "2026-12-31")).toEqual({ days: { "2026-10-02": 2 }, total: 2, years: [2026, 2025], repos: [{ fullName: "dev/app", name: "App", count: 2, private: false }] });
 		expect((await store.calendar("dev", "2026-10-03", "2026-12-31")).total).toBe(0);
 	});
 
@@ -61,12 +61,12 @@ describe("contributions (#143)", () => {
 		const first = await store.activity({ userId: "dev" }, "2026-01-01", "2027-01-01");
 		expect(first.months.map((m) => m.month)).toEqual(["2026-10", "2026-08", "2026-06"]);
 		expect(first.months[0]!.groups).toEqual([
-			{ kind: "commit", total: 2, repos: [{ fullName: "dev/app", name: "App", count: 2 }] },
-			{ kind: "repo", total: 1, repos: [{ fullName: "dev/app", name: "App", count: 1 }] },
+			{ kind: "commit", total: 2, repos: [{ fullName: "dev/app", name: "App", count: 2, private: false }] },
+			{ kind: "repo", total: 1, repos: [{ fullName: "dev/app", name: "App", count: 1, private: false }] },
 		]);
 		expect(first.next).toBe("2026-06-01");
 		const second = await store.activity({ userId: "dev" }, "2026-01-01", first.next!);
-		expect(second).toEqual({ months: [{ month: "2026-05", groups: [{ kind: "commit", total: 1, repos: [{ fullName: "dev/app", name: "App", count: 1 }] }] }], next: null });
+		expect(second).toEqual({ months: [{ month: "2026-05", groups: [{ kind: "commit", total: 1, repos: [{ fullName: "dev/app", name: "App", count: 1, private: false }] }] }], next: null });
 		expect((await store.activity({ ownerId: "dev" }, "2026-10-01", "2026-11-01")).months[0]!.groups[0]!.total).toBe(2);
 		expect(JSON.stringify(first)).not.toContain("secret");
 	});
@@ -80,13 +80,40 @@ describe("contributions (#143)", () => {
 		await store.addCommits("r2", [commit("b", "dev@example.test", "2026-10-02"), commit("c", "dev@example.test", "2026-09-05")]);
 		await store.addCommits("r3", [commit("d", "dev@example.test", "2026-10-02")]);
 		expect((await store.calendar("dev", "2026-01-01", "2026-12-31")).total).toBe(1);
-		expect((await store.calendar("dev", "2026-01-01", "2026-12-31", true)).days).toEqual({ "2026-10-02": 2, "2026-09-05": 1 });
-		const page = await store.activity({ userId: "dev" }, "2026-09-01", "2026-11-01", 3, true);
+		expect((await store.calendar("dev", "2026-01-01", "2026-12-31", null, true)).days).toEqual({ "2026-10-02": 2, "2026-09-05": 1 });
+		const page = await store.activity({ userId: "dev" }, "2026-09-01", "2026-11-01", 3, null, true);
 		expect(page.months.map((m) => [m.month, m.privateCount ?? 0])).toEqual([
 			["2026-10", 1],
 			["2026-09", 1],
 		]);
 		expect(page.months[1]!.groups).toEqual([]);
 		expect(JSON.stringify(page)).not.toMatch(/secret|gone/i);
+	});
+
+	it("names private repos to the people who can open them: the user, the repo's org members, admins; never others", async () => {
+		const { db, store } = setup();
+		db.sqlite.prepare("INSERT INTO owners (id, handle, kind) VALUES ('acme', 'acme', 'org')").run();
+		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state) VALUES ('r2', 'acme', 'dev', 'secret', 'Secret', 'Summary text', 'ai', 'draft')`).run();
+		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state) VALUES ('r3', 'dev', 'dev', 'mine', 'Mine', 'Summary text', 'ai', 'draft')`).run();
+		await store.addCommits("r2", [commit("a", "dev@example.test", "2026-10-02"), commit("b", "dev@example.test", "2026-10-03")]);
+		await store.addCommits("r3", [commit("c", "dev@example.test", "2026-10-02")]);
+		const range = ["dev", "2026-01-01", "2026-12-31"] as const;
+		const self = { id: "dev", orgIds: ["acme"], admin: false };
+		const member = { id: "someone", orgIds: ["acme"], admin: false };
+		const stranger = { id: "stranger", orgIds: [], admin: false };
+		expect((await store.calendar(...range, self)).repos).toEqual([
+			{ fullName: "acme/secret", name: "Secret", count: 2, private: true },
+			{ fullName: "dev/mine", name: "Mine", count: 1, private: true },
+		]);
+		expect(await store.calendar(...range, member)).toMatchObject({ total: 2, repos: [{ fullName: "acme/secret", count: 2, private: true }] });
+		expect(await store.calendar(...range, stranger)).toMatchObject({ total: 0, repos: [] });
+		expect((await store.calendar(...range, { id: "root", orgIds: [], admin: true })).total).toBe(3);
+		// The opt-in counts the rest for everyone, without names.
+		expect(await store.calendar(...range, stranger, true)).toMatchObject({ total: 3, repos: [] });
+		const page = await store.activity({ userId: "dev" }, "2026-09-01", "2026-11-01", 3, member, true);
+		expect(page.months[0]!.groups[0]!.repos.map((r) => r.fullName)).toEqual(["acme/secret"]);
+		expect(page.months[0]!.privateCount).toBe(1);
+		expect(JSON.stringify(page)).not.toContain("mine");
+		expect(await store.commitRefs("dev", "r2", "2026-10", 10)).toEqual({ shas: ["b".padEnd(40, "0"), "a".padEnd(40, "0")], total: 2 });
 	});
 });

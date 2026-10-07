@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { Checkpoint, CheckpointAccess, CheckpointPage, CheckpointVisibility } from '@appmarket/shared';
+import type { Checkpoint, CheckpointAccess, CheckpointPage, CheckpointVisibility, CommitEntry } from '@appmarket/shared';
 import type { Observable } from 'rxjs';
 
 /** Checkpoints PRD: the prompts, harness and effort behind each commit of a repo. */
@@ -15,6 +15,13 @@ export class CheckpointsApi {
     if (query.before) params['before'] = query.before;
     if (query.limit) params['limit'] = String(query.limit);
     return this.http.get<CheckpointPage>(`/api/repos/${path}/checkpoints`, { params });
+  }
+
+  /** A branch's commit history (default: the default branch), with prompts where visible. */
+  commits(path: string, ref: string | null, offset = 0): Observable<{ ref: string; items: CommitEntry[]; next: number | null }> {
+    const params: Record<string, string> = { offset: String(offset) };
+    if (ref) params['ref'] = ref;
+    return this.http.get<{ ref: string; items: CommitEntry[]; next: number | null }>(`/api/repos/${path}/commits`, { params });
   }
 
   setVisibility(path: string, sha: string, visibility: CheckpointVisibility): Observable<Checkpoint> {

@@ -1,4 +1,18 @@
-import type { ActivityMonth, ActivityPage, ContributionKind } from "@appmarket/shared";
+import type { ActivityMonth, ActivityPage, ContributionCalendar, ContributionKind } from "@appmarket/shared";
+
+/** Who is looking at a profile: signed out (null), or a user with their organizations. */
+export type ContributionViewer = { id: string; orgIds: readonly string[]; admin: boolean } | null;
+
+/**
+ * Repos `viewer` can open (as repos/access.ts canView): published ones, and private ones they own
+ * or belong to through an organization; admins all. Removed repos never.
+ */
+export function visibleTo(viewer: ContributionViewer): { sql: string; binds: string[] } {
+	if (viewer?.admin) return { sql: "r.state != 'removed'", binds: [] };
+	const mine = viewer ? [viewer.id, ...viewer.orgIds] : [];
+	if (!mine.length) return { sql: "r.state = 'published'", binds: [] };
+	return { sql: `(r.state = 'published' OR (r.state != 'removed' AND r.owner_id IN (${mine.map(() => "?").join(",")})))`, binds: mine };
+}
 
 /** A commit as Artifacts reports it (seconds or milliseconds since the epoch). */
 export interface ScannedCommit {
@@ -14,72 +28,94 @@ export class ContributionStore {
 	constructor(private readonly db: D1Database) {}
 
 	/**
-	 * #144: a user's contributions per day in [from, to], counting only published repos (private
-	 * contributions are #146), plus the years that have any.
+	 * #144: a user's contributions per day in [from, to], plus the years that have any and the repos
+	 * they went to (most first). Counted in the repos `viewer` can open (published ones, and private
+	 * ones they own or belong to through an organization); with `anonymous` (the user's opt-in, #146)
+	 * the rest count too, as numbers only. Removed repos never count.
 	 */
-	async calendar(userId: string, from: string, to: string, includePrivate = false): Promise<{ days: Record<string, number>; total: number; years: number[] }> {
-		// #146: with the opt-in, unpublished repos count too (as numbers only; removed ones never).
-		const visible = includePrivate ? "r.state != 'removed'" : "r.state = 'published'";
-		const [days, years] = await this.db.batch<{ day?: string; n?: number; year?: string }>([
+	async calendar(userId: string, from: string, to: string, viewer: ContributionViewer = null, anonymous = false): Promise<Omit<ContributionCalendar, "from" | "to">> {
+		const seen = visibleTo(viewer);
+		const counted = anonymous ? { sql: "r.state != 'removed'", binds: [] as string[] } : seen;
+		const [days, years, repos] = await this.db.batch<{ day?: string; n?: number; year?: string; full_name?: string; name?: string; state?: string }>([
 			this.db
-				.prepare(`SELECT c.day, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${visible} AND c.day BETWEEN ? AND ? GROUP BY c.day`)
-				.bind(userId, from, to),
-			this.db.prepare(`SELECT DISTINCT substr(c.day, 1, 4) AS year FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${visible} ORDER BY year DESC`).bind(userId),
+				.prepare(`SELECT c.day, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${counted.sql} AND c.day BETWEEN ? AND ? GROUP BY c.day`)
+				.bind(userId, ...counted.binds, from, to),
+			this.db.prepare(`SELECT DISTINCT substr(c.day, 1, 4) AS year FROM contributions c JOIN repos r ON r.id = c.repo_id WHERE c.user_id = ? AND ${counted.sql} ORDER BY year DESC`).bind(userId, ...counted.binds),
+			this.db
+				.prepare(
+					`SELECT o.handle || '/' || r.slug AS full_name, r.name, r.state, COUNT(*) AS n FROM contributions c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id
+					 WHERE c.user_id = ? AND ${seen.sql} AND c.day BETWEEN ? AND ? GROUP BY r.id ORDER BY n DESC, full_name`,
+				)
+				.bind(userId, ...seen.binds, from, to),
 		]);
 		const map = Object.fromEntries((days!.results ?? []).map((r) => [r.day!, r.n!]));
-		return { days: map, total: Object.values(map).reduce((a, b) => a + b, 0), years: (years!.results ?? []).map((r) => Number(r.year)) };
+		return {
+			days: map,
+			total: Object.values(map).reduce((a, b) => a + b, 0),
+			years: (years!.results ?? []).map((r) => Number(r.year)),
+			repos: (repos!.results ?? []).map((r) => ({ fullName: r.full_name!, name: r.name!, count: r.n!, private: r.state !== "published" })),
+		};
 	}
 
 	/**
 	 * #145: activity by month for a user (their contributions) or an organization (contributions
-	 * to its repos), published repos only, newest first: up to `months` months with activity in
-	 * [from, before).
+	 * to its repos), newest first: up to `months` months with activity in [from, before). Repos are
+	 * named where `viewer` can open them; with `anonymous` the rest show as a count per month.
 	 */
-	async activity(subject: { userId: string } | { ownerId: string }, from: string, before: string, months = 3, includePrivate = false): Promise<ActivityPage> {
+	async activity(subject: { userId: string } | { ownerId: string }, from: string, before: string, months = 3, viewer: ContributionViewer = null, anonymous = false): Promise<ActivityPage> {
 		const who = "userId" in subject ? "c.user_id = ?" : "r.owner_id = ?";
 		const id = "userId" in subject ? subject.userId : subject.ownerId;
+		const seen = visibleTo(viewer);
 		const scope = `FROM contributions c JOIN repos r ON r.id = c.repo_id JOIN owners o ON o.id = r.owner_id WHERE ${who} AND c.day >= ? AND c.day < ?`;
-		const base = `${scope} AND r.state = 'published'`;
-		// #146: months with only private activity still appear (as a count) when opted in.
-		const monthScope = includePrivate ? `${scope} AND r.state != 'removed'` : base;
+		// #146: months with only hidden activity still appear (as a count) when opted in.
+		const month = anonymous ? { sql: `${scope} AND r.state != 'removed'`, binds: [] as string[] } : { sql: `${scope} AND ${seen.sql}`, binds: seen.binds };
 		const { results: monthRows } = await this.db
-			.prepare(`SELECT DISTINCT substr(c.day, 1, 7) AS month ${monthScope} ORDER BY month DESC LIMIT ?`)
-			.bind(id, from, before, months + 1)
+			.prepare(`SELECT DISTINCT substr(c.day, 1, 7) AS month ${month.sql} ORDER BY month DESC LIMIT ?`)
+			.bind(id, from, before, ...month.binds, months + 1)
 			.all<{ month: string }>();
 		const shown = monthRows.slice(0, months).map((m) => m.month);
 		if (!shown.length) return { months: [], next: null };
+		const inShown = `substr(c.day, 1, 7) IN (${shown.map(() => "?").join(",")})`;
 		const { results } = await this.db
 			.prepare(
-				`SELECT substr(c.day, 1, 7) AS month, c.kind, o.handle || '/' || r.slug AS full_name, r.name, COUNT(*) AS n ${base}
-				 AND substr(c.day, 1, 7) IN (${shown.map(() => "?").join(",")})
-				 GROUP BY month, c.kind, r.id ORDER BY month DESC, n DESC`,
+				`SELECT substr(c.day, 1, 7) AS month, c.kind, o.handle || '/' || r.slug AS full_name, r.name, r.state, COUNT(*) AS n ${scope} AND ${seen.sql}
+				 AND ${inShown} GROUP BY month, c.kind, r.id ORDER BY month DESC, n DESC`,
 			)
-			.bind(id, from, before, ...shown)
-			.all<{ month: string; kind: ContributionKind; full_name: string; name: string; n: number }>();
+			.bind(id, from, before, ...seen.binds, ...shown)
+			.all<{ month: string; kind: ContributionKind; full_name: string; name: string; state: string; n: number }>();
 		const privateCounts = new Map<string, number>();
-		if (includePrivate) {
+		if (anonymous) {
 			const { results: hidden } = await this.db
-				.prepare(`SELECT substr(c.day, 1, 7) AS month, COUNT(*) AS n ${scope} AND r.state NOT IN ('published', 'removed') AND substr(c.day, 1, 7) IN (${shown.map(() => "?").join(",")}) GROUP BY month`)
-				.bind(id, from, before, ...shown)
+				.prepare(`SELECT substr(c.day, 1, 7) AS month, COUNT(*) AS n ${scope} AND r.state != 'removed' AND NOT (${seen.sql}) AND ${inShown} GROUP BY month`)
+				.bind(id, from, before, ...seen.binds, ...shown)
 				.all<{ month: string; n: number }>();
 			for (const h of hidden) privateCounts.set(h.month, h.n);
 		}
 		const order: ContributionKind[] = ["commit", "repo", "version", "release", "checkpoint"];
-		const out: ActivityMonth[] = shown.map((month) => {
-			const rows = results.filter((r) => r.month === month);
+		const out: ActivityMonth[] = shown.map((m) => {
+			const rows = results.filter((r) => r.month === m);
 			return {
-				month,
+				month: m,
 				groups: order
 					.map((kind) => {
-						const repos = rows.filter((r) => r.kind === kind).map((r) => ({ fullName: r.full_name, name: r.name, count: r.n }));
+						const repos = rows.filter((r) => r.kind === kind).map((r) => ({ fullName: r.full_name, name: r.name, count: r.n, private: r.state !== "published" }));
 						return { kind, total: repos.reduce((t, r) => t + r.count, 0), repos };
 					})
 					.filter((g) => g.total > 0),
-				...(privateCounts.get(month) ? { privateCount: privateCounts.get(month) } : {}),
+				...(privateCounts.get(m) ? { privateCount: privateCounts.get(m) } : {}),
 			};
 		});
 		// The next page ends where this one stopped: before the first day of its oldest month.
 		return { months: out, next: monthRows.length > months ? `${shown.at(-1)}-01` : null };
+	}
+
+	/** A user's commits in one repo in one month (YYYY-MM), newest day first, and how many there are. */
+	async commitRefs(userId: string, repoId: string, month: string, limit: number): Promise<{ shas: string[]; total: number }> {
+		const [rows, count] = await this.db.batch<{ ref?: string; n?: number }>([
+			this.db.prepare("SELECT ref FROM contributions WHERE user_id = ? AND repo_id = ? AND kind = 'commit' AND substr(day, 1, 7) = ? ORDER BY day DESC LIMIT ?").bind(userId, repoId, month, limit),
+			this.db.prepare("SELECT COUNT(*) AS n FROM contributions WHERE user_id = ? AND repo_id = ? AND kind = 'commit' AND substr(day, 1, 7) = ?").bind(userId, repoId, month),
+		]);
+		return { shas: (rows!.results ?? []).map((r) => r.ref!), total: count!.results?.[0]?.n ?? 0 };
 	}
 
 	/**

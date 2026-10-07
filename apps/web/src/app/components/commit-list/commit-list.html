@@ -1,0 +1,30 @@
+<mat-list role="list" class="commits" aria-label="Commits">
+  @for (c of commits(); track c.sha) {
+    <mat-list-item role="listitem" class="commit">
+      <div class="row">
+        <div class="main">
+          <span class="title">{{ c.title }}</span>
+          <span class="meta">
+            {{ c.author.name }} · {{ c.date | date: 'medium' }}
+            @if (c.checkpoint && c.checkpoint.harness !== 'none') {
+              · <mat-icon aria-hidden="true">smart_toy</mat-icon>{{ harnesses[c.checkpoint.harness] }}{{ c.checkpoint.model ? ' · ' + c.checkpoint.model : '' }}
+            }
+          </span>
+        </div>
+        <a mat-stroked-button class="sha" [routerLink]="['/', repo().split('/')[0], repo().split('/')[1], 'code']" [queryParams]="{ ref: c.sha }" [attr.aria-label]="'Browse the code at ' + c.sha.slice(0, 7)">{{ c.sha.slice(0, 7) }}</a>
+      </div>
+      @if (c.checkpoint?.prompts?.length) {
+        <div class="prompts">
+          @for (p of c.checkpoint!.prompts; track $index) {
+            <blockquote class="prompt"><mat-icon aria-hidden="true">chat</mat-icon><span>{{ p }}</span></blockquote>
+          }
+          @if (c.checkpoint!.promptCount > c.checkpoint!.prompts.length) {
+            <span class="more">and {{ c.checkpoint!.promptCount - c.checkpoint!.prompts.length }} more prompt{{ c.checkpoint!.promptCount - c.checkpoint!.prompts.length === 1 ? '' : 's' }}</span>
+          }
+        </div>
+      }
+    </mat-list-item>
+  } @empty {
+    <mat-list-item role="listitem">No commits to show.</mat-list-item>
+  }
+</mat-list>

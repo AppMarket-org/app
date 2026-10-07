@@ -124,7 +124,7 @@
       </mat-card-content>
     </mat-card>
   } @empty {
-    @if (!loading()) {
+    @if (!loading() && !loadError()) {
       <mat-card appearance="outlined" class="empty">
         <mat-card-header>
           <mat-icon mat-card-avatar>history_edu</mat-icon>

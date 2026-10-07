@@ -131,6 +131,16 @@ export class CheckpointStore {
 		return row && (viewer === "owner" || row.visibility !== "private") ? toCheckpoint(row, repo.path, viewer) : null;
 	}
 
+	/** The checkpoints of these commits that `viewer` may see, by commit. */
+	async forCommits(repo: { id: string; path: string }, shas: string[], viewer: CheckpointViewer): Promise<Map<string, Checkpoint>> {
+		if (!shas.length) return new Map();
+		const { results } = await this.db
+			.prepare(`SELECT * FROM checkpoints WHERE repo_id = ? AND commit_sha IN (${shas.map(() => "?").join(",")})${viewer === "owner" ? "" : " AND visibility != 'private'"}`)
+			.bind(repo.id, ...shas)
+			.all<Row>();
+		return new Map(results.map((r) => [r.commit_sha, toCheckpoint(r, repo.path, viewer)]));
+	}
+
 	/** Newest first; `before` is the previous page's last received_at. */
 	async list(
 		repo: { id: string; path: string },

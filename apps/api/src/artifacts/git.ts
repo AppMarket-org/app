@@ -305,3 +305,17 @@ export async function readPath(gitRepo: string, commit: string, path: string): P
 	using git = await env.ARTIFACTS.get(gitRepo);
 	return git.readFile({ ref: commit, path });
 }
+
+/** A page of commits reachable from `ref` (default: the default branch), newest first. */
+export async function commitLog(gitRepo: string, ref: string | null, offset: number, limit: number): Promise<{ ref: string; commits: ArtifactsCommitMetadata[] }> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const from = ref ?? (await git.info()).defaultBranch;
+	return { ref: from, commits: await git.log({ ref: from, offset, limit }).catch(() => []) };
+}
+
+/** Commits by SHA, in the order given; unknown ones are left out. */
+export async function commitsBySha(gitRepo: string, shas: string[]): Promise<ArtifactsCommitMetadata[]> {
+	using git = await env.ARTIFACTS.get(gitRepo);
+	const found = await Promise.all(shas.map((sha) => git.readCommit(sha).catch(() => null)));
+	return found.filter((c): c is ArtifactsCommitMetadata => !!c);
+}

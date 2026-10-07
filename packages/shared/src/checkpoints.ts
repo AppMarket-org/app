@@ -108,3 +108,17 @@ export interface CheckpointPage {
 	/** Pass as `before` to get the next (older) page; null at the end. */
 	next: string | null;
 }
+
+/**
+ * A commit as a repo's commit list and a profile's activity show it, with the prompts behind it
+ * when the viewer may see its checkpoint.
+ */
+export interface CommitEntry {
+	sha: string;
+	/** First line of the message. */
+	title: string;
+	author: { name: string };
+	/** ISO time the commit was authored. */
+	date: string;
+	checkpoint: { harness: Harness; model: string; visibility: CheckpointVisibility; prompts: string[]; promptCount: number } | null;
+}

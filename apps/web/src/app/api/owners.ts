@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import type { ActivityPage, ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerPrivacy, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo } from '@appmarket/shared';
+import type { ActivityPage, ContributionCalendar, OrgCreate, OrgMember, OrgMemberInput, OrgMembership, OrgRole, Owner, OwnerPrivacy, OwnerProfile, OwnerProfileUpdate, Repo, SessionInfo, CommitEntry } from '@appmarket/shared';
 import { type Observable, map } from 'rxjs';
 
 /** A profile: users list their public organizations, organizations their public members. */
@@ -38,6 +38,11 @@ export class OwnersApi {
   }
 
   /** #145: activity by month (a year, or the last 12 months), older pages with `before`. */
+  /** A user's commits in one repo in one month, with the prompts the viewer may see. */
+  commits(handle: string, repo: string, month: string): Observable<{ items: CommitEntry[]; total: number }> {
+    return this.http.get<{ items: CommitEntry[]; total: number }>(`/api/owners/${encodeURIComponent(handle)}/commits`, { params: { repo, month } });
+  }
+
   activity(handle: string, year?: number | null, before?: string | null): Observable<ActivityPage> {
     const params: Record<string, string> = {};
     if (year) params['year'] = String(year);

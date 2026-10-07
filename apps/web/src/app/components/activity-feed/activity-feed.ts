@@ -5,9 +5,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
-import type { ActivityMonth, ContributionKind } from '@appmarket/shared';
+import type { ActivityMonth, CommitEntry, ContributionKind } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { OwnersApi } from '../../api/owners';
+import { CommitList } from '../commit-list/commit-list';
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
 
@@ -32,7 +33,7 @@ const ICONS: Record<ContributionKind, string> = { commit: 'commit', repo: 'creat
 /** #145: activity by month below the contribution graph (users) or on organization profiles. */
 @Component({
   selector: 'app-activity-feed',
-  imports: [MatButtonModule, MatExpansionModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
+  imports: [CommitList, MatButtonModule, MatExpansionModule, MatIconModule, MatListModule, MatProgressBarModule, RouterLink],
   templateUrl: './activity-feed.html',
   styleUrl: './activity-feed.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +49,8 @@ export class ActivityFeed {
   protected readonly loading = signal(true);
   protected readonly describe = describeGroup;
   protected readonly icons = ICONS;
+  /** Commits per opened "month repo" row; undefined while loading, null when it failed. */
+  protected readonly commits = signal<Record<string, { items: CommitEntry[]; total: number } | null | undefined>>({});
 
   constructor() {
     // Reload from the newest month whenever the profile or the selected year changes.
@@ -60,6 +63,15 @@ export class ActivityFeed {
 
   protected monthName(month: string): string {
     return new Date(`${month}-01T00:00:00Z`).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  /** A repo row under "Created N commits" opened: its commits that month, loaded once. */
+  protected async openCommits(month: string, repo: string): Promise<void> {
+    const key = `${month} ${repo}`;
+    if (this.commits()[key]) return;
+    this.commits.update((c) => ({ ...c, [key]: undefined }));
+    const page = await firstValueFrom(this.api.commits(this.handle(), repo, month)).catch(() => null);
+    this.commits.update((c) => ({ ...c, [key]: page }));
   }
 
   protected more(): Promise<void> {
