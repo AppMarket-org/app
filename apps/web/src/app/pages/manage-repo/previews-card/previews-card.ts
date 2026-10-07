@@ -8,10 +8,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import type { BranchPreview, CloudflareAccount, PreviewSettings } from '@appmarket/shared';
 import { firstValueFrom } from 'rxjs';
 import { CloudflareApi } from '../../../api/cloudflare';
@@ -21,12 +22,13 @@ import { ConfirmDialog, type ConfirmDialogData } from '../../../components/confi
 const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /**
- * #28 (R8), #37 (D7): deploy from this repo into your own Cloudflare account: the default branch
- * on every push (to a Worker you choose) and previews of other branches.
+ * #28 (R8), #37 (D7): deploy from this repo into your own Cloudflare account. Deploy starts the
+ * first deploy of the default branch; once it is deployed, its settings (redeploy on every push,
+ * previews of other branches) are saved with Save.
  */
 @Component({
   selector: 'app-previews-card',
-  imports: [DatePipe, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatSelectModule, MatSlideToggleModule],
+  imports: [DatePipe, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule],
   templateUrl: './previews-card.html',
   styleUrl: './previews-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,23 +40,39 @@ export class PreviewsCard {
   private readonly http = inject(HttpClient);
   private readonly cloudflare = inject(CloudflareApi);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
 
   protected readonly settings = signal<PreviewSettings | null | undefined>(undefined);
   protected readonly deploys = signal<(BranchPreview & { branchExists?: boolean })[]>([]);
-  private readonly dialog = inject(MatDialog);
   /** null when the user has to connect Cloudflare first. */
   protected readonly accounts = signal<CloudflareAccount[] | null | undefined>(undefined);
+  /** appmarket.org cannot deploy to Cloudflare yet (its OAuth client is not set up). */
+  protected readonly unavailable = signal(false);
   protected readonly busy = signal(false);
   protected readonly short = (sha: string) => sha.slice(0, 7);
   protected connectUrl = '';
 
   // Form state.
-  protected readonly deployDefault = signal(false);
+  protected readonly deployDefault = signal(true);
   protected readonly previews = signal(false);
   protected readonly workerName = signal('');
   protected readonly accountId = signal('');
   protected readonly workerNameValid = computed(() => WORKER_NAME.test(this.workerName()));
-  protected readonly canSave = computed(() => !this.busy() && (!(this.deployDefault() || this.previews()) || (!!this.accountId() && (!this.deployDefault() || this.workerNameValid()))));
+  protected readonly accountName = computed(() => this.accounts()?.find((a) => a.id === this.accountId())?.name ?? '');
+
+  /** The default branch's deploy to its Worker; null until the repo is first deployed. */
+  protected readonly live = computed(() => {
+    const worker = this.settings()?.workerName;
+    return (worker && this.deploys().find((p) => p.workerName === worker && !p.deleted)) || null;
+  });
+  protected readonly branchPreviews = computed(() => this.deploys().filter((p) => p.workerName !== this.settings()?.workerName));
+  protected readonly canDeploy = computed(() => !this.busy() && !!this.accountId() && this.workerNameValid());
+  protected readonly canSave = computed(() => !this.busy() && (!(this.deployDefault() || this.previews()) || (!!this.accountId() && this.workerNameValid())));
+  protected readonly dirty = computed(() => {
+    const s = this.settings();
+    return !s || s.deployDefault !== this.deployDefault() || s.enabled !== this.previews() || (s.workerName ?? this.slug()) !== this.workerName() || s.accountId !== this.accountId();
+  });
 
   constructor() {
     const timer = setInterval(() => {
@@ -70,6 +88,27 @@ export class PreviewsCard {
     void this.loadAccounts();
   }
 
+  /** Deploys the default branch's latest commit now, with these settings, and opens the deployment. */
+  protected async deploy(): Promise<void> {
+    this.busy.set(true);
+    try {
+      const r = await firstValueFrom(
+        this.http.post<{ id: string; already: boolean }>(`/api/repos/${this.path()}/previews/deploy`, {
+          accountId: this.accountId(),
+          workerName: this.workerName(),
+          deployDefault: this.deployDefault(),
+          previews: this.previews(),
+        }),
+      );
+      if (r.already) this.snackBar.open('A deploy is already running', undefined, { duration: 4000 });
+      await this.router.navigate(['/dashboard/deployments', r.id]);
+    } catch (error) {
+      this.fail(error, 'Could not start the deploy.');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   protected async save(): Promise<void> {
     const on = this.deployDefault() || this.previews();
     this.busy.set(true);
@@ -78,24 +117,17 @@ export class PreviewsCard {
         this.http.put(`/api/repos/${this.path()}/previews`, {
           enabled: this.previews(),
           deployDefault: this.deployDefault(),
-          workerName: this.deployDefault() ? this.workerName() : undefined,
+          workerName: this.workerName(),
           accountId: on ? this.accountId() : undefined,
         }),
       );
-      this.snackBar.open(on ? 'Saved. Your next push deploys.' : 'Automatic deploys off', undefined, { duration: 4000 });
+      this.snackBar.open('Saved', undefined, { duration: 3000 });
       await this.load(true);
     } catch (error) {
-      const body = error instanceof HttpErrorResponse ? (error.error as { error?: string; message?: string } | null) : null;
-      if (body?.error === 'not_connected' || body?.error === 'reconnect') this.accounts.set(null);
-      else this.snackBar.open(body?.message ?? 'Could not save.', 'OK', { duration: 5000 });
+      this.fail(error, 'Could not save.');
     } finally {
       this.busy.set(false);
     }
-  }
-
-  /** #192: a preview Worker is a slug-pr-branch Worker; the default branch's Worker is never offered. */
-  protected isPreview(p: BranchPreview): boolean {
-    return p.workerName !== this.settings()?.workerName;
   }
 
   protected async deletePreview(p: BranchPreview): Promise<void> {
@@ -128,8 +160,11 @@ export class PreviewsCard {
     await this.save();
   }
 
-  /** appmarket.org cannot deploy to Cloudflare yet (its OAuth client is not set up). */
-  protected readonly unavailable = signal(false);
+  private fail(error: unknown, fallback: string): void {
+    const body = error instanceof HttpErrorResponse ? (error.error as { error?: string; message?: string } | null) : null;
+    if (body?.error === 'not_connected' || body?.error === 'reconnect') this.accounts.set(null);
+    else this.snackBar.open(body?.message ?? fallback, 'OK', { duration: 5000 });
+  }
 
   private async loadAccounts(): Promise<void> {
     try {
@@ -148,11 +183,13 @@ export class PreviewsCard {
     if (!r) return;
     this.settings.set(r.settings);
     this.deploys.set(r.items);
-    if (form) {
-      this.previews.set(!!r.settings?.enabled);
-      this.deployDefault.set(!!r.settings?.deployDefault);
-      this.workerName.set(r.settings?.workerName ?? this.slug());
-      if (r.settings?.accountId) this.accountId.set(r.settings.accountId);
+    if (form && r.settings) {
+      this.previews.set(r.settings.enabled);
+      this.deployDefault.set(r.settings.deployDefault);
+      this.workerName.set(r.settings.workerName ?? this.slug());
+      this.accountId.set(r.settings.accountId);
+    } else if (form) {
+      this.workerName.set(this.slug());
     }
   }
 }

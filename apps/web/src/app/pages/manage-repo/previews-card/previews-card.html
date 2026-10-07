@@ -1,59 +1,74 @@
 <mat-card appearance="outlined">
   <mat-card-header>
-    <mat-card-title>Deploy from this repo</mat-card-title>
-    <mat-card-subtitle>Pushes, including your agents', deploy into your own Cloudflare account. Secrets you set on a Worker stay on it across deploys.</mat-card-subtitle>
+    <img mat-card-avatar class="cloudflare-avatar" src="/brand/cloudflare.svg" alt="" />
+    <mat-card-title>Deploy to Cloudflare</mat-card-title>
+    <mat-card-subtitle>Into your own account. Secrets you set on the Worker stay on it across deploys.</mat-card-subtitle>
   </mat-card-header>
+
   <mat-card-content>
-    @if (settings() !== undefined) {
-      @if (unavailable()) {
-        <p class="hint">Deploying to Cloudflare is not available on appmarket.org yet.</p>
-      } @else if (accounts() === null) {
-        <p class="hint">Connect your Cloudflare account to deploy into it.</p>
-        <a mat-stroked-button [href]="connectUrl"><mat-icon class="cloudflare-icon" aria-hidden="true"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" /></mat-icon>Connect Cloudflare</a>
-        @if (settings()?.enabled || settings()?.deployDefault) {
-          <!-- Turning automatic deploys off needs no Cloudflare connection. -->
-          <button mat-button type="button" [disabled]="busy()" (click)="turnOff()">Turn automatic deploys off</button>
-        }
-      } @else {
-        <div class="form">
-          <mat-slide-toggle [ngModel]="deployDefault()" (ngModelChange)="deployDefault.set($event)" name="deployDefault">Deploy the default branch on every push</mat-slide-toggle>
-          @if (deployDefault()) {
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Worker name</mat-label>
-              <input matInput [ngModel]="workerName()" (ngModelChange)="workerName.set($event)" name="workerName" autocomplete="off" spellcheck="false" />
-              <mat-hint>Use the name of a Worker you already deployed this app as to keep updating it.</mat-hint>
-              @if (workerName() && !workerNameValid()) {
-                <mat-error>Lowercase letters, digits and dashes, up to 63 characters.</mat-error>
-              }
-            </mat-form-field>
+    @if (settings() === undefined || accounts() === undefined) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading deploy settings" />
+    } @else if (unavailable()) {
+      <p class="hint">Deploying to Cloudflare is not available on appmarket.org yet.</p>
+    } @else if (accounts() === null) {
+      <p>Connect your Cloudflare account to deploy this repo into it.</p>
+    } @else {
+      @if (live(); as l) {
+        <div class="live">
+          <mat-icon aria-hidden="true" [class]="l.status">{{ l.status === 'succeeded' ? 'check_circle' : l.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
+          <div>
+            <div class="live-title">{{ l.status === 'succeeded' ? 'Live' : l.status === 'failed' ? 'Last deploy failed' : 'Deploying' }} · <code>{{ l.workerName }}</code></div>
+            <div class="hint">{{ l.branch }} at <code>{{ short(l.commit) }}</code> · {{ l.updatedAt | date: 'short' }}</div>
+          </div>
+          <span class="spacer"></span>
+          @if (l.status === 'succeeded' && l.url) {
+            <a mat-button [href]="l.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>Open</a>
           }
-          <mat-slide-toggle [ngModel]="previews()" (ngModelChange)="previews.set($event)" name="previews">Deploy previews of other branches</mat-slide-toggle>
-          @if ((deployDefault() || previews()) && accounts()?.length) {
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Cloudflare account</mat-label>
-              <mat-select [ngModel]="accountId()" (ngModelChange)="accountId.set($event)" name="accountId">
-                @for (a of accounts(); track a.id) {
-                  <mat-option [value]="a.id">{{ a.name }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          }
-          @let s = settings();
-          @if (s && !s.mine && (s.enabled || s.deployDefault)) {
-            <p class="hint">Deploys use {{ s.connectedBy }}'s Cloudflare connection. Saving switches them to yours.</p>
-          }
+          <a mat-button [routerLink]="['/dashboard/deployments', l.deploymentId]">Details</a>
         </div>
       }
 
-      @if (deploys().length) {
-        <mat-list role="list" aria-label="Automatic deploys by branch">
-          @for (p of deploys(); track p.branch) {
+      <div class="fields">
+        @if ((accounts()?.length ?? 0) > 1) {
+          <mat-form-field appearance="outline">
+            <mat-label>Cloudflare account</mat-label>
+            <mat-select [ngModel]="accountId()" (ngModelChange)="accountId.set($event)" name="accountId">
+              @for (a of accounts(); track a.id) {
+                <mat-option [value]="a.id">{{ a.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline">
+          <mat-label>Worker name</mat-label>
+          <input matInput [ngModel]="workerName()" (ngModelChange)="workerName.set($event)" name="workerName" autocomplete="off" spellcheck="false" />
+          @if (workerName() && !workerNameValid()) {
+            <mat-error>Lowercase letters, digits and dashes, up to 63 characters.</mat-error>
+          } @else {
+            <mat-hint>{{ accountName() ? 'In ' + accountName() + '. ' : '' }}Use an existing Worker's name to update it.</mat-hint>
+          }
+        </mat-form-field>
+      </div>
+
+      <div class="toggles">
+        <mat-slide-toggle [ngModel]="deployDefault()" (ngModelChange)="deployDefault.set($event)" name="deployDefault">Redeploy the default branch on every push</mat-slide-toggle>
+        <mat-slide-toggle [ngModel]="previews()" (ngModelChange)="previews.set($event)" name="previews">Deploy a preview of every other branch</mat-slide-toggle>
+      </div>
+      @let s = settings();
+      @if (s && !s.mine && (s.enabled || s.deployDefault)) {
+        <p class="hint">Automatic deploys use {{ s.connectedBy }}'s Cloudflare connection. Saving switches them to yours.</p>
+      }
+
+      @if (branchPreviews().length) {
+        <h3 class="sub">Branch previews</h3>
+        <mat-list role="list" aria-label="Branch previews">
+          @for (p of branchPreviews(); track p.branch) {
             <mat-list-item role="listitem" lines="2">
               <mat-icon matListItemIcon aria-hidden="true">{{ p.deleted ? 'delete' : p.status === 'succeeded' ? 'check_circle' : p.status === 'failed' ? 'error' : 'pending' }}</mat-icon>
               <span matListItemTitle class="branch">{{ p.branch }}{{ p.branchExists === false ? ' · branch deleted' : '' }}</span>
               <span matListItemLine><code>{{ short(p.commit) }}</code> · {{ p.deleted ? 'Worker deleted' : p.status }} · {{ p.updatedAt | date: 'short' }}</span>
               <span matListItemMeta class="row-actions">
-                @if (!p.deleted && isPreview(p) && p.status !== 'queued' && p.status !== 'building' && p.status !== 'deploying') {
+                @if (!p.deleted && p.status !== 'queued' && p.status !== 'building' && p.status !== 'deploying') {
                   <button mat-button type="button" [disabled]="busy()" (click)="deletePreview(p)">Delete</button>
                 }
                 @if (p.deleted) {
@@ -69,9 +84,21 @@
       }
     }
   </mat-card-content>
-  @if (accounts() !== null && settings() !== undefined) {
-    <mat-card-actions>
-      <button mat-flat-button type="button" [disabled]="!canSave()" (click)="save()">Save</button>
+
+  @if (settings() !== undefined && accounts() !== undefined && !unavailable()) {
+    <mat-card-actions align="end">
+      @if (accounts() === null) {
+        @if (settings()?.enabled || settings()?.deployDefault) {
+          <!-- Turning automatic deploys off needs no Cloudflare connection. -->
+          <button mat-button type="button" [disabled]="busy()" (click)="turnOff()">Turn automatic deploys off</button>
+        }
+        <a mat-flat-button [href]="connectUrl"><img class="cloudflare-mark" src="/brand/cloudflare.svg" alt="" />Connect Cloudflare</a>
+      } @else if (live()) {
+        <button mat-stroked-button type="button" [disabled]="!canDeploy()" (click)="deploy()"><mat-icon>refresh</mat-icon>Deploy again</button>
+        <button mat-flat-button type="button" [disabled]="!dirty() || !canSave()" (click)="save()">Save</button>
+      } @else {
+        <button mat-flat-button type="button" [disabled]="!canDeploy()" (click)="deploy()"><mat-icon>cloud_upload</mat-icon>Deploy</button>
+      }
     </mat-card-actions>
   }
 </mat-card>
