@@ -10,6 +10,7 @@ interface Row {
 	state: CheckpointState;
 	visibility: CheckpointVisibility;
 	device: string | null;
+	os: string | null;
 	received_at: string;
 	server_redactions: number;
 	transcript_bytes: number | null;
@@ -87,6 +88,7 @@ function toCheckpoint(row: Row, repoPath: string, viewer: CheckpointViewer): Che
 		state: row.state,
 		visibility: row.visibility,
 		device: row.device,
+		os: row.os ?? null,
 		received_at: row.received_at,
 		...(row.server_redactions ? { server_redactions: row.server_redactions } : {}),
 		...(row.transcript_bytes ? { transcript_bytes: row.transcript_bytes } : {}),
@@ -103,7 +105,7 @@ export class CheckpointStore {
 	async put(
 		repo: { id: string; path: string },
 		record: CheckpointRecord,
-		meta: { state: CheckpointState; visibility: CheckpointVisibility; uploadedBy: string; device: string | null; force: boolean; serverRedactions?: number },
+		meta: { state: CheckpointState; visibility: CheckpointVisibility; uploadedBy: string; device: string | null; os?: string | null; force: boolean; serverRedactions?: number },
 	): Promise<PutResult> {
 		const hash = await hashOf(record);
 		const existing = await this.row(repo.id, record.commit);
@@ -113,14 +115,14 @@ export class CheckpointStore {
 		if (existing && !meta.force) return { status: 409, checkpoint: toCheckpoint(existing, repo.path, "owner") };
 		await this.db
 			.prepare(
-				`INSERT INTO checkpoints (repo_id, commit_sha, record, record_hash, harness, model, session_id, branch, source, state, visibility, uploaded_by, device, created_at, server_redactions, prompt_text)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				`INSERT INTO checkpoints (repo_id, commit_sha, record, record_hash, harness, model, session_id, branch, source, state, visibility, uploaded_by, device, os, created_at, server_redactions, prompt_text)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				 ON CONFLICT (repo_id, commit_sha) DO UPDATE SET record = excluded.record, record_hash = excluded.record_hash, harness = excluded.harness,
 				   model = excluded.model, session_id = excluded.session_id, branch = excluded.branch, source = excluded.source, state = excluded.state,
-				   uploaded_by = excluded.uploaded_by, device = excluded.device, created_at = excluded.created_at, server_redactions = excluded.server_redactions, prompt_text = excluded.prompt_text,
+				   uploaded_by = excluded.uploaded_by, device = excluded.device, os = excluded.os, created_at = excluded.created_at, server_redactions = excluded.server_redactions, prompt_text = excluded.prompt_text,
 				   received_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
 			)
-			.bind(repo.id, record.commit, JSON.stringify(record), hash, record.harness, record.model, record.session_id, record.branch, record.source, meta.state, meta.visibility, meta.uploadedBy, meta.device, record.created_at, meta.serverRedactions ?? 0, promptText(record))
+			.bind(repo.id, record.commit, JSON.stringify(record), hash, record.harness, record.model, record.session_id, record.branch, record.source, meta.state, meta.visibility, meta.uploadedBy, meta.device, meta.os ?? null, record.created_at, meta.serverRedactions ?? 0, promptText(record))
 			.run();
 		// A replaced record keeps the owner's visibility choice (ON CONFLICT leaves it unchanged).
 		return { status: existing ? 200 : 201, checkpoint: toCheckpoint((await this.row(repo.id, record.commit))!, repo.path, "owner") };

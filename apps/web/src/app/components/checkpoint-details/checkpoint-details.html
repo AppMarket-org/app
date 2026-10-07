@@ -10,8 +10,8 @@
   @if (c.branch) {
     <span><mat-icon inline>alt_route</mat-icon>{{ c.branch }}</span>
   }
-  @if (c.device) {
-    <span><mat-icon inline>laptop</mat-icon>{{ c.device }}</span>
+  @if (c.os) {
+    <span><mat-icon inline>{{ c.os === 'iOS' || c.os === 'Android' ? 'smartphone' : 'laptop' }}</mat-icon>{{ c.os }}</span>
   }
   @if (c.redactions) {
     <span><mat-icon inline>visibility_off</mat-icon>{{ c.redactions }} redacted{{ c.server_redactions ? ' (' + c.server_redactions + ' by appmarket.org)' : '' }}</span>
@@ -35,16 +35,37 @@
   <p class="summary">{{ c.assistant_summary }}</p>
 }
 @if (c.tools?.length) {
-  <h3>Tools ({{ c.tools!.length }})</h3>
-  <mat-list dense>
-    @for (t of c.tools; track $index) {
-      <mat-list-item>
-        <mat-icon matListItemIcon>{{ t.outcome === 'error' ? 'error_outline' : 'check' }}</mat-icon>
-        <span matListItemTitle>{{ t.name }}</span>
-        <span matListItemLine><code>{{ t.args_summary }}</code></span>
-      </mat-list-item>
+  <h3>Tools <span class="n">{{ c.tools!.length }} call{{ c.tools!.length === 1 ? '' : 's' }}</span></h3>
+  <div class="tools" role="list" aria-label="Tools used">
+    @for (g of groups(); track g.name) {
+      <div class="tool" role="listitem">
+        <mat-icon aria-hidden="true">{{ icon(g.name) }}</mat-icon>
+        <span class="name">{{ g.name }}</span>
+        <span class="count">×{{ g.calls }}</span>
+        @if (g.errors) {
+          <span class="errors">{{ g.errors }} failed</span>
+        }
+        <span class="targets">
+          @for (t of g.targets; track t.label; let last = $last) {
+            <code>{{ t.label }}</code>{{ t.count > 1 ? ' ×' + t.count : '' }}{{ last ? '' : ' · ' }}
+          }
+          @if (g.more) {
+            <span class="more"> and {{ g.more }} more</span>
+          }
+        </span>
+      </div>
     }
-  </mat-list>
+  </div>
+  <mat-expansion-panel class="all-calls">
+    <mat-expansion-panel-header><mat-panel-title>Every call, in order</mat-panel-title></mat-expansion-panel-header>
+    <mat-list class="call-list" aria-label="Tool calls in order">
+      @for (t of c.tools; track $index) {
+        <mat-list-item [class.error]="t.outcome === 'error'">
+          <span matListItemTitle class="call"><span class="name">{{ $index + 1 }}. {{ t.name }}</span><code [title]="t.args_summary">{{ t.args_summary }}</code></span>
+        </mat-list-item>
+      }
+    </mat-list>
+  </mat-expansion-panel>
 }
 <h3>Files ({{ c.files.length }}{{ c.truncated ? '+' : '' }})</h3>
 <mat-list dense>

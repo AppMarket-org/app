@@ -1,4 +1,4 @@
-import { CHECKPOINT_LIMITS, type Checkpoint, type CheckpointVisibility, type Repo, summarizeSessions, type CheckpointRecord } from "@appmarket/shared";
+import { CHECKPOINT_LIMITS, osFromUserAgent, type Checkpoint, type CheckpointVisibility, type Repo, summarizeSessions, type CheckpointRecord } from "@appmarket/shared";
 import { checkpointPatchSchema, checkpointRecordSchema, checkpointTranscriptSchema, checkpointVisibilitySchema, sessionVisibilitySchema } from "@appmarket/shared/schemas";
 import { env } from "cloudflare:workers";
 import { type Context, Hono } from "hono";
@@ -102,11 +102,14 @@ export const checkpointRoutes = new Hono<Ctx>()
 		if (redacted.count) logEvent("checkpoint.server_redacted", { repo: repo.fullName, count: redacted.count, cli: c.req.header("user-agent") ?? "" }, "warn");
 		const attached = repo.gitRepo ? await commitExists(repo.gitRepo, record.commit) : false;
 		const device = (session.session as { deviceName?: string | null }).deviceName ?? null;
+		// The OS from the CLI's user agent (or, for older CLIs, the one it signed in with).
+		const os = osFromUserAgent(c.req.header("user-agent")) ?? osFromUserAgent((session.session as { userAgent?: string | null }).userAgent);
 		const result = await checkpoints().put({ id: repo.id, path: repo.fullName }, record, {
 			state: attached ? "attached" : "pending",
 			visibility: repo.checkpointVisibility,
 			uploadedBy: session.user.id,
 			device,
+			os,
 			force: c.req.query("force") === "1",
 			serverRedactions: redacted.count,
 		});

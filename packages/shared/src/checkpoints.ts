@@ -77,6 +77,8 @@ export interface Checkpoint extends Omit<CheckpointRecord, "prompts" | "assistan
 	server_redactions?: number;
 	visibility: CheckpointVisibility;
 	device: string | null;
+	/** The operating system it was uploaded from (macOS, Linux, Windows…), when known. */
+	os: string | null;
 	received_at: string;
 	prompts?: CheckpointRecord["prompts"];
 	assistant_summary?: string;

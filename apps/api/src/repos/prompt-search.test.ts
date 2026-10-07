@@ -11,7 +11,7 @@ describe("search over published prompts (#137)", () => {
 		db.sqlite.prepare("INSERT INTO owners (id, handle, kind, user_id) VALUES ('dev', 'dev', 'user', 'dev') ON CONFLICT DO NOTHING").run();
 		db.sqlite.prepare(`INSERT INTO repos (id, owner_id, created_by, slug, name, summary, category, state) VALUES ('r1', 'dev', 'dev', 'app', 'App', 'Summary text', 'ai', 'published')`).run();
 		const checkpoints = new CheckpointStore(db.d1);
-		await checkpoints.put({ id: "r1", path: "dev/app" }, record(1, "Build a quantum flux capacitor"), { state: "attached", visibility: "private", uploadedBy: "dev", device: null, force: false });
+		await checkpoints.put({ id: "r1", path: "dev/app" }, record(1, "Build a quantum flux capacitor"), { state: "attached", visibility: "private", uploadedBy: "dev", device: null, os: null, force: false });
 		const repos = new RepoStore(db.d1);
 		const query: Parameters<RepoStore["search"]>[0] = { q: "flux capacitor", page: 1, pageSize: 20, sort: "newest" };
 		expect((await repos.search(query)).items).toEqual([]);
